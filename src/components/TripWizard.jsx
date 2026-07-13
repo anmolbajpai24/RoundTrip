@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { COLORS, createTrip } from "../lib/session.js";
 import { saveKey } from "../lib/storage.js";
-import { CONFIG_KEY, generateDays, listDates, softOf, slugify, dateLabel, weekday, addDays, softBg } from "../lib/tripConfig.js";
+import { CONFIG_KEY, generateDays, listDates, softOf, slugify, dateLabel, weekday, addDays, softBg, todayISO } from "../lib/tripConfig.js";
 import { searchPlaces } from "../lib/geocode.js";
 import { getLocalProfile } from "../lib/profile.js";
 import { searchCoverPhotos, trackDownload, asCover } from "../lib/unsplash.js";
@@ -10,13 +10,9 @@ import { APP_NAME, ACCENT, INK, MUTED } from "../theme.js";
 
 const MAX_TRIP_DAYS = 60;
 
-// A gentle generic starter packing list for new trips.
-const GENERIC_PACKING = [
-  ["Documents", ["Passport / ID", "Travel insurance", "Payment cards", "Flight / train confirmations"]],
-  ["Clothes", ["Comfortable walking shoes", "1 nicer outfit for evenings", "Layer for cool evenings"]],
-  ["Tech", ["Phone charger", "Power bank", "Plug adapter"]],
-  ["Other", ["Medicines + basic first aid", "Day backpack", "Reusable water bottle"]],
-];
+// New trips start with an empty packing list — the Pack tab shows suggested
+// categories and a sample hint so travellers build their own list.
+const GENERIC_PACKING = [];
 
 const inputStyle = { borderColor: "var(--border)", backgroundColor: "var(--field)", color: INK };
 
@@ -54,6 +50,7 @@ export default function TripWizard({ profile, onDone, onCancel }) {
     if (!name.trim()) return "Enter your name.";
     if (!title.trim()) return "Give the trip a name.";
     if (!startDate || !endDate) return "Pick the start and end dates.";
+    if (startDate < todayISO()) return "The start date is in the past — pick today or a future date.";
     if (endDate < startDate) return "The end date is before the start date.";
     if (tripLen > MAX_TRIP_DAYS) return `That's ${tripLen} days — the limit is ${MAX_TRIP_DAYS}.`;
     return "";
@@ -184,12 +181,12 @@ export default function TripWizard({ profile, onDone, onCancel }) {
             <div className="flex gap-2 mb-1">
               <div className="flex-1">
                 {label("First day")}
-                <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)}
+                <input type="date" value={startDate} min={todayISO()} onChange={(e) => setStartDate(e.target.value)}
                   className="mt-1 w-full text-sm rounded-xl border px-3 py-3" style={inputStyle} />
               </div>
               <div className="flex-1">
                 {label("Last day")}
-                <input type="date" value={endDate} min={startDate || undefined} onChange={(e) => setEndDate(e.target.value)}
+                <input type="date" value={endDate} min={startDate || todayISO()} onChange={(e) => setEndDate(e.target.value)}
                   className="mt-1 w-full text-sm rounded-xl border px-3 py-3" style={inputStyle} />
               </div>
             </div>
