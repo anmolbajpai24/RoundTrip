@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { DAYS, LEGS, dayKey, dateLabel, weekday } from "../data/trip.js";
+import { useTripConfig, dateLabel, weekday, defaultDay, findDay } from "../lib/tripConfig.js";
 import { saveKey } from "../lib/storage.js";
 import { compressImage } from "../lib/image.js";
 import SectionTitle from "../components/SectionTitle.jsx";
@@ -8,17 +8,18 @@ import DayStrip from "../components/DayStrip.jsx";
 import PersonBadge from "../components/PersonBadge.jsx";
 
 export default function OutfitsTab({ outfitsAll, setOutfitsAll, membersById, members, myId, initialDay }) {
-  const [selected, setSelected] = useState(initialDay || 7);
-  const day = DAYS.find((x) => x.d === selected);
-  const L = LEGS[day.leg];
-  const key = dayKey(selected);
+  const config = useTripConfig();
+  const [selected, setSelected] = useState(() => initialDay || defaultDay(config));
+  const day = findDay(config, selected);
+  const L = config.legs[day.leg] || {};
+  const key = day.date;
 
   const mine = (outfitsAll[myId] || {})[key] || {};
   const fileRef = useRef(null);
   const [busy, setBusy] = useState(false);
   const [desc, setDesc] = useState(mine.desc || "");
 
-  useEffect(() => { setDesc(((outfitsAll[myId] || {})[dayKey(selected)] || {}).desc || ""); }, [selected, outfitsAll, myId]);
+  useEffect(() => { setDesc(((outfitsAll[myId] || {})[key] || {}).desc || ""); }, [key, outfitsAll, myId]);
 
   const persist = async (next) => {
     setOutfitsAll((prev) => ({ ...prev, [myId]: { ...(prev[myId] || {}), [key]: next } }));
@@ -45,12 +46,12 @@ export default function OutfitsTab({ outfitsAll, setOutfitsAll, membersById, mem
 
   return (
     <div>
-      <SectionTitle sub={`You've planned ${plannedCount} of 24 days`}>Outfit planner</SectionTitle>
-      <DayStrip selected={selected} onSelect={setSelected} />
+      <SectionTitle sub={`You've planned ${plannedCount} of ${config.days.length} days`}>Outfit planner</SectionTitle>
+      <DayStrip selected={key} onSelect={setSelected} />
 
       <div className="mt-3 rounded-2xl border overflow-hidden" style={{ borderColor: "#E5E2DA", backgroundColor: "#FFF" }}>
         <div className="px-4 py-2.5 flex items-center justify-between border-b" style={{ borderColor: "#F0EDE6" }}>
-          <span className="text-sm font-bold" style={{ color: "#1D2433" }}>{weekday(selected)} {dateLabel(selected)} · {day.title}</span>
+          <span className="text-sm font-bold" style={{ color: "#1D2433" }}>{weekday(key)} {dateLabel(key)} · {day.title}</span>
           <LegChip leg={day.leg} />
         </div>
 
@@ -59,7 +60,7 @@ export default function OutfitsTab({ outfitsAll, setOutfitsAll, membersById, mem
           <div className="mb-2"><PersonBadge member={membersById[myId]} size="xs" /></div>
           {mine.photo ? (
             <div className="relative">
-              <img src={mine.photo} alt={`Outfit for ${dateLabel(selected)}`} className="w-full rounded-xl object-cover" style={{ maxHeight: 380 }} />
+              <img src={mine.photo} alt={`Outfit for ${dateLabel(key)}`} className="w-full rounded-xl object-cover" style={{ maxHeight: 380 }} />
               <button onClick={removePhoto} className="absolute top-2 right-2 text-xs font-bold text-white px-3 py-1.5 rounded-full" style={{ backgroundColor: "rgba(29,36,51,0.75)" }}>Remove</button>
             </div>
           ) : (
@@ -105,13 +106,13 @@ export default function OutfitsTab({ outfitsAll, setOutfitsAll, membersById, mem
       <div className="mt-5">
         <SectionTitle>All days</SectionTitle>
         <div className="grid grid-cols-3 gap-2">
-          {DAYS.map((d) => {
-            const dk = dayKey(d.d);
+          {config.days.map((d) => {
+            const dk = d.date;
             const o = myMap[dk];
-            const Lg = LEGS[d.leg];
+            const Lg = config.legs[d.leg] || {};
             const otherDots = (members || []).filter((m) => m.user_id !== myId && (outfitsAll[m.user_id] || {})[dk]?.photo);
             return (
-              <button key={d.d} onClick={() => { setSelected(d.d); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="rounded-xl overflow-hidden border text-left relative" style={{ borderColor: "#E5E2DA", backgroundColor: "#FFF" }}>
+              <button key={dk} onClick={() => { setSelected(dk); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="rounded-xl overflow-hidden border text-left relative" style={{ borderColor: "#E5E2DA", backgroundColor: "#FFF" }}>
                 {o?.photo ? (
                   <img src={o.photo} alt="" className="w-full h-20 object-cover" />
                 ) : (
@@ -122,7 +123,7 @@ export default function OutfitsTab({ outfitsAll, setOutfitsAll, membersById, mem
                     {otherDots.map((m) => <span key={m.user_id} className="w-2 h-2 rounded-full border border-white" style={{ backgroundColor: m.color }} />)}
                   </div>
                 )}
-                <div className="px-1.5 py-1 text-[10px] font-semibold" style={{ color: "#1D2433" }}>{d.d} Aug</div>
+                <div className="px-1.5 py-1 text-[10px] font-semibold" style={{ color: "#1D2433" }}>{dateLabel(dk)}</div>
               </button>
             );
           })}

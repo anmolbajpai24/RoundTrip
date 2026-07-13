@@ -68,6 +68,12 @@ function requireConfig() {
   if (!isConfigured) throw new Error("Supabase isn't set up yet — see supabase/SETUP.md.");
 }
 
+// True when the DB error means "that RPC doesn't exist (yet)" — the hardening
+// migration (supabase/migrations/001_public_hardening.sql) hasn't been run, so
+// fall back to the original direct table access, which the pre-hardening RLS
+// policies still allow.
+const rpcMissing = (error) => error && (error.code === "PGRST202" || error.code === "42883");
+
 // Create a brand-new trip, join it with your profile, return the session.
 export async function createTrip(name, color) {
   requireConfig();
@@ -76,29 +82,99 @@ export async function createTrip(name, color) {
   let trip;
   for (let attempt = 0; attempt < 5 && !trip; attempt++) {
     const code = generateCode();
-    const { data, error } = await supabase.from("trips").insert({ code }).select().single();
-    if (!error) { trip = data; break; }
-    if (error.code !== "23505") throw error; // 23505 = duplicate code, retry
+    const { data, error } = await supabase.rpc("create_trip_with_code", { p_code: code, p_name: name, p_color: color });
+    if (!error) { const row = Array.isArray(data) ? data[0] : data; trip = { id: row.trip_id, code: row.trip_code }; break; }
+    if (rpcMissing(error)) { trip = await createTripDirect(); break; }
+    if (error.code !== "23505" && !`${error.message}`.includes("23505")) throw error; // duplicate code → retry
   }
   if (!trip) throw new Error("Couldn't create a trip — please try again.");
-
-  await upsertMember(trip.id, name, color);
   return saveSession({ tripId: trip.id, code: trip.code, userId, name, color });
+
+  async function createTripDirect() {
+    let t;
+    for (let attempt = 0; attempt < 5 && !t; attempt++) {
+      const code = generateCode();
+      const { data, error } = await supabase.from("trips").insert({ code }).select().single();
+      if (!error) { t = data; break; }
+      if (error.code !== "23505") throw error;
+    }
+    if (!t) throw new Error("Couldn't create a trip — please try again.");
+    await upsertMember(t.id, name, color);
+    return t;
+  }
 }
 
 // Join an existing trip by code with your profile.
 export async function joinTrip(code, name, color) {
   requireConfig();
   const userId = await ensureAuth();
-
   const normalized = code.trim().toUpperCase();
-  const { data: trip, error } = await supabase
-    .from("trips").select("id, code").eq("code", normalized).maybeSingle();
-  if (error) throw error;
-  if (!trip) throw new Error("No trip found with that code. Check the letters and try again.");
 
+  const { data, error } = await supabase.rpc("join_trip_with_code", { p_code: normalized, p_name: name, p_color: color });
+  if (!error) {
+    const row = Array.isArray(data) ? data[0] : data;
+    if (!row) throw new Error("No trip found with that code. Check the letters and try again.");
+    return saveSession({ tripId: row.trip_id, code: row.trip_code, userId, name, color });
+  }
+  if (!rpcMissing(error)) throw error;
+
+  // Pre-hardening fallback: direct lookup + membership insert.
+  const { data: trip, error: selErr } = await supabase
+    .from("trips").select("id, code").eq("code", normalized).maybeSingle();
+  if (selErr) throw selErr;
+  if (!trip) throw new Error("No trip found with that code. Check the letters and try again.");
   await upsertMember(trip.id, name, color);
   return saveSession({ tripId: trip.id, code: trip.code, userId, name, color });
+}
+
+// Re-enter a trip this user already belongs to (from the Your Trips screen).
+export async function enterTrip(trip) {
+  requireConfig();
+  const userId = await ensureAuth();
+  return saveSession({ tripId: trip.id, code: trip.code, userId, name: trip.myName, color: trip.myColor });
+}
+
+// Leave the trip view back to the trips list (keeps auth + memberships).
+export async function leaveToHome() {
+  await clearSession();
+}
+
+// All trips this user belongs to, newest membership first:
+// [{ id, code, myName, myColor, members: [{user_id,name,color}], config }]
+export async function listMyTrips() {
+  if (!isConfigured) return [];
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data: mine, error } = await supabase
+    .from("trip_members").select("trip_id, name, color").eq("user_id", user.id);
+  if (error) throw error;
+  if (!mine?.length) return [];
+  const ids = mine.map((m) => m.trip_id);
+
+  const [tripsRes, membersRes, configsRes] = await Promise.all([
+    supabase.from("trips").select("id, code, created_at").in("id", ids),
+    supabase.from("trip_members").select("trip_id, user_id, name, color").in("trip_id", ids),
+    supabase.from("trip_kv").select("trip_id, value").eq("key", "trip-config").eq("owner", "__shared__").in("trip_id", ids),
+  ]);
+  if (tripsRes.error) throw tripsRes.error;
+
+  const configByTrip = Object.fromEntries((configsRes.data || []).map((r) => [r.trip_id, r.value]));
+  const membersByTrip = {};
+  for (const m of membersRes.data || []) (membersByTrip[m.trip_id] ||= []).push(m);
+
+  return (tripsRes.data || []).map((t) => {
+    const my = mine.find((m) => m.trip_id === t.id);
+    return {
+      id: t.id,
+      code: t.code,
+      createdAt: t.created_at,
+      myName: my?.name,
+      myColor: my?.color,
+      members: membersByTrip[t.id] || [],
+      config: configByTrip[t.id] || null,
+    };
+  });
 }
 
 // Insert this member; if already present, update the name/colour instead.

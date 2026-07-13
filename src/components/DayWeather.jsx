@@ -1,12 +1,28 @@
+import { useTripConfig } from "../lib/tripConfig.js";
 import { getDayWeather, WMO } from "../lib/weather.js";
 import { suggestOutfit } from "../lib/outfitAdvisor.js";
 import WeatherIcon from "./WeatherIcon.jsx";
 
 // Inline per-day weather + outfit widget for the Itinerary day card.
-export default function DayWeather({ day, weather, legColor = "#1D2433", legSoft = "#F0EDE6" }) {
-  const w = getDayWeather(weather, day);
+// `packingItems` (optional) = the viewer's own packing-list texts, used to tick
+// suggested items they've already packed.
+export default function DayWeather({ day, weather, legColor = "#1D2433", legSoft = "#F0EDE6", packingItems }) {
+  const config = useTripConfig();
+  const w = getDayWeather(weather, day, config);
+
+  // No live forecast yet and no climate normals for this place → quiet placeholder.
+  if (!w) {
+    return (
+      <div className="mt-3 rounded-2xl border px-3.5 py-3" style={{ borderColor: "#E5E2DA", backgroundColor: "#FFF" }}>
+        <div className="text-xs" style={{ color: "#8A8F98" }}>
+          🌤 Forecast opens ~16 days before this date.
+        </div>
+      </div>
+    );
+  }
+
   const { label } = WMO(w.code);
-  const outfit = suggestOutfit(w);
+  const outfit = suggestOutfit(w, packingItems);
   const typical = w.source === "typical";
 
   const chip = (item, i) => (
@@ -32,7 +48,7 @@ export default function DayWeather({ day, weather, legColor = "#1D2433", legSoft
             <span className="text-sm font-bold truncate" style={{ color: "#1D2433" }}>{w.place}</span>
             {typical && (
               <span className="text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full flex-shrink-0" style={{ backgroundColor: "#EDEAE2", color: "#8A8F98" }}>
-                Typical for August
+                Seasonal average
               </span>
             )}
           </div>

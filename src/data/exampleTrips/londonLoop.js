@@ -1,11 +1,12 @@
-// ---------- Trip constants ----------
+// Archived content of the original hardcoded trip ("London & the Loop",
+// 7–30 Aug 2026). This is the permanent in-repo record of the itinerary that
+// used to live in src/data/trip.js, plus buildLegacyConfig() which converts it
+// into the per-trip `trip-config` shape so the owner's live trip can be
+// upgraded in place (see lib/legacyMigration.js). Do not edit the data.
+
 export const GBP_TO_INR = 127;
 export const BUDGET_GBP = 3415;
-export const TRIP_START = new Date("2026-08-07T00:00:00");
 
-// `lat`/`lon` locate each leg for the weather forecast; `norm` holds typical
-// August climate normals (WMO code 2 = partly cloudy) shown as a fallback when a
-// live forecast doesn't yet reach a date. Temps in °C, precipProb in %.
 export const LEGS = {
   london: { name: "London", color: "#C8102E", soft: "#FBE9EC", lat: 51.5074, lon: -0.1278, norm: { tempMax: 23, tempMin: 14, precipProb: 30, code: 2 } },
   bath: { name: "Bath", color: "#C77E1F", soft: "#FBF1E2", lat: 51.3811, lon: -2.3590, norm: { tempMax: 22, tempMin: 13, precipProb: 35, code: 2 } },
@@ -61,22 +62,26 @@ export const DEFAULT_BOOKINGS = [
   { text: "Windsor Castle tickets", urgent: false },
 ];
 
-export const dayKey = (d) => `d${d}`;
-export const dateLabel = (d) => `${d} Aug`;
-export const weekday = (d) => ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][new Date(2026, 7, d).getDay()];
+// Day-of-month → ISO date for this trip (all days fall in August 2026).
+export const legacyDayISO = (d) => `2026-08-${String(d).padStart(2, "0")}`;
 
-// Resolve the weather location for a day: a per-day override (day trips) wins,
-// otherwise fall back to the day's leg. Always returns { name, lat, lon, norm }.
-export const locationOf = (day) => {
-  const L = LEGS[day.leg];
+// The archived itinerary expressed as a `trip-config` value (see lib/tripConfig.js).
+export function buildLegacyConfig() {
   return {
-    name: day.place || L.name,
-    leg: day.leg,
-    lat: day.lat ?? L.lat,
-    lon: day.lon ?? L.lon,
-    norm: day.norm || L.norm,
+    v: 1,
+    title: "London & the Loop",
+    startDate: legacyDayISO(7),
+    endDate: legacyDayISO(30),
+    currency: "GBP",
+    homeCurrency: "INR",
+    homeRate: GBP_TO_INR,
+    budget: BUDGET_GBP,
+    legs: LEGS,
+    legOrder: ["london", "bath", "lakes", "edinburgh", "york", "london"],
+    days: DAYS.map(({ d, ...day }) => ({ date: legacyDayISO(d), ...day })),
+    packingTemplate: DEFAULT_PACKING,
   };
-};
+}
 
-// ISO date string (YYYY-MM-DD) for a trip day-of-month in August 2026.
-export const isoDate = (d) => `2026-08-${String(d).padStart(2, "0")}`;
+// Seed for the shared bookings list (mirrors the old App.jsx seedBookings()).
+export const seedLegacyBookings = () => DEFAULT_BOOKINGS.map((b, i) => ({ id: i, ...b, done: false }));

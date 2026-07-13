@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import { exportAll, importAll } from "../lib/storage.js";
+import { APP_SLUG } from "../theme.js";
 
 // Trip data syncs across devices via Supabase; this is an extra manual safety
 // net — download the current trip's data as JSON, or restore it from a file.
@@ -13,7 +14,7 @@ export default function BackupControls() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `uk-trip-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `${APP_SLUG}-backup-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
   };

@@ -1,14 +1,17 @@
-import { DAYS, locationOf, isoDate } from "../data/trip.js";
+import { locationOf } from "./tripConfig.js";
 import { saveKey } from "./storage.js";
 
 // Weather data layer (no React). Fetches a daily forecast for every trip
 // location from Open-Meteo (free, no API key, CORS-enabled), normalizes it, and
 // caches it via the shared storage layer so it syncs to all members + works
-// offline. Dates the live forecast doesn't reach fall back to climate normals.
+// offline. Dates the live forecast doesn't reach fall back to that location's
+// climate normals when the trip config provides them; otherwise the day simply
+// has no weather yet (the widget shows a placeholder).
 
 const FORECAST_URL = "https://api.open-meteo.com/v1/forecast";
 const FORECAST_HORIZON_DAYS = 16;      // Open-Meteo free daily forecast range
 const STALE_MS = 3 * 60 * 60 * 1000;   // refetch at most every ~3h
+const CACHE_VERSION = 2;               // v2 = days keyed by ISO date
 
 // ---------- WMO weather code buckets ----------
 // One place that turns a raw WMO code into a stable bucket key + human label.
@@ -43,10 +46,10 @@ const fmt = (date) => {
 };
 
 // The date range the live forecast can actually cover today: overlap of
-// [today, today+16d] with the trip window (7–30 Aug 2026). Null if no overlap.
-function fetchableWindow(now = new Date()) {
-  const tripStart = new Date("2026-08-07T00:00:00");
-  const tripEnd = new Date("2026-08-30T00:00:00");
+// [today, today+16d] with the trip window. Null if no overlap.
+function fetchableWindow(config, now = new Date()) {
+  const tripStart = new Date(`${config.startDate}T00:00:00`);
+  const tripEnd = new Date(`${config.endDate}T00:00:00`);
   const horizon = new Date(now.getFullYear(), now.getMonth(), now.getDate() + FORECAST_HORIZON_DAYS);
   const start = now > tripStart ? now : tripStart;
   const end = horizon < tripEnd ? horizon : tripEnd;
@@ -55,51 +58,60 @@ function fetchableWindow(now = new Date()) {
 }
 
 // Unique locations across all days (day trips dedupe against their leg by coord).
-function uniqueLocations() {
+function uniqueLocations(config) {
   const seen = new Map();
-  for (const day of DAYS) {
-    const loc = locationOf(day);
+  for (const day of config.days) {
+    const loc = locationOf(config, day);
+    if (loc.lat == null || loc.lon == null) continue;
     const id = `${loc.lat},${loc.lon}`;
     if (!seen.has(id)) seen.set(id, loc);
   }
   return [...seen.values()];
 }
 
-const normRecord = (loc, source = "typical") => ({
-  place: loc.name,
-  leg: loc.leg,
-  source,
-  tempMax: loc.norm.tempMax,
-  tempMin: loc.norm.tempMin,
-  precipProb: loc.norm.precipProb,
-  windMax: null,
-  code: loc.norm.code,
-  uv: null,
-});
+const normRecord = (loc, source = "typical") =>
+  loc.norm
+    ? {
+        place: loc.name,
+        leg: loc.leg,
+        source,
+        tempMax: loc.norm.tempMax,
+        tempMin: loc.norm.tempMin,
+        precipProb: loc.norm.precipProb,
+        windMax: null,
+        code: loc.norm.code,
+        uv: null,
+      }
+    : null;
 
 // ---------- fetch + normalize + cache ----------
 // Returns the (possibly refreshed) weather object. Pass the current cached value
 // so we skip the network when it's still fresh or when nothing is fetchable yet.
-export async function refreshWeather(current) {
+export async function refreshWeather(current, config) {
+  if (!config?.days?.length) return current;
+  if (current?.v !== CACHE_VERSION) current = null; // old cache format → refetch
   const fresh = current?.fetchedAt && Date.now() - new Date(current.fetchedAt).getTime() < STALE_MS;
   if (fresh || !online()) return current;
 
-  const window = fetchableWindow();
-  const locs = uniqueLocations();
+  const window = fetchableWindow(config);
+  const locs = uniqueLocations(config);
 
   // Build the all-typical baseline first; live rows overwrite where available.
   const byLocDays = {};
   const days = {};
-  for (const day of DAYS) days[day.d] = normRecord(locationOf(day));
+  for (const day of config.days) {
+    const rec = normRecord(locationOf(config, day));
+    if (rec) days[day.date] = rec;
+  }
 
   // Nothing in forecast range yet (true well before the trip) → typical only.
-  if (window) {
+  if (window && locs.length) {
     try {
       const params = new URLSearchParams({
         latitude: locs.map((l) => l.lat).join(","),
         longitude: locs.map((l) => l.lon).join(","),
         daily: "weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,wind_speed_10m_max,uv_index_max",
-        timezone: "Europe/London",
+        timezone: "auto",
         start_date: window.start,
         end_date: window.end,
       });
@@ -125,27 +137,27 @@ export async function refreshWeather(current) {
         byLocDays[`${loc.lat},${loc.lon}`] = byDate;
       });
 
-      for (const day of DAYS) {
-        const loc = locationOf(day);
-        const hit = byLocDays[`${loc.lat},${loc.lon}`]?.[isoDate(day.d)];
-        if (hit) days[day.d] = { place: loc.name, leg: loc.leg, source: "forecast", ...hit };
+      for (const day of config.days) {
+        const loc = locationOf(config, day);
+        const hit = byLocDays[`${loc.lat},${loc.lon}`]?.[day.date];
+        if (hit) days[day.date] = { place: loc.name, leg: loc.leg, source: "forecast", ...hit };
       }
     } catch {
       // Network/parse failure: keep the typical baseline, don't cache a bad fetch.
-      return current || { fetchedAt: new Date().toISOString(), days };
+      return current || { v: CACHE_VERSION, fetchedAt: new Date().toISOString(), days };
     }
   }
 
-  const next = { fetchedAt: new Date().toISOString(), days };
+  const next = { v: CACHE_VERSION, fetchedAt: new Date().toISOString(), days };
   await saveKey("trip-weather", next);
   return next;
 }
 
 // ---------- selector ----------
-// One day's normalized record. Falls back to that day's climate normal when the
-// cache is empty, so the widget always has something to render.
-export function getDayWeather(weather, day) {
-  const rec = weather?.days?.[day.d];
+// One day's normalized record, falling back to that day's climate normal.
+// Returns null when there's no forecast yet and the location has no normals.
+export function getDayWeather(weather, day, config) {
+  const rec = weather?.v === CACHE_VERSION ? weather.days?.[day.date] : null;
   if (rec) return rec;
-  return normRecord(locationOf(day));
+  return config ? normRecord(locationOf(config, day)) : null;
 }

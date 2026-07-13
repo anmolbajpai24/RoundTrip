@@ -1,6 +1,7 @@
 import { get, set, keys } from "idb-keyval";
 import { supabase, isConfigured } from "./supabase.js";
 import { getSession, myId } from "./session.js";
+import { APP_SLUG, LEGACY_APP_SLUG } from "../theme.js";
 
 // Persistence layer. Public surface stays close to the local-only version
 // (loadKey / saveKey / loadPersonalAll ...) so the tabs barely change. Under the
@@ -101,6 +102,7 @@ export async function loadOutfitsAll() {
       if (error) throw error;
       for (const row of data) {
         const day = row.key.slice("outfit:".length);
+        if (isLegacyDayKey(day)) continue; // pre-migration "d7" rows, kept as inert backups
         (result[row.owner] ||= {})[day] = row.value;
         await writeCache(s.tripId, row.owner, row.key, row.value);
       }
@@ -114,11 +116,14 @@ export async function loadOutfitsAll() {
       const rest = k.slice(base.length); // "<owner>:outfit:<day>"
       const owner = rest.slice(0, rest.indexOf(":outfit:"));
       const day = rest.slice(rest.indexOf(":outfit:") + ":outfit:".length);
-      if (owner !== SHARED) (result[owner] ||= {})[day] = await get(k);
+      if (owner !== SHARED && !isLegacyDayKey(day)) (result[owner] ||= {})[day] = await get(k);
     }
   }
   return result;
 }
+
+// Day suffixes from before the ISO-date refactor looked like "d7".
+const isLegacyDayKey = (day) => /^d\d+$/.test(day);
 
 // ---------- writes (optimistic: cache now, sync via outbox) ----------
 export async function saveKey(key, value) {
@@ -198,6 +203,19 @@ export function subscribeMembers(onJoin) {
   return () => supabase.removeChannel(channel);
 }
 
+// Write a kv row for an arbitrary owner (used by the legacy migration to move
+// every member's rows from one device). Online-only; RLS gates on membership.
+export async function upsertRow(owner, key, value) {
+  const s = getSession();
+  if (!s || !online()) throw new Error("You need to be online for this.");
+  const { error } = await supabase.from("trip_kv").upsert(
+    { trip_id: s.tripId, owner, key, value, updated_at: new Date().toISOString() },
+    { onConflict: "trip_id,owner,key" }
+  );
+  if (error) throw error;
+  await writeCache(s.tripId, owner, key, value);
+}
+
 // ---------- backup / restore (current trip: shared + your own) ----------
 export async function exportAll() {
   const s = getSession();
@@ -208,11 +226,11 @@ export async function exportAll() {
       .eq("trip_id", s.tripId).in("owner", [SHARED, s.userId]);
     if (data) rows.push(...data);
   }
-  return { app: "uk-trip-companion", version: 2, exportedAt: new Date().toISOString(), code: s?.code ?? null, rows };
+  return { app: APP_SLUG, version: 2, exportedAt: new Date().toISOString(), code: s?.code ?? null, rows };
 }
 
 export async function importAll(backup) {
-  if (!backup || backup.app !== "uk-trip-companion") throw new Error("Not a valid trip backup file");
+  if (!backup || (backup.app !== APP_SLUG && backup.app !== LEGACY_APP_SLUG)) throw new Error("Not a valid trip backup file");
   if (Array.isArray(backup.rows)) { for (const r of backup.rows) await saveKey(r.key, r.value); return; }
   if (backup.data && typeof backup.data === "object") {
     for (const [key, value] of Object.entries(backup.data)) await saveKey(key, value);

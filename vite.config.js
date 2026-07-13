@@ -11,9 +11,9 @@ export default defineConfig({
       registerType: "autoUpdate",
       includeAssets: ["apple-touch-icon.png"],
       manifest: {
-        name: "London & the Loop",
-        short_name: "UK Trip",
-        description: "UK trip companion — itinerary, outfits, packing, budget, bookings",
+        name: "Roundtrip",
+        short_name: "Roundtrip",
+        description: "Shared trip companion — itinerary, outfits, packing, budget, bookings",
         theme_color: "#1D2433",
         background_color: "#F7F5F0",
         display: "standalone",

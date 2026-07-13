@@ -1,10 +1,10 @@
--- London & the Loop — Supabase schema
+-- Roundtrip — Supabase schema (FIRST-TIME SETUP ONLY)
 -- Paste this whole file into the Supabase SQL editor and run it once.
 -- See supabase/SETUP.md for the click-by-click walkthrough.
 --
--- NOTE: this DROPS and recreates the trip tables, so it wipes any existing
--- trip data. That's fine for first-time setup. If you already have data you
--- care about, back it up first.
+-- ⚠️ DO NOT RE-RUN THIS ON A LIVE DATABASE. It DROPS and recreates the trip
+-- tables, wiping every trip, member and all synced data. Schema changes after
+-- first setup belong in supabase/migrations/ as additive SQL.
 
 drop table if exists public.trip_kv       cascade;
 drop table if exists public.trip_members  cascade;

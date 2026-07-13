@@ -1,19 +1,25 @@
 import { useState } from "react";
-import { BUDGET_GBP, GBP_TO_INR } from "../data/trip.js";
+import { useTripConfig, fmtMoney, fmtHome, currencySymbol } from "../lib/tripConfig.js";
 import { saveKey } from "../lib/storage.js";
 import SectionTitle from "../components/SectionTitle.jsx";
 import PersonBadge from "../components/PersonBadge.jsx";
 
+const CATS = ["Food", "Transport", "Stay", "Sights", "Shows", "Shopping", "Other"];
+
 export default function BudgetTab({ expenses, setExpenses, members, membersById, myId }) {
+  const config = useTripConfig();
+  const cur = config.currency || "USD";
+  const budget = config.budget ?? null;
   const [desc, setDesc] = useState("");
   const [amount, setAmount] = useState("");
   const [cat, setCat] = useState("Food");
   const [paidBy, setPaidBy] = useState(myId);
-  const CATS = ["Food", "Transport", "Stay", "Sights", "Shows", "Shopping", "Other"];
 
+  const money = (n, frac = 0) => fmtMoney(n, cur, frac);
   const spent = expenses.reduce((s, e) => s + e.amount, 0);
-  const remaining = BUDGET_GBP - spent;
-  const pct = Math.min(100, (spent / BUDGET_GBP) * 100);
+  const remaining = (budget ?? 0) - spent;
+  const pct = budget ? Math.min(100, (spent / budget) * 100) : 0;
+  const homeSpent = fmtHome(config, spent);
 
   const persist = (next) => { setExpenses(next); saveKey("trip-expenses", next); };
   const add = () => {
@@ -34,29 +40,37 @@ export default function BudgetTab({ expenses, setExpenses, members, membersById,
     return { member: m, paid, net: paid - share };
   });
 
+  const sub = budget
+    ? `Budget ${money(budget)} for the trip${config.homeCurrency ? ` · ${money(1)} ≈ ${fmtHome(config, 1)}` : ""}`
+    : `Tracking in ${cur}${config.homeCurrency ? ` · ${money(1)} ≈ ${fmtHome(config, 1)}` : ""}`;
+
   return (
     <div>
-      <SectionTitle sub={`Budget £${BUDGET_GBP.toLocaleString()} for the trip · £1 ≈ ₹${GBP_TO_INR}`}>Budget</SectionTitle>
+      <SectionTitle sub={sub}>Budget</SectionTitle>
 
       <div className="rounded-2xl border p-4 mb-4" style={{ borderColor: "#E5E2DA", backgroundColor: "#FFF" }}>
         <div className="flex items-end justify-between">
           <div>
             <div className="text-xs font-semibold uppercase tracking-wide" style={{ color: "#8A8F98" }}>Spent</div>
-            <div className="text-2xl font-bold" style={{ color: "#1D2433", fontFamily: "ui-monospace, monospace" }}>£{spent.toFixed(0)}</div>
-            <div className="text-xs" style={{ color: "#8A8F98" }}>≈ ₹{(spent * GBP_TO_INR).toLocaleString("en-IN", { maximumFractionDigits: 0 })}</div>
+            <div className="text-2xl font-bold" style={{ color: "#1D2433", fontFamily: "ui-monospace, monospace" }}>{money(spent)}</div>
+            {homeSpent && <div className="text-xs" style={{ color: "#8A8F98" }}>≈ {homeSpent}</div>}
           </div>
-          <div className="text-right">
-            <div className="text-xs font-semibold uppercase tracking-wide" style={{ color: "#8A8F98" }}>{remaining >= 0 ? "Left" : "Over"}</div>
-            <div className="text-2xl font-bold" style={{ color: remaining >= 0 ? "#2E7D4F" : "#C8102E", fontFamily: "ui-monospace, monospace" }}>£{Math.abs(remaining).toFixed(0)}</div>
+          {budget != null && (
+            <div className="text-right">
+              <div className="text-xs font-semibold uppercase tracking-wide" style={{ color: "#8A8F98" }}>{remaining >= 0 ? "Left" : "Over"}</div>
+              <div className="text-2xl font-bold" style={{ color: remaining >= 0 ? "#2E7D4F" : "#C8102E", fontFamily: "ui-monospace, monospace" }}>{money(Math.abs(remaining))}</div>
+            </div>
+          )}
+        </div>
+        {budget != null && (
+          <div className="h-2.5 rounded-full mt-3" style={{ backgroundColor: "#EDEAE2" }}>
+            <div className="h-2.5 rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: pct > 90 ? "#C8102E" : pct > 70 ? "#C77E1F" : "#2E7D4F" }} />
           </div>
-        </div>
-        <div className="h-2.5 rounded-full mt-3" style={{ backgroundColor: "#EDEAE2" }}>
-          <div className="h-2.5 rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: pct > 90 ? "#C8102E" : pct > 70 ? "#C77E1F" : "#2E7D4F" }} />
-        </div>
+        )}
         {byCat.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mt-3">
             {byCat.map((x) => (
-              <span key={x.c} className="text-[11px] font-semibold px-2 py-1 rounded-full" style={{ backgroundColor: "#F5F3EC", color: "#1D2433" }}>{x.c} £{x.total.toFixed(0)}</span>
+              <span key={x.c} className="text-[11px] font-semibold px-2 py-1 rounded-full" style={{ backgroundColor: "#F5F3EC", color: "#1D2433" }}>{x.c} {money(x.total)}</span>
             ))}
           </div>
         )}
@@ -71,10 +85,10 @@ export default function BudgetTab({ expenses, setExpenses, members, membersById,
               <div key={member.user_id} className="flex items-center justify-between">
                 <span className="inline-flex items-center gap-2">
                   <PersonBadge member={member} size="xs" />
-                  <span className="text-[11px]" style={{ color: "#8A8F98" }}>paid £{paid.toFixed(0)}</span>
+                  <span className="text-[11px]" style={{ color: "#8A8F98" }}>paid {money(paid)}</span>
                 </span>
                 <span className="text-xs font-bold" style={{ color: Math.abs(net) < 0.5 ? "#2E7D4F" : net > 0 ? "#2E7D4F" : "#C8102E" }}>
-                  {Math.abs(net) < 0.5 ? "settled" : net > 0 ? `owed £${net.toFixed(0)}` : `owes £${(-net).toFixed(0)}`}
+                  {Math.abs(net) < 0.5 ? "settled" : net > 0 ? `owed ${money(net)}` : `owes ${money(-net)}`}
                 </span>
               </div>
             ))}
@@ -85,7 +99,7 @@ export default function BudgetTab({ expenses, setExpenses, members, membersById,
       <div className="rounded-2xl border p-4 mb-4" style={{ borderColor: "#E5E2DA", backgroundColor: "#FFF" }}>
         <div className="flex gap-2 mb-2">
           <input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="What was it?" className="flex-1 text-sm rounded-xl border px-3 py-2.5" style={{ borderColor: "#E5E2DA", backgroundColor: "#FAF9F6", color: "#1D2433" }} />
-          <input value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="£" inputMode="decimal" className="w-20 text-sm rounded-xl border px-3 py-2.5" style={{ borderColor: "#E5E2DA", backgroundColor: "#FAF9F6", color: "#1D2433" }} />
+          <input value={amount} onChange={(e) => setAmount(e.target.value)} placeholder={currencySymbol(cur)} inputMode="decimal" className="w-20 text-sm rounded-xl border px-3 py-2.5" style={{ borderColor: "#E5E2DA", backgroundColor: "#FAF9F6", color: "#1D2433" }} />
         </div>
         <div className="flex gap-1.5 flex-wrap mb-3">
           {CATS.map((c) => (
@@ -110,11 +124,11 @@ export default function BudgetTab({ expenses, setExpenses, members, membersById,
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium truncate" style={{ color: "#1D2433" }}>{e.desc}</div>
                 <div className="text-[11px] flex items-center gap-1.5" style={{ color: "#8A8F98" }}>
-                  {e.cat} · {new Date(e.ts).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+                  {e.cat} · {new Date(e.ts).toLocaleDateString(undefined, { day: "numeric", month: "short" })}
                   {e.paidBy && <PersonBadge member={membersById[e.paidBy]} size="xs" />}
                 </div>
               </div>
-              <div className="text-sm font-bold" style={{ color: "#1D2433", fontFamily: "ui-monospace, monospace" }}>£{e.amount.toFixed(2)}</div>
+              <div className="text-sm font-bold" style={{ color: "#1D2433", fontFamily: "ui-monospace, monospace" }}>{money(e.amount, 2)}</div>
               <button onClick={() => remove(e.id)} className="text-xs px-1" style={{ color: "#C9C5BB" }}>✕</button>
             </div>
           ))}
