@@ -98,6 +98,21 @@ export function softOf(hex) {
   return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, "0").toUpperCase()}`;
 }
 
+// Theme-aware pastel derived from a leg colour at render time. (Configs also
+// carry a stored `soft` hex from softOf(), but that's white-mixed and wrong in
+// dark mode — prefer this for backgrounds.)
+export const softBg = (color) => `color-mix(in srgb, ${color || "#8A8F98"} 14%, var(--card))`;
+
+// Cover-art fallback: a gradient built from the trip's leg colours, used
+// wherever a trip has no cover photo (offline, no Unsplash key, user choice).
+export function legGradient(config) {
+  const colors = (config?.legOrder || []).map((k) => config.legs?.[k]?.color).filter(Boolean);
+  if (!colors.length) return "linear-gradient(135deg, #1D2433 0%, #C8102E 100%)";
+  const last = Math.max(colors.length - 1, 1);
+  const stops = colors.map((c, i) => `${c} ${Math.round((i / last) * 100)}%`);
+  return `linear-gradient(135deg, ${stops.join(", ")})`;
+}
+
 export const slugify = (name) =>
   name.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "place";
 

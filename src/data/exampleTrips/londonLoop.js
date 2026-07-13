@@ -8,7 +8,7 @@ export const GBP_TO_INR = 127;
 export const BUDGET_GBP = 3415;
 
 export const LEGS = {
-  london: { name: "London", color: "#C8102E", soft: "#FBE9EC", lat: 51.5074, lon: -0.1278, norm: { tempMax: 23, tempMin: 14, precipProb: 30, code: 2 } },
+  london: { name: "London", color: "#C8102E", soft: "var(--danger-soft)", lat: 51.5074, lon: -0.1278, norm: { tempMax: 23, tempMin: 14, precipProb: 30, code: 2 } },
   bath: { name: "Bath", color: "#C77E1F", soft: "#FBF1E2", lat: 51.3811, lon: -2.3590, norm: { tempMax: 22, tempMin: 13, precipProb: 35, code: 2 } },
   lakes: { name: "Lake District", color: "#2E7D4F", soft: "#E7F3EC", lat: 54.3807, lon: -2.9066, norm: { tempMax: 19, tempMin: 11, precipProb: 55, code: 61 } },
   edinburgh: { name: "Edinburgh", color: "#5B3B8C", soft: "#EFE9F7", lat: 55.9533, lon: -3.1883, norm: { tempMax: 19, tempMin: 11, precipProb: 45, code: 3 } },

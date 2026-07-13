@@ -2,7 +2,7 @@ import { useState } from "react";
 import { isGuest, linkEmailStart, linkEmailVerify, linkGoogle, signInEmailStart, signInEmailVerify, signInGoogle, signOut } from "../lib/auth.js";
 import { APP_NAME, ACCENT, INK, MUTED } from "../theme.js";
 
-const inputStyle = { borderColor: "#E5E2DA", backgroundColor: "#FAF9F6", color: INK };
+const inputStyle = { borderColor: "var(--border)", backgroundColor: "var(--field)", color: INK };
 
 // Bottom-sheet for account state. Two modes:
 //  - mode="link"   (default): guest saves their account / linked user manages it
@@ -19,7 +19,13 @@ export default function AccountSheet({ user, mode = "link", onClose, onChanged }
   const run = async (fn, nextStage) => {
     setBusy(true); setError("");
     try { await fn(); if (nextStage) setStage(nextStage); }
-    catch (e) { setError(e.message || "Something went wrong."); }
+    catch (e) {
+      const msg = e.message || "Something went wrong.";
+      if (/manual linking/i.test(msg)) {
+        console.warn('Roundtrip setup: enable "Allow manual linking" in Supabase → Authentication → Settings so guests can link Google/email to their existing anonymous user.');
+      }
+      setError(msg);
+    }
     setBusy(false);
   };
 
@@ -41,7 +47,7 @@ export default function AccountSheet({ user, mode = "link", onClose, onChanged }
 
   return (
     <div className="fixed inset-0 z-40 flex items-end sm:items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.4)" }} onClick={onClose}>
-      <div className="w-full max-w-sm m-4 rounded-2xl p-5" style={{ backgroundColor: "#FFF" }} onClick={(e) => e.stopPropagation()}>
+      <div className="w-full max-w-sm m-4 rounded-2xl p-5" style={{ backgroundColor: "var(--card)" }} onClick={(e) => e.stopPropagation()}>
         {signin ? (
           <>
             <h2 className="text-base font-bold mb-1" style={{ color: INK }}>Sign in</h2>
@@ -60,7 +66,7 @@ export default function AccountSheet({ user, mode = "link", onClose, onChanged }
             <p className="text-xs mb-4" style={{ color: MUTED }}>
               Signed in as <span className="font-semibold" style={{ color: INK }}>{user?.email}</span>. Your trips follow this account onto any device.
             </p>
-            <button onClick={doSignOut} disabled={busy} className="w-full text-sm font-bold py-2.5 rounded-full border mb-2" style={{ borderColor: "#E5E2DA", color: ACCENT }}>
+            <button onClick={doSignOut} disabled={busy} className="w-full text-sm font-bold py-2.5 rounded-full border mb-2" style={{ borderColor: "var(--border)", color: ACCENT }}>
               {busy ? "…" : "Sign out"}
             </button>
             <button onClick={onClose} className="w-full text-sm font-semibold py-2 rounded-full" style={{ color: MUTED }}>Close</button>
@@ -70,13 +76,13 @@ export default function AccountSheet({ user, mode = "link", onClose, onChanged }
 
         {(signin || guest) && stage === "start" && (
           <>
-            <button onClick={google} disabled={busy} className="w-full text-sm font-bold py-3 rounded-full border mb-3 flex items-center justify-center gap-2" style={{ borderColor: "#E5E2DA", color: INK }}>
+            <button onClick={google} disabled={busy} className="w-full text-sm font-bold py-3 rounded-full border mb-3 flex items-center justify-center gap-2" style={{ borderColor: "var(--border)", color: INK }}>
               <GoogleG /> Continue with Google
             </button>
             <div className="flex items-center gap-3 mb-3">
-              <div className="flex-1 h-px" style={{ backgroundColor: "#E5E2DA" }} />
-              <span className="text-[11px] font-semibold" style={{ color: "#B8B5AD" }}>or with email</span>
-              <div className="flex-1 h-px" style={{ backgroundColor: "#E5E2DA" }} />
+              <div className="flex-1 h-px" style={{ backgroundColor: "var(--border)" }} />
+              <span className="text-[11px] font-semibold" style={{ color: "var(--faint)" }}>or with email</span>
+              <div className="flex-1 h-px" style={{ backgroundColor: "var(--border)" }} />
             </div>
             <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="you@example.com" inputMode="email"
               onKeyDown={(e) => e.key === "Enter" && sendCode()}

@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef } from "react";
-import { generateDays, listDates, softOf, slugify } from "../lib/tripConfig.js";
+import { generateDays, listDates, softOf, slugify, legGradient } from "../lib/tripConfig.js";
 import { searchPlaces } from "../lib/geocode.js";
+import { searchCoverPhotos, trackDownload, asCover, unsplashEnabled } from "../lib/unsplash.js";
 import { CURRENCIES } from "../data/currencies.js";
 import { COLORS } from "../lib/session.js";
 import { ACCENT, INK, MUTED } from "../theme.js";
 
 const MAX_TRIP_DAYS = 60;
-const inputStyle = { borderColor: "#E5E2DA", backgroundColor: "#FAF9F6", color: INK };
+const inputStyle = { borderColor: "var(--border)", backgroundColor: "var(--field)", color: INK };
 
 // Trip settings modal: title, dates, money, destinations. Saving rebuilds the
 // day list for the (possibly new) date range while preserving each existing
@@ -23,6 +24,9 @@ export default function TripSettings({ config, onSave, onClose }) {
   const [budget, setBudget] = useState(config.budget != null ? String(config.budget) : "");
   const [legs, setLegs] = useState(config.legs);
   const [legOrder, setLegOrder] = useState(config.legOrder);
+  const [cover, setCover] = useState(config.cover || null);
+  const [coverChoices, setCoverChoices] = useState(null);
+  const [coverBusy, setCoverBusy] = useState(false);
   const [error, setError] = useState("");
 
   // destination search
@@ -80,6 +84,7 @@ export default function TripSettings({ config, onSave, onClose }) {
       homeCurrency: homeOn ? homeCurrency : null,
       homeRate: homeOn ? parseFloat(homeRate) : null,
       budget: parseFloat(budget) > 0 ? parseFloat(budget) : null,
+      cover,
       legs,
       legOrder: legOrder.length ? legOrder : uniqueLegKeys,
       days: days.map((d) => (legs[d.leg] ? d : { ...d, leg: fallbackLeg })),
@@ -91,7 +96,7 @@ export default function TripSettings({ config, onSave, onClose }) {
 
   return (
     <div className="fixed inset-0 z-40 flex items-end sm:items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.4)" }} onClick={onClose}>
-      <div className="w-full max-w-sm m-4 rounded-2xl p-5 overflow-y-auto" style={{ backgroundColor: "#FFF", maxHeight: "85vh" }} onClick={(e) => e.stopPropagation()}>
+      <div className="w-full max-w-sm m-4 rounded-2xl p-5 overflow-y-auto" style={{ backgroundColor: "var(--card)", maxHeight: "85vh" }} onClick={(e) => e.stopPropagation()}>
         <h2 className="text-base font-bold mb-4" style={{ color: INK }}>Trip settings</h2>
 
         {label("Trip name")}
@@ -111,7 +116,7 @@ export default function TripSettings({ config, onSave, onClose }) {
           </div>
         </div>
         {(startDate !== config.startDate || endDate !== config.endDate) && (
-          <p className="text-[11px] mb-3" style={{ color: "#8A6D1A" }}>
+          <p className="text-[11px] mb-3" style={{ color: "var(--warn-ink)" }}>
             Changing dates re-generates the day list. Notes and outfits on removed dates are kept and come back if the dates return.
           </p>
         )}
@@ -123,7 +128,7 @@ export default function TripSettings({ config, onSave, onClose }) {
 
         <div className="flex items-center justify-between mb-2">
           <span className="text-sm font-semibold" style={{ color: INK }}>Second currency</span>
-          <button onClick={() => setHomeOn(!homeOn)} className="w-11 h-6 rounded-full relative transition-colors" style={{ backgroundColor: homeOn ? "#2E7D4F" : "#D8D5CC" }}>
+          <button onClick={() => setHomeOn(!homeOn)} className="w-11 h-6 rounded-full relative transition-colors" style={{ backgroundColor: homeOn ? "#2E7D4F" : "var(--chip)" }}>
             <span className="absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all" style={{ left: homeOn ? 22 : 2 }} />
           </button>
         </div>
@@ -141,21 +146,64 @@ export default function TripSettings({ config, onSave, onClose }) {
         <input value={budget} onChange={(e) => setBudget(e.target.value)} inputMode="decimal" placeholder="No budget bar when empty"
           className="mt-1 mb-4 w-full text-sm rounded-xl border px-4 py-2.5" style={inputStyle} />
 
+        <div className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: MUTED }}>Cover photo</div>
+        <div className="rounded-xl overflow-hidden mb-2 relative" style={{ height: 72 }}>
+          <div className="absolute inset-0" style={cover?.url
+            ? { backgroundImage: `url("${cover.url}")`, backgroundSize: "cover", backgroundPosition: "center" }
+            : { background: legGradient({ legs, legOrder }) }} />
+          {cover?.author && (
+            <span className="absolute bottom-1 right-2 text-[9px]" style={{ color: "rgba(255,255,255,0.75)" }}>Photo: {cover.author} / Unsplash</span>
+          )}
+        </div>
+        <div className="flex gap-2 mb-2">
+          {unsplashEnabled && (
+            <button onClick={async () => {
+              setCoverBusy(true);
+              try { setCoverChoices(await searchCoverPhotos(`${legs[uniqueLegKeys[0]]?.name || title} travel`)); }
+              catch { setCoverChoices([]); }
+              setCoverBusy(false);
+            }} className="text-xs font-bold px-3 py-1.5 rounded-full border" style={{ borderColor: "var(--border)", color: INK }}>
+              {coverBusy ? "Searching…" : "Choose a photo"}
+            </button>
+          )}
+          {cover && (
+            <button onClick={() => { setCover(null); setCoverChoices(null); }} className="text-xs font-semibold px-3 py-1.5 rounded-full" style={{ color: MUTED }}>
+              Use colours instead
+            </button>
+          )}
+        </div>
+        {coverChoices !== null && (
+          coverChoices.length === 0 ? (
+            <p className="text-[11px] mb-3" style={{ color: MUTED }}>No photos found — the colour gradient will be used.</p>
+          ) : (
+            <div className="grid grid-cols-3 gap-1.5 mb-3">
+              {coverChoices.map((p, i) => (
+                <button key={i} onClick={() => { setCover(asCover(p)); trackDownload(p); }} className="rounded-lg overflow-hidden" style={{ height: 52, outline: cover?.url === p.url ? "3px solid #C8102E" : "none" }}>
+                  <img src={p.thumb} alt={`Photo by ${p.author}`} className="w-full h-full object-cover" loading="lazy" />
+                </button>
+              ))}
+            </div>
+          )
+        )}
+        {!unsplashEnabled && (
+          <p className="text-[11px] mb-3" style={{ color: MUTED }}>Covers use your destination colours. Add an Unsplash key to pick real photos — see README.</p>
+        )}
+
         <div className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: MUTED }}>Destinations</div>
         {uniqueLegKeys.map((key) => {
           const L = legs[key];
           if (!L) return null;
           return (
-            <div key={key} className="rounded-xl border p-3 mb-2" style={{ borderColor: "#E5E2DA" }}>
+            <div key={key} className="rounded-xl border p-3 mb-2" style={{ borderColor: "var(--border)" }}>
               <div className="flex items-center gap-2">
                 <input value={L.name} onChange={(e) => renameLeg(key, e.target.value)} maxLength={30}
                   className="flex-1 text-sm rounded-lg border px-2.5 py-1.5" style={inputStyle} />
-                <button onClick={() => removeLeg(key)} className="text-xs px-1" style={{ color: "#C9C5BB" }}>✕</button>
+                <button onClick={() => removeLeg(key)} className="text-xs px-1" style={{ color: "var(--faint)" }}>✕</button>
               </div>
               <div className="flex gap-1.5 mt-2">
                 {COLORS.map((c) => (
                   <button key={c} onClick={() => recolorLeg(key, c)} className="w-6 h-6 rounded-full"
-                    style={{ backgroundColor: c, outline: L.color === c ? "2px solid #1D2433" : "none", outlineOffset: 1 }} />
+                    style={{ backgroundColor: c, outline: L.color === c ? "2px solid var(--ink)" : "none", outlineOffset: 1 }} />
                 ))}
               </div>
             </div>
@@ -164,7 +212,7 @@ export default function TripSettings({ config, onSave, onClose }) {
         <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Add a destination…"
           className="w-full text-sm rounded-xl border px-4 py-2.5" style={inputStyle} />
         {results.map((r, i) => (
-          <button key={i} onClick={() => addLeg(r)} className="w-full text-left rounded-xl border px-3 py-2 mt-1.5 text-sm" style={{ borderColor: "#E5E2DA", color: INK }}>
+          <button key={i} onClick={() => addLeg(r)} className="w-full text-left rounded-xl border px-3 py-2 mt-1.5 text-sm" style={{ borderColor: "var(--border)", color: INK }}>
             <span className="font-semibold">{r.name}</span>
             <span style={{ color: MUTED }}> · {[r.admin1, r.country].filter(Boolean).join(", ")}</span>
           </button>

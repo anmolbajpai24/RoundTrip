@@ -6,10 +6,10 @@ import { loadSession, getSession, ensureAuth, loadMembers, setProfile, leaveToHo
 import { currentUser } from "./lib/auth.js";
 import BackupControls from "./components/BackupControls.jsx";
 import TripGate from "./components/TripGate.jsx";
+import Onboarding, { hasOnboarded } from "./components/Onboarding.jsx";
 import TripsHome from "./components/TripsHome.jsx";
 import TripWizard from "./components/TripWizard.jsx";
 import TripSettings from "./components/TripSettings.jsx";
-import AccountSheet from "./components/AccountSheet.jsx";
 import LegacyUpgrade from "./components/LegacyUpgrade.jsx";
 import PersonBadge from "./components/PersonBadge.jsx";
 import ItineraryTab from "./tabs/ItineraryTab.jsx";
@@ -38,12 +38,13 @@ export default function App() {
   const [packingAll, setPackingAll] = useState({});    // { ownerId: [items] }
   const [expenses, setExpenses] = useState([]);        // shared
   const [bookings, setBookings] = useState([]);        // shared
+  const [documents, setDocuments] = useState([]);      // shared file metadata
   const [outfitDay, setOutfitDay] = useState(null);    // ISO date
   const [weather, setWeather] = useState(null);        // shared { v, fetchedAt, days }
   const [editingProfile, setEditingProfile] = useState(false);
   const [editingTrip, setEditingTrip] = useState(false);
-  const [accountOpen, setAccountOpen] = useState(false);
   const [wizardProfile, setWizardProfile] = useState(undefined); // undefined = closed
+  const [onboarded, setOnboarded] = useState(true);
 
   const myId = session?.userId;
   const membersById = useMemo(() => Object.fromEntries(members.map((m) => [m.user_id, m])), [members]);
@@ -56,6 +57,7 @@ export default function App() {
       const s = await loadSession();
       setSession(s);
       setAuthUser(await currentUser().catch(() => null));
+      setOnboarded(hasOnboarded());
       setBooted(true);
     })();
   }, []);
@@ -70,7 +72,7 @@ export default function App() {
     (async () => {
       await ensureAuth().catch(() => {});
       flushOutbox();
-      const [cfg, mem, ov, notes, packs, outs, ex, bk, wx] = await Promise.all([
+      const [cfg, mem, ov, notes, packs, outs, ex, bk, docs, wx] = await Promise.all([
         loadKey(CONFIG_KEY, null),
         loadMembers(),
         loadKey("trip-itinerary", {}),
@@ -79,6 +81,7 @@ export default function App() {
         loadOutfitsAll(),
         loadKey("trip-expenses", []),
         loadKey("trip-bookings", null),
+        loadKey("trip-documents", []),
         loadKey("trip-weather", null),
       ]);
       setConfig(cfg);
@@ -94,6 +97,7 @@ export default function App() {
       setPackingAll(packs);
       setExpenses(ex || []);
       setBookings(bk || []);
+      setDocuments(docs || []);
       setLoaded(true);
       unsub = subscribe(onRemoteChange);
       unsubMembers = subscribeMembers(async () => setMembers(await loadMembers()));
@@ -110,6 +114,7 @@ export default function App() {
       else if (key === "trip-itinerary") setOverrides(value || {});
       else if (key === "trip-expenses") setExpenses(value || []);
       else if (key === "trip-bookings") setBookings(value || []);
+      else if (key === "trip-documents") setDocuments(value || []);
       else if (key === "trip-weather") setWeather(value || null);
       return;
     }
@@ -143,16 +148,16 @@ export default function App() {
     }
     if (authUser) {
       return (
-        <>
-          <TripsHome
-            user={authUser}
-            onOpen={() => setSession(getSession())}
-            onNew={(profile) => setWizardProfile(profile)}
-            onAccount={() => setAccountOpen(true)}
-          />
-          {accountOpen && <AccountSheet user={authUser} onClose={() => setAccountOpen(false)} onChanged={refreshAuth} />}
-        </>
+        <TripsHome
+          user={authUser}
+          onOpen={() => setSession(getSession())}
+          onNew={(profile) => setWizardProfile(profile)}
+          onAuthChanged={refreshAuth}
+        />
       );
+    }
+    if (!onboarded) {
+      return <Onboarding onDone={() => setOnboarded(true)} />;
     }
     return <TripGate onReady={() => { setSession(getSession()); refreshAuth(); }} />;
   }
@@ -176,9 +181,9 @@ export default function App() {
 
   return (
     <TripConfigContext.Provider value={config}>
-    <div className="min-h-screen" style={{ backgroundColor: "#F7F5F0", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
+    <div className="min-h-screen" style={{ backgroundColor: "var(--bg)", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
       {/* Header */}
-      <div className="px-4 pt-5 pb-3" style={{ backgroundColor: "#1D2433" }}>
+      <div className="px-4 pt-5 pb-3" style={{ backgroundColor: "var(--solid)" }}>
         <div className="flex items-center justify-between">
           <div className="min-w-0">
             <button onClick={goHome} className="text-[11px] font-bold uppercase tracking-widest flex items-center gap-1" style={{ color: ACCENT }}>
@@ -259,17 +264,17 @@ export default function App() {
           <BudgetTab expenses={expenses} setExpenses={setExpenses} members={members} membersById={membersById} myId={myId} />
         )}
         {tab === "bookings" && (
-          <BookingsTab bookings={bookings} setBookings={setBookings} membersById={membersById} myId={myId} />
+          <BookingsTab bookings={bookings} setBookings={setBookings} documents={documents} setDocuments={setDocuments} membersById={membersById} myId={myId} />
         )}
       </div>
 
       {/* Bottom nav */}
-      <div className="fixed bottom-0 left-0 right-0 border-t" style={{ backgroundColor: "#FFFFFF", borderColor: "#E5E2DA", paddingBottom: "env(safe-area-inset-bottom)" }}>
+      <div className="fixed bottom-0 left-0 right-0 border-t" style={{ backgroundColor: "var(--card)", borderColor: "var(--border)", paddingBottom: "env(safe-area-inset-bottom)" }}>
         <div className="flex max-w-lg mx-auto">
           {TABS.map((t) => (
             <button key={t.id} onClick={() => setTab(t.id)} className="flex-1 py-2.5 flex flex-col items-center gap-0.5">
               <span className="text-lg" style={{ filter: tab === t.id ? "none" : "grayscale(1) opacity(0.5)" }}>{t.icon}</span>
-              <span className="text-[10px] font-bold" style={{ color: tab === t.id ? ACCENT : "#B8B5AD" }}>{t.label}</span>
+              <span className="text-[10px] font-bold" style={{ color: tab === t.id ? ACCENT : "var(--faint)" }}>{t.label}</span>
             </button>
           ))}
         </div>
@@ -281,7 +286,7 @@ export default function App() {
 
 function Splash({ text }) {
   return (
-    <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: "#F7F5F0" }}>
+    <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: "var(--bg)" }}>
       <div className="text-center">
         <div className="text-3xl mb-2">✈️</div>
         <div className="text-sm font-semibold" style={{ color: MUTED }}>{text}</div>
@@ -302,16 +307,16 @@ function ProfileEditor({ session, onClose, onSaved }) {
   };
   return (
     <div className="fixed inset-0 z-30 flex items-end sm:items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.4)" }} onClick={onClose}>
-      <div className="w-full max-w-sm m-4 rounded-2xl p-5" style={{ backgroundColor: "#FFF" }} onClick={(e) => e.stopPropagation()}>
+      <div className="w-full max-w-sm m-4 rounded-2xl p-5" style={{ backgroundColor: "var(--card)" }} onClick={(e) => e.stopPropagation()}>
         <h2 className="text-base font-bold mb-3" style={{ color: INK }}>Your profile</h2>
         <label className="text-xs font-bold uppercase tracking-wide" style={{ color: MUTED }}>Name</label>
         <input value={name} onChange={(e) => setName(e.target.value)} maxLength={24}
-          className="mt-1 mb-4 w-full text-sm rounded-xl border px-4 py-3" style={{ borderColor: "#E5E2DA", backgroundColor: "#FAF9F6", color: INK }} />
+          className="mt-1 mb-4 w-full text-sm rounded-xl border px-4 py-3" style={{ borderColor: "var(--border)", backgroundColor: "var(--field)", color: INK }} />
         <div className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: MUTED }}>Colour</div>
         <div className="flex gap-2 mb-5">
           {COLORS.map((c) => (
             <button key={c} onClick={() => setColor(c)} className="w-9 h-9 rounded-full flex items-center justify-center"
-              style={{ backgroundColor: c, outline: color === c ? "3px solid #1D2433" : "none", outlineOffset: 2 }}>
+              style={{ backgroundColor: c, outline: color === c ? "3px solid var(--ink)" : "none", outlineOffset: 2 }}>
               {color === c && <span className="text-white text-sm font-bold">✓</span>}
             </button>
           ))}

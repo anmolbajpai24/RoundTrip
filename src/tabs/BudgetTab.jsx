@@ -48,29 +48,29 @@ export default function BudgetTab({ expenses, setExpenses, members, membersById,
     <div>
       <SectionTitle sub={sub}>Budget</SectionTitle>
 
-      <div className="rounded-2xl border p-4 mb-4" style={{ borderColor: "#E5E2DA", backgroundColor: "#FFF" }}>
+      <div className="rounded-2xl border p-4 mb-4" style={{ borderColor: "var(--border)", backgroundColor: "var(--card)" }}>
         <div className="flex items-end justify-between">
           <div>
-            <div className="text-xs font-semibold uppercase tracking-wide" style={{ color: "#8A8F98" }}>Spent</div>
-            <div className="text-2xl font-bold" style={{ color: "#1D2433", fontFamily: "ui-monospace, monospace" }}>{money(spent)}</div>
-            {homeSpent && <div className="text-xs" style={{ color: "#8A8F98" }}>≈ {homeSpent}</div>}
+            <div className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--muted)" }}>Spent</div>
+            <div className="text-2xl font-bold" style={{ color: "var(--ink)", fontFamily: "ui-monospace, monospace" }}>{money(spent)}</div>
+            {homeSpent && <div className="text-xs" style={{ color: "var(--muted)" }}>≈ {homeSpent}</div>}
           </div>
           {budget != null && (
             <div className="text-right">
-              <div className="text-xs font-semibold uppercase tracking-wide" style={{ color: "#8A8F98" }}>{remaining >= 0 ? "Left" : "Over"}</div>
+              <div className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--muted)" }}>{remaining >= 0 ? "Left" : "Over"}</div>
               <div className="text-2xl font-bold" style={{ color: remaining >= 0 ? "#2E7D4F" : "#C8102E", fontFamily: "ui-monospace, monospace" }}>{money(Math.abs(remaining))}</div>
             </div>
           )}
         </div>
         {budget != null && (
-          <div className="h-2.5 rounded-full mt-3" style={{ backgroundColor: "#EDEAE2" }}>
+          <div className="h-2.5 rounded-full mt-3" style={{ backgroundColor: "var(--chip)" }}>
             <div className="h-2.5 rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: pct > 90 ? "#C8102E" : pct > 70 ? "#C77E1F" : "#2E7D4F" }} />
           </div>
         )}
         {byCat.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mt-3">
             {byCat.map((x) => (
-              <span key={x.c} className="text-[11px] font-semibold px-2 py-1 rounded-full" style={{ backgroundColor: "#F5F3EC", color: "#1D2433" }}>{x.c} {money(x.total)}</span>
+              <span key={x.c} className="text-[11px] font-semibold px-2 py-1 rounded-full" style={{ backgroundColor: "var(--chip)", color: "var(--ink)" }}>{x.c} {money(x.total)}</span>
             ))}
           </div>
         )}
@@ -78,14 +78,14 @@ export default function BudgetTab({ expenses, setExpenses, members, membersById,
 
       {/* Settle-up */}
       {members.length > 1 && spent > 0 && (
-        <div className="rounded-2xl border p-4 mb-4" style={{ borderColor: "#E5E2DA", backgroundColor: "#FFF" }}>
-          <div className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: "#8A8F98" }}>Who paid · settle up</div>
+        <div className="rounded-2xl border p-4 mb-4" style={{ borderColor: "var(--border)", backgroundColor: "var(--card)" }}>
+          <div className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: "var(--muted)" }}>Who paid · settle up</div>
           <div className="space-y-2">
             {balances.map(({ member, paid, net }) => (
               <div key={member.user_id} className="flex items-center justify-between">
                 <span className="inline-flex items-center gap-2">
                   <PersonBadge member={member} size="xs" />
-                  <span className="text-[11px]" style={{ color: "#8A8F98" }}>paid {money(paid)}</span>
+                  <span className="text-[11px]" style={{ color: "var(--muted)" }}>paid {money(paid)}</span>
                 </span>
                 <span className="text-xs font-bold" style={{ color: Math.abs(net) < 0.5 ? "#2E7D4F" : net > 0 ? "#2E7D4F" : "#C8102E" }}>
                   {Math.abs(net) < 0.5 ? "settled" : net > 0 ? `owed ${money(net)}` : `owes ${money(-net)}`}
@@ -96,40 +96,40 @@ export default function BudgetTab({ expenses, setExpenses, members, membersById,
         </div>
       )}
 
-      <div className="rounded-2xl border p-4 mb-4" style={{ borderColor: "#E5E2DA", backgroundColor: "#FFF" }}>
+      <div className="rounded-2xl border p-4 mb-4" style={{ borderColor: "var(--border)", backgroundColor: "var(--card)" }}>
         <div className="flex gap-2 mb-2">
-          <input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="What was it?" className="flex-1 text-sm rounded-xl border px-3 py-2.5" style={{ borderColor: "#E5E2DA", backgroundColor: "#FAF9F6", color: "#1D2433" }} />
-          <input value={amount} onChange={(e) => setAmount(e.target.value)} placeholder={currencySymbol(cur)} inputMode="decimal" className="w-20 text-sm rounded-xl border px-3 py-2.5" style={{ borderColor: "#E5E2DA", backgroundColor: "#FAF9F6", color: "#1D2433" }} />
+          <input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="What was it?" className="flex-1 text-sm rounded-xl border px-3 py-2.5" style={{ borderColor: "var(--border)", backgroundColor: "var(--field)", color: "var(--ink)" }} />
+          <input value={amount} onChange={(e) => setAmount(e.target.value)} placeholder={currencySymbol(cur)} inputMode="decimal" className="w-20 text-sm rounded-xl border px-3 py-2.5" style={{ borderColor: "var(--border)", backgroundColor: "var(--field)", color: "var(--ink)" }} />
         </div>
         <div className="flex gap-1.5 flex-wrap mb-3">
           {CATS.map((c) => (
-            <button key={c} onClick={() => setCat(c)} className="text-[11px] font-semibold px-2.5 py-1.5 rounded-full border" style={{ borderColor: cat === c ? "#1D2433" : "#E5E2DA", backgroundColor: cat === c ? "#1D2433" : "#FFF", color: cat === c ? "#FFF" : "#8A8F98" }}>{c}</button>
+            <button key={c} onClick={() => setCat(c)} className="text-[11px] font-semibold px-2.5 py-1.5 rounded-full border" style={{ borderColor: cat === c ? "var(--solid)" : "var(--border)", backgroundColor: cat === c ? "var(--solid)" : "var(--card)", color: cat === c ? "#FFF" : "var(--muted)" }}>{c}</button>
           ))}
         </div>
         <div className="flex items-center gap-2 mb-3 flex-wrap">
-          <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "#8A8F98" }}>Paid by</span>
+          <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--muted)" }}>Paid by</span>
           {members.map((m) => (
-            <button key={m.user_id} onClick={() => setPaidBy(m.user_id)} className="text-[11px] font-semibold px-3 py-1.5 rounded-full border" style={{ borderColor: paidBy === m.user_id ? m.color : "#E5E2DA", backgroundColor: paidBy === m.user_id ? m.color : "#FFF", color: paidBy === m.user_id ? "#FFF" : "#8A8F98" }}>{m.name}</button>
+            <button key={m.user_id} onClick={() => setPaidBy(m.user_id)} className="text-[11px] font-semibold px-3 py-1.5 rounded-full border" style={{ borderColor: paidBy === m.user_id ? m.color : "var(--border)", backgroundColor: paidBy === m.user_id ? m.color : "var(--card)", color: paidBy === m.user_id ? "#FFF" : "var(--muted)" }}>{m.name}</button>
           ))}
         </div>
         <button onClick={add} className="w-full text-sm font-bold text-white py-2.5 rounded-full" style={{ backgroundColor: "#C8102E" }}>Add expense</button>
       </div>
 
       {expenses.length === 0 ? (
-        <p className="text-sm text-center py-6" style={{ color: "#B8B5AD" }}>No expenses yet — log your first coffee.</p>
+        <p className="text-sm text-center py-6" style={{ color: "var(--faint)" }}>No expenses yet — log your first coffee.</p>
       ) : (
-        <div className="rounded-2xl border overflow-hidden" style={{ borderColor: "#E5E2DA", backgroundColor: "#FFF" }}>
+        <div className="rounded-2xl border overflow-hidden" style={{ borderColor: "var(--border)", backgroundColor: "var(--card)" }}>
           {expenses.map((e, i) => (
-            <div key={e.id} className="flex items-center gap-3 px-4 py-3" style={{ borderBottom: i < expenses.length - 1 ? "1px solid #F0EDE6" : "none" }}>
+            <div key={e.id} className="flex items-center gap-3 px-4 py-3" style={{ borderBottom: i < expenses.length - 1 ? "1px solid var(--divider)" : "none" }}>
               <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium truncate" style={{ color: "#1D2433" }}>{e.desc}</div>
-                <div className="text-[11px] flex items-center gap-1.5" style={{ color: "#8A8F98" }}>
+                <div className="text-sm font-medium truncate" style={{ color: "var(--ink)" }}>{e.desc}</div>
+                <div className="text-[11px] flex items-center gap-1.5" style={{ color: "var(--muted)" }}>
                   {e.cat} · {new Date(e.ts).toLocaleDateString(undefined, { day: "numeric", month: "short" })}
                   {e.paidBy && <PersonBadge member={membersById[e.paidBy]} size="xs" />}
                 </div>
               </div>
-              <div className="text-sm font-bold" style={{ color: "#1D2433", fontFamily: "ui-monospace, monospace" }}>{money(e.amount, 2)}</div>
-              <button onClick={() => remove(e.id)} className="text-xs px-1" style={{ color: "#C9C5BB" }}>✕</button>
+              <div className="text-sm font-bold" style={{ color: "var(--ink)", fontFamily: "ui-monospace, monospace" }}>{money(e.amount, 2)}</div>
+              <button onClick={() => remove(e.id)} className="text-xs px-1" style={{ color: "var(--faint)" }}>✕</button>
             </div>
           ))}
         </div>

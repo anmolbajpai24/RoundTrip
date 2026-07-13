@@ -1,9 +1,10 @@
 # Roundtrip — shared trip companion
 
 Plan a trip together and carry it with you: itinerary with per-day weather and
-outfit advice, outfit planner with photos, packing lists, shared budget with
-settle-up, and a booking checklist. Create a trip in the app, share a 6-letter
-code, and everyone stays in sync in near real-time.
+outfit advice, a trip map, outfit planner with photos, packing lists, shared
+budget with settle-up, a booking checklist, and a documents wallet for tickets
+and PDFs. Create a trip in the app, share a 6-letter code, and everyone stays
+in sync in near real-time. Light and dark themes.
 
 Built with Vite + React + Tailwind CSS on Supabase (anonymous-first auth with
 optional email/Google account linking). Installable as a PWA — works offline.
@@ -20,8 +21,23 @@ npm run dev
 The app uses a free [Supabase](https://supabase.com) project for sync + auth.
 Follow [`supabase/SETUP.md`](supabase/SETUP.md): create the project, run
 [`supabase/schema.sql`](supabase/schema.sql) **once** (never again — it drops
-the tables), run [`supabase/migrations/001_public_hardening.sql`](supabase/migrations/001_public_hardening.sql),
-enable the auth providers, and put your project URL + anon key in `.env.local`.
+the tables), run [`supabase/migrations/001_public_hardening.sql`](supabase/migrations/001_public_hardening.sql)
+and [`supabase/migrations/002_documents_storage.sql`](supabase/migrations/002_documents_storage.sql)
+(both additive and live-safe), enable the auth providers, and put your project
+URL + anon key in `.env.local`.
+
+### Optional: trip cover photos (Unsplash)
+
+Trip cards use a colour gradient by default. To offer real destination photos,
+create a free [Unsplash developer app](https://unsplash.com/developers) and add
+its Access Key to `.env.local` (and Vercel):
+
+```
+VITE_UNSPLASH_ACCESS_KEY=your-access-key
+```
+
+Photos are only fetched from the trip wizard and trip settings, so the demo
+tier's 50 requests/hour is plenty.
 
 ## How trips work
 
@@ -41,8 +57,12 @@ Everything is stored in **Supabase** and mirrored to **IndexedDB on each
 device** as an offline cache with a write outbox.
 
 - **Shared** by all members: the trip definition (days, destinations, money
-  settings), shared day notes, expenses (who-paid + settle-up), bookings.
+  settings, cover photo), shared day notes, expenses (who-paid + settle-up),
+  bookings, and the document list (files themselves live in a private
+  Supabase Storage bucket, member-only).
 - **Personal** per member: packing list, outfit photos, own per-day notes.
+- **Profile** (display name + colour) lives in auth user metadata and follows
+  your account across trips and devices.
 - **↓ Backup data** in the header downloads a JSON backup of the current trip;
   **↑ Restore** loads one back.
 
@@ -74,6 +94,9 @@ src/
   lib/weather.js             Open-Meteo forecast, cached + synced
   lib/outfitAdvisor.js       rule-based outfit suggestions
   lib/geocode.js             Open-Meteo place search
+  lib/profile.js             global display name/colour (auth user metadata)
+  lib/unsplash.js            optional trip cover photos
+  lib/documents.js           documents wallet (Supabase Storage)
   lib/legacyMigration.js     one-time upgrade of the pre-wizard trip
   components/                shared UI (wizard, settings, trips home, …)
   tabs/                      one file per tab

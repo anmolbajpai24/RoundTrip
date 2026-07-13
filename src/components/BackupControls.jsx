@@ -36,10 +36,10 @@ export default function BackupControls() {
 
   return (
     <div className="flex items-center gap-3 mt-2">
-      <button onClick={doExport} className="text-[11px] font-semibold" style={{ color: "#8A8F98" }}>
+      <button onClick={doExport} className="text-[11px] font-semibold" style={{ color: "var(--muted)" }}>
         ↓ Backup data
       </button>
-      <button onClick={() => fileRef.current?.click()} className="text-[11px] font-semibold" style={{ color: "#8A8F98" }}>
+      <button onClick={() => fileRef.current?.click()} className="text-[11px] font-semibold" style={{ color: "var(--muted)" }}>
         ↑ Restore
       </button>
       <input ref={fileRef} type="file" accept="application/json" className="hidden" onChange={doImport} />

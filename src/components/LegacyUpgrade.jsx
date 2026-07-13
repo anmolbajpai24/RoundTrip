@@ -23,7 +23,7 @@ export default function LegacyUpgrade({ onDone }) {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-6" style={{ backgroundColor: "#F7F5F0", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
+    <div className="min-h-screen flex items-center justify-center px-6" style={{ backgroundColor: "var(--bg)", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
       <div className="max-w-sm w-full">
         <div className="text-4xl mb-3 text-center">🧭</div>
         <h1 className="text-lg font-bold mb-2 text-center" style={{ color: INK }}>This trip needs a one-time upgrade</h1>
@@ -40,7 +40,7 @@ export default function LegacyUpgrade({ onDone }) {
           Just joined this trip? Reload to wait for setup to sync
         </button>
         {error && <p className="text-xs mb-3 text-center" style={{ color: ACCENT }}>{error}</p>}
-        <div className="rounded-2xl border p-3" style={{ borderColor: "#E5E2DA", backgroundColor: "#FFF" }}>
+        <div className="rounded-2xl border p-3" style={{ borderColor: "var(--border)", backgroundColor: "var(--card)" }}>
           <p className="text-xs mb-1" style={{ color: MUTED }}>Want a safety net first? Download a backup:</p>
           <BackupControls />
         </div>

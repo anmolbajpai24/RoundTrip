@@ -1,4 +1,4 @@
-import { useTripConfig } from "../lib/tripConfig.js";
+import { useTripConfig, softBg } from "../lib/tripConfig.js";
 
 export default function LegChip({ leg }) {
   const config = useTripConfig();
@@ -7,7 +7,7 @@ export default function LegChip({ leg }) {
   return (
     <span
       className="text-xs font-semibold px-2 py-0.5 rounded-full"
-      style={{ color: L.color, backgroundColor: L.soft }}
+      style={{ color: L.color, backgroundColor: softBg(L.color) }}
     >
       {L.name}
     </span>

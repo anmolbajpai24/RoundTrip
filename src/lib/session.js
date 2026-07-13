@@ -1,5 +1,6 @@
 import { get, set, del } from "idb-keyval";
 import { supabase, isConfigured } from "./supabase.js";
+import { getProfile, saveProfile, syncProfileToAuth } from "./profile.js";
 
 // The session ties this device to a shared trip and to the profile (name +
 // colour) this person chose. It's cached locally so the app boots instantly
@@ -50,10 +51,22 @@ export async function clearSession() {
 export async function ensureAuth() {
   if (!isConfigured) return null;
   const { data: { session } } = await supabase.auth.getSession();
-  if (session?.user) return session.user.id;
+  if (session?.user) {
+    syncProfileToAuth().catch(() => {});
+    return session.user.id;
+  }
   const { data, error } = await supabase.auth.signInAnonymously();
   if (error) throw error;
+  await syncProfileToAuth().catch(() => {});
   return data.user?.id ?? null;
+}
+
+// First trip create/join also seeds the global profile if there is none yet.
+async function adoptProfile(name, color) {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!getProfile(user)?.name) await saveProfile({ name, color });
+  } catch { /* non-fatal */ }
 }
 
 // Human-friendly join code: 6 chars, no ambiguous 0/O/1/I.
@@ -88,6 +101,7 @@ export async function createTrip(name, color) {
     if (error.code !== "23505" && !`${error.message}`.includes("23505")) throw error; // duplicate code → retry
   }
   if (!trip) throw new Error("Couldn't create a trip — please try again.");
+  await adoptProfile(name, color);
   return saveSession({ tripId: trip.id, code: trip.code, userId, name, color });
 
   async function createTripDirect() {
@@ -114,6 +128,7 @@ export async function joinTrip(code, name, color) {
   if (!error) {
     const row = Array.isArray(data) ? data[0] : data;
     if (!row) throw new Error("No trip found with that code. Check the letters and try again.");
+    await adoptProfile(name, color);
     return saveSession({ tripId: row.trip_id, code: row.trip_code, userId, name, color });
   }
   if (!rpcMissing(error)) throw error;
@@ -124,6 +139,7 @@ export async function joinTrip(code, name, color) {
   if (selErr) throw selErr;
   if (!trip) throw new Error("No trip found with that code. Check the letters and try again.");
   await upsertMember(trip.id, name, color);
+  await adoptProfile(name, color);
   return saveSession({ tripId: trip.id, code: trip.code, userId, name, color });
 }
 

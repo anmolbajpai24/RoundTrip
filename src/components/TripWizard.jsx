@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from "react";
 import { COLORS, createTrip } from "../lib/session.js";
 import { saveKey } from "../lib/storage.js";
-import { CONFIG_KEY, generateDays, listDates, softOf, slugify, dateLabel, weekday, addDays } from "../lib/tripConfig.js";
+import { CONFIG_KEY, generateDays, listDates, softOf, slugify, dateLabel, weekday, addDays, softBg } from "../lib/tripConfig.js";
 import { searchPlaces } from "../lib/geocode.js";
+import { getLocalProfile } from "../lib/profile.js";
+import { searchCoverPhotos, trackDownload, asCover } from "../lib/unsplash.js";
 import { CURRENCIES } from "../data/currencies.js";
 import { APP_NAME, ACCENT, INK, MUTED } from "../theme.js";
 
@@ -16,7 +18,7 @@ const GENERIC_PACKING = [
   ["Other", ["Medicines + basic first aid", "Day backpack", "Reusable water bottle"]],
 ];
 
-const inputStyle = { borderColor: "#E5E2DA", backgroundColor: "#FAF9F6", color: INK };
+const inputStyle = { borderColor: "var(--border)", backgroundColor: "var(--field)", color: INK };
 
 // Multi-step create-trip flow. `profile` = { name, color } from the caller
 // (TripGate inputs or an existing membership); shown editable on step 1.
@@ -25,9 +27,10 @@ export default function TripWizard({ profile, onDone, onCancel }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
-  // Step 1 — you + basics
-  const [name, setName] = useState(profile?.name || "");
-  const [color, setColor] = useState(profile?.color || COLORS[0]);
+  // Step 1 — you + basics (prefilled from the global profile when the caller
+  // didn't pass one, so returning users never retype their name)
+  const [name, setName] = useState(profile?.name || getLocalProfile()?.name || "");
+  const [color, setColor] = useState(profile?.color || getLocalProfile()?.color || COLORS[0]);
   const [title, setTitle] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -105,8 +108,15 @@ export default function TripWizard({ profile, onDone, onCancel }) {
   const create = async () => {
     setBusy(true); setError("");
     try {
+      const config = buildConfig();
+      // Best-effort cover photo for the first destination; the gradient
+      // fallback covers no-key/offline, so failures are silently ignored.
+      try {
+        const photos = await searchCoverPhotos(`${dests[0].name} ${dests[0].country || ""} travel`);
+        if (photos[0]) { config.cover = asCover(photos[0]); trackDownload(photos[0]); }
+      } catch { /* gradient fallback */ }
       const s = await createTrip(name.trim(), color);
-      await saveKey(CONFIG_KEY, buildConfig());
+      await saveKey(CONFIG_KEY, config);
       setCreated(s.code);
     } catch (e) { setError(e.message || "Something went wrong."); }
     setBusy(false);
@@ -120,7 +130,7 @@ export default function TripWizard({ profile, onDone, onCancel }) {
     } catch { /* cancelled */ }
   };
 
-  const wrap = { minHeight: "100vh", backgroundColor: "#F7F5F0", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" };
+  const wrap = { minHeight: "100vh", backgroundColor: "var(--bg)", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" };
   const label = (t) => <label className="text-xs font-bold uppercase tracking-wide" style={{ color: MUTED }}>{t}</label>;
 
   if (created) {
@@ -132,7 +142,7 @@ export default function TripWizard({ profile, onDone, onCancel }) {
           <p className="text-sm mb-5" style={{ color: MUTED }}>
             Share this code so others can join. Everyone sees the whole trip, with each person's additions clearly labelled.
           </p>
-          <div className="rounded-2xl border px-6 py-5 mb-3" style={{ borderColor: "#E5E2DA", backgroundColor: "#FFF" }}>
+          <div className="rounded-2xl border px-6 py-5 mb-3" style={{ borderColor: "var(--border)", backgroundColor: "var(--card)" }}>
             <div className="text-[11px] font-bold uppercase tracking-widest mb-1" style={{ color: MUTED }}>Trip code</div>
             <div className="text-3xl font-bold tracking-[0.3em]" style={{ color: INK, fontFamily: "ui-monospace, monospace" }}>{created}</div>
           </div>
@@ -163,7 +173,7 @@ export default function TripWizard({ profile, onDone, onCancel }) {
             <div className="flex gap-2 mb-4">
               {COLORS.map((c) => (
                 <button key={c} onClick={() => setColor(c)} className="w-8 h-8 rounded-full flex items-center justify-center"
-                  style={{ backgroundColor: c, outline: color === c ? "3px solid #1D2433" : "none", outlineOffset: 2 }}>
+                  style={{ backgroundColor: c, outline: color === c ? "3px solid var(--ink)" : "none", outlineOffset: 2 }}>
                   {color === c && <span className="text-white text-xs font-bold">✓</span>}
                 </button>
               ))}
@@ -194,7 +204,7 @@ export default function TripWizard({ profile, onDone, onCancel }) {
             <CurrencySelect value={currency} onChange={setCurrency} />
             <div className="flex items-center justify-between mt-4 mb-2">
               <span className="text-sm font-semibold" style={{ color: INK }}>Also show amounts in a second currency</span>
-              <button onClick={() => setHomeOn(!homeOn)} className="w-11 h-6 rounded-full relative transition-colors" style={{ backgroundColor: homeOn ? "#2E7D4F" : "#D8D5CC" }}>
+              <button onClick={() => setHomeOn(!homeOn)} className="w-11 h-6 rounded-full relative transition-colors" style={{ backgroundColor: homeOn ? "#2E7D4F" : "var(--chip)" }}>
                 <span className="absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all" style={{ left: homeOn ? 22 : 2 }} />
               </button>
             </div>
@@ -282,13 +292,13 @@ function DestinationsStep({ dests, setDests, startDate, endDate }) {
       <p className="text-xs mb-4" style={{ color: MUTED }}>Add the places you'll stay, in order. Days are assigned by each place's arrival date.</p>
 
       {dests.map((d, i) => (
-        <div key={i} className="rounded-xl border p-3 mb-2" style={{ borderColor: "#E5E2DA", backgroundColor: "#FFF" }}>
+        <div key={i} className="rounded-xl border p-3 mb-2" style={{ borderColor: "var(--border)", backgroundColor: "var(--card)" }}>
           <div className="flex items-center justify-between">
             <span className="text-sm font-bold inline-flex items-center gap-2" style={{ color: INK }}>
               <span className="w-3 h-3 rounded-full" style={{ backgroundColor: d.color }} />
               {d.name}{d.country ? `, ${d.country}` : ""}
             </span>
-            <button onClick={() => setDests((ds) => ds.filter((_, j) => j !== i))} className="text-xs" style={{ color: "#C9C5BB" }}>✕</button>
+            <button onClick={() => setDests((ds) => ds.filter((_, j) => j !== i))} className="text-xs" style={{ color: "var(--faint)" }}>✕</button>
           </div>
           <div className="flex items-center gap-2 mt-2">
             <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: MUTED }}>{i === 0 ? "From the start" : "Arriving on"}</span>
@@ -305,7 +315,7 @@ function DestinationsStep({ dests, setDests, startDate, endDate }) {
         className="w-full text-sm rounded-xl border px-4 py-3" style={inputStyle} />
       {searching && <p className="text-xs mt-2" style={{ color: MUTED }}>Searching…</p>}
       {results.map((r, i) => (
-        <button key={i} onClick={() => addDest(r)} className="w-full text-left rounded-xl border px-3 py-2.5 mt-1.5 text-sm" style={{ borderColor: "#E5E2DA", backgroundColor: "#FFF", color: INK }}>
+        <button key={i} onClick={() => addDest(r)} className="w-full text-left rounded-xl border px-3 py-2.5 mt-1.5 text-sm" style={{ borderColor: "var(--border)", backgroundColor: "var(--card)", color: INK }}>
           <span className="font-semibold">{r.name}</span>
           <span style={{ color: MUTED }}> · {[r.admin1, r.country].filter(Boolean).join(", ")}</span>
         </button>
@@ -322,13 +332,13 @@ function ReviewStep({ config }) {
         {config.days.length} days · {config.legOrder.map((k) => config.legs[k].name).join(" → ")} · {config.currency}
         {config.homeCurrency ? ` (+${config.homeCurrency})` : ""}
       </p>
-      <div className="rounded-2xl border overflow-hidden" style={{ borderColor: "#E5E2DA", backgroundColor: "#FFF", maxHeight: 320, overflowY: "auto" }}>
+      <div className="rounded-2xl border overflow-hidden" style={{ borderColor: "var(--border)", backgroundColor: "var(--card)", maxHeight: 320, overflowY: "auto" }}>
         {config.days.map((d, i) => {
           const L = config.legs[d.leg];
           return (
-            <div key={d.date} className="flex items-center gap-3 px-3 py-2" style={{ borderBottom: i < config.days.length - 1 ? "1px solid #F0EDE6" : "none" }}>
+            <div key={d.date} className="flex items-center gap-3 px-3 py-2" style={{ borderBottom: i < config.days.length - 1 ? "1px solid var(--divider)" : "none" }}>
               <span className="text-[11px] w-16 flex-shrink-0" style={{ color: MUTED, fontFamily: "ui-monospace, monospace" }}>{weekday(d.date)} {dateLabel(d.date)}</span>
-              <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full" style={{ color: L.color, backgroundColor: L.soft }}>{L.name}</span>
+              <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full" style={{ color: L.color, backgroundColor: softBg(L.color) }}>{L.name}</span>
             </div>
           );
         })}

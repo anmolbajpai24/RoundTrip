@@ -13,9 +13,9 @@ export default function DayStrip({ selected, onSelect }) {
             onClick={() => onSelect(day.date)}
             className="flex-shrink-0 rounded-xl px-3 py-2 text-center border transition-transform"
             style={{
-              backgroundColor: active ? L.color : "#FFFFFF",
-              borderColor: active ? L.color : "#E5E2DA",
-              color: active ? "#FFF" : "#1D2433",
+              backgroundColor: active ? L.color : "var(--card)",
+              borderColor: active ? L.color : "var(--border)",
+              color: active ? "#FFF" : "var(--ink)",
               minWidth: 56,
               transform: active ? "scale(1.05)" : "none",
             }}

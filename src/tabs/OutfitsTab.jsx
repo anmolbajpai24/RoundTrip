@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useTripConfig, dateLabel, weekday, defaultDay, findDay } from "../lib/tripConfig.js";
+import { useTripConfig, dateLabel, weekday, defaultDay, findDay, softBg } from "../lib/tripConfig.js";
 import { saveKey } from "../lib/storage.js";
 import { compressImage } from "../lib/image.js";
 import SectionTitle from "../components/SectionTitle.jsx";
@@ -49,9 +49,9 @@ export default function OutfitsTab({ outfitsAll, setOutfitsAll, membersById, mem
       <SectionTitle sub={`You've planned ${plannedCount} of ${config.days.length} days`}>Outfit planner</SectionTitle>
       <DayStrip selected={key} onSelect={setSelected} />
 
-      <div className="mt-3 rounded-2xl border overflow-hidden" style={{ borderColor: "#E5E2DA", backgroundColor: "#FFF" }}>
-        <div className="px-4 py-2.5 flex items-center justify-between border-b" style={{ borderColor: "#F0EDE6" }}>
-          <span className="text-sm font-bold" style={{ color: "#1D2433" }}>{weekday(key)} {dateLabel(key)} · {day.title}</span>
+      <div className="mt-3 rounded-2xl border overflow-hidden" style={{ borderColor: "var(--border)", backgroundColor: "var(--card)" }}>
+        <div className="px-4 py-2.5 flex items-center justify-between border-b" style={{ borderColor: "var(--divider)" }}>
+          <span className="text-sm font-bold" style={{ color: "var(--ink)" }}>{weekday(key)} {dateLabel(key)} · {day.title}</span>
           <LegChip leg={day.leg} />
         </div>
 
@@ -64,10 +64,10 @@ export default function OutfitsTab({ outfitsAll, setOutfitsAll, membersById, mem
               <button onClick={removePhoto} className="absolute top-2 right-2 text-xs font-bold text-white px-3 py-1.5 rounded-full" style={{ backgroundColor: "rgba(29,36,51,0.75)" }}>Remove</button>
             </div>
           ) : (
-            <button onClick={() => fileRef.current?.click()} disabled={busy} className="w-full rounded-xl border-2 border-dashed py-10 flex flex-col items-center gap-2" style={{ borderColor: L.color, backgroundColor: L.soft }}>
+            <button onClick={() => fileRef.current?.click()} disabled={busy} className="w-full rounded-xl border-2 border-dashed py-10 flex flex-col items-center gap-2" style={{ borderColor: L.color, backgroundColor: softBg(L.color) }}>
               <span className="text-3xl">📸</span>
               <span className="text-sm font-bold" style={{ color: L.color }}>{busy ? "Saving photo…" : "Add your outfit photo"}</span>
-              <span className="text-xs" style={{ color: "#8A8F98" }}>Lay it out on the bed &amp; snap it</span>
+              <span className="text-xs" style={{ color: "var(--muted)" }}>Lay it out on the bed &amp; snap it</span>
             </button>
           )}
           <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onFile} />
@@ -75,11 +75,11 @@ export default function OutfitsTab({ outfitsAll, setOutfitsAll, membersById, mem
             <button onClick={() => fileRef.current?.click()} disabled={busy} className="mt-2 text-xs font-semibold" style={{ color: L.color }}>{busy ? "Saving…" : "Replace photo"}</button>
           )}
           <div className="mt-4">
-            <label className="text-xs font-semibold uppercase tracking-wide" style={{ color: "#8A8F98" }}>What you're wearing</label>
+            <label className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--muted)" }}>What you're wearing</label>
             <textarea value={desc} onChange={(e) => setDesc(e.target.value)} onBlur={saveDesc} rows={2}
               placeholder="e.g. Black tee, olive chinos, rain jacket, white sneakers"
-              className="mt-1 w-full text-sm rounded-xl border p-3" style={{ borderColor: "#E5E2DA", backgroundColor: "#FAF9F6", color: "#1D2433" }} />
-            <p className="text-[11px] mt-1" style={{ color: "#B8B5AD" }}>Saved automatically when you tap away.</p>
+              className="mt-1 w-full text-sm rounded-xl border p-3" style={{ borderColor: "var(--border)", backgroundColor: "var(--field)", color: "var(--ink)" }} />
+            <p className="text-[11px] mt-1" style={{ color: "var(--faint)" }}>Saved automatically when you tap away.</p>
           </div>
         </div>
 
@@ -87,16 +87,16 @@ export default function OutfitsTab({ outfitsAll, setOutfitsAll, membersById, mem
         {others.map((m) => {
           const o = (outfitsAll[m.user_id] || {})[key];
           return (
-            <div key={m.user_id} className="p-4 border-t" style={{ borderColor: "#F0EDE6" }}>
+            <div key={m.user_id} className="p-4 border-t" style={{ borderColor: "var(--divider)" }}>
               <div className="mb-2"><PersonBadge member={m} size="xs" /></div>
               {o?.photo ? (
                 <img src={o.photo} alt={`${m.name}'s outfit`} className="w-full rounded-xl object-cover" style={{ maxHeight: 380 }} />
               ) : (
-                <div className="w-full rounded-xl py-8 text-center text-sm" style={{ backgroundColor: "#FAF9F6", color: "#B8B5AD" }}>
+                <div className="w-full rounded-xl py-8 text-center text-sm" style={{ backgroundColor: "var(--field)", color: "var(--faint)" }}>
                   {m.name} hasn't planned this day yet
                 </div>
               )}
-              {o?.desc && <p className="text-sm mt-2" style={{ color: "#1D2433" }}>{o.desc}</p>}
+              {o?.desc && <p className="text-sm mt-2" style={{ color: "var(--ink)" }}>{o.desc}</p>}
             </div>
           );
         })}
@@ -112,18 +112,18 @@ export default function OutfitsTab({ outfitsAll, setOutfitsAll, membersById, mem
             const Lg = config.legs[d.leg] || {};
             const otherDots = (members || []).filter((m) => m.user_id !== myId && (outfitsAll[m.user_id] || {})[dk]?.photo);
             return (
-              <button key={dk} onClick={() => { setSelected(dk); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="rounded-xl overflow-hidden border text-left relative" style={{ borderColor: "#E5E2DA", backgroundColor: "#FFF" }}>
+              <button key={dk} onClick={() => { setSelected(dk); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="rounded-xl overflow-hidden border text-left relative" style={{ borderColor: "var(--border)", backgroundColor: "var(--card)" }}>
                 {o?.photo ? (
                   <img src={o.photo} alt="" className="w-full h-20 object-cover" />
                 ) : (
-                  <div className="w-full h-20 flex items-center justify-center text-lg" style={{ backgroundColor: Lg.soft }}>{o?.desc ? "📝" : "＋"}</div>
+                  <div className="w-full h-20 flex items-center justify-center text-lg" style={{ backgroundColor: softBg(Lg.color) }}>{o?.desc ? "📝" : "＋"}</div>
                 )}
                 {otherDots.length > 0 && (
                   <div className="absolute top-1 right-1 flex gap-0.5">
                     {otherDots.map((m) => <span key={m.user_id} className="w-2 h-2 rounded-full border border-white" style={{ backgroundColor: m.color }} />)}
                   </div>
                 )}
-                <div className="px-1.5 py-1 text-[10px] font-semibold" style={{ color: "#1D2433" }}>{dateLabel(dk)}</div>
+                <div className="px-1.5 py-1 text-[10px] font-semibold" style={{ color: "var(--ink)" }}>{dateLabel(dk)}</div>
               </button>
             );
           })}
