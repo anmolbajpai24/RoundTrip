@@ -161,6 +161,9 @@ function DocumentsSection({ documents, setDocuments, bookings, persistBookings, 
         {busy ? "Uploading…" : "＋ Add a document"}
       </button>
       <input ref={fileRef} type="file" accept="image/*,application/pdf" className="hidden" onChange={onPick} />
+      <p className="text-[11px] mt-2 text-center" style={{ color: "var(--faint)" }}>
+        Shared with everyone on the trip. Avoid uploading sensitive scans like passport photo pages unless you need to.
+      </p>
       {error && <p className="text-xs mt-2" style={{ color: "#C8102E" }}>{error}</p>}
 
       {viewer && (

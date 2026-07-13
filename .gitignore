@@ -4,3 +4,6 @@ dev-dist
 .vercel
 .DS_Store
 *.local
+.env
+.env.*
+!.env.example

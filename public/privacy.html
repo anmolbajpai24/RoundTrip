@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Privacy Policy · Roundtrip</title>
+    <style>
+      :root {
+        --bg: #f7f5f0; --card: #ffffff; --ink: #1d2433; --muted: #5b6472;
+        --border: #e5e1d8; --accent: #c8102e;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #12161f; --card: #1b212d; --ink: #e8eaef; --muted: #9aa3b2;
+          --border: #2a3240; --accent: #ff5a6e;
+        }
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0; background: var(--bg); color: var(--ink);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        line-height: 1.6; -webkit-font-smoothing: antialiased;
+      }
+      main { max-width: 720px; margin: 0 auto; padding: 40px 20px 80px; }
+      h1 { font-size: 1.9rem; margin: 0 0 4px; letter-spacing: -0.02em; }
+      .updated { color: var(--muted); font-size: 0.85rem; margin: 0 0 32px; }
+      h2 { font-size: 1.15rem; margin: 36px 0 10px; letter-spacing: -0.01em; }
+      p, li { color: var(--ink); }
+      a { color: var(--accent); }
+      ul { padding-left: 20px; }
+      li { margin: 6px 0; }
+      .card {
+        background: var(--card); border: 1px solid var(--border);
+        border-radius: 16px; padding: 18px 20px; margin: 16px 0;
+      }
+      table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 0.92rem; }
+      td { padding: 8px 6px; border-bottom: 1px solid var(--border); vertical-align: top; }
+      td:first-child { font-weight: 600; white-space: nowrap; padding-right: 16px; }
+      .muted { color: var(--muted); font-size: 0.9rem; }
+      footer { margin-top: 48px; color: var(--muted); font-size: 0.85rem; }
+      .scroll { overflow-x: auto; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Privacy Policy</h1>
+      <p class="updated">Roundtrip · last updated 13 July 2026</p>
+
+      <p>
+        Roundtrip is a shared trip-planning companion. This policy explains what
+        information the app collects, why, where it goes, and how you can remove
+        it. If you don't agree with it, please don't use the app.
+      </p>
+
+      <h2>Who we are</h2>
+      <p>
+        Roundtrip is operated by an individual for personal and small-group use.
+        For any privacy question or request, contact
+        <a href="mailto:anmolbajpai24@gmail.com">anmolbajpai24@gmail.com</a>.
+      </p>
+
+      <h2>What we collect</h2>
+      <div class="scroll">
+        <table>
+          <tr>
+            <td>Account</td>
+            <td>If you link an account, your email address and (for Google
+              sign-in) your Google account identity. Using the app as a guest
+              creates an anonymous ID with no email.</td>
+          </tr>
+          <tr>
+            <td>Profile</td>
+            <td>The display name and colour you choose for yourself.</td>
+          </tr>
+          <tr>
+            <td>Trip content</td>
+            <td>Everything you add to a trip: itinerary, packing lists, budget
+              and expenses, booking checklist, outfit notes/photos, and trip
+              settings — including destination place names, their coordinates,
+              and travel dates.</td>
+          </tr>
+          <tr>
+            <td>Documents</td>
+            <td>Files you upload to a trip (tickets, PDFs, screenshots). These
+              are shared with everyone on that trip. Please avoid uploading
+              highly sensitive scans, such as passport photo pages, unless you
+              need to.</td>
+          </tr>
+          <tr>
+            <td>Technical</td>
+            <td>Standard request data (such as IP address) is processed by our
+              hosting and third-party services to deliver the app; we don't use
+              analytics or advertising trackers.</td>
+          </tr>
+        </table>
+      </div>
+      <p class="muted">
+        Everyone who is a member of a trip can see that trip's shared content and
+        documents, and the names of the other members. Personal slices (your own
+        packing list and outfits) are scoped to you.
+      </p>
+
+      <h2>How we use it</h2>
+      <ul>
+        <li>To run the app: store your trips, sync them live across your devices
+          and your trip-mates', and let you sign back in.</li>
+        <li>To show weather and maps for your destinations.</li>
+        <li>We do <strong>not</strong> sell your data or use it for advertising.</li>
+      </ul>
+
+      <h2>Third-party services</h2>
+      <p>The app relies on these providers, which may process the data noted:</p>
+      <ul>
+        <li><strong>Supabase</strong> — hosts the database, authentication, and
+          uploaded documents (our backend).</li>
+        <li><strong>Google</strong> — only if you choose Google sign-in, to
+          authenticate you.</li>
+        <li><strong>Open-Meteo</strong> — receives destination coordinates (for
+          weather) and place-search text you type (for location search).</li>
+        <li><strong>Unsplash</strong> — receives cover-photo search terms when you
+          pick a trip cover image.</li>
+        <li><strong>OpenStreetMap</strong> — serves map tiles; receives your IP
+          and the map area you view.</li>
+      </ul>
+
+      <h2>Storage &amp; security</h2>
+      <div class="card">
+        <p style="margin:0">
+          Data is protected by row-level security so trip content is only
+          readable by that trip's members. Uploaded documents live in a private
+          storage bucket and are served through short-lived links that expire
+          after about an hour. Traffic is encrypted in transit (HTTPS).
+        </p>
+      </div>
+
+      <h2>Data retention &amp; deletion</h2>
+      <ul>
+        <li>Trip content stays until you or another trip member deletes it. You
+          can delete individual documents and items in the app at any time.</li>
+        <li>To delete your account and associated data, contact
+          <a href="mailto:anmolbajpai24@gmail.com">anmolbajpai24@gmail.com</a>
+          and we'll remove it. (An in-app "delete my account" option is planned.)</li>
+      </ul>
+
+      <h2>Children</h2>
+      <p>The app isn't directed at children under 13 and shouldn't be used by them.</p>
+
+      <h2>Changes</h2>
+      <p>
+        We may update this policy; the "last updated" date above will change when
+        we do. Continued use after an update means you accept the revised policy.
+      </p>
+
+      <footer>
+        Questions? <a href="mailto:anmolbajpai24@gmail.com">anmolbajpai24@gmail.com</a>
+      </footer>
+    </main>
+  </body>
+</html>

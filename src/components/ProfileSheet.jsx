@@ -154,7 +154,9 @@ export default function ProfileSheet({ user, stats, onClose, onChanged }) {
         {error && <p className="text-xs mt-2 text-center" style={{ color: ACCENT }}>{error}</p>}
 
         <button onClick={onClose} className="w-full text-sm font-semibold py-2.5 mt-3 rounded-full" style={{ color: MUTED }}>Close</button>
-        <p className="text-center text-[10px] mt-1" style={{ color: "var(--faint)" }}>{APP_NAME} v{pkg.version}</p>
+        <p className="text-center text-[10px] mt-1" style={{ color: "var(--faint)" }}>
+          {APP_NAME} v{pkg.version} · <a href="/privacy.html" target="_blank" rel="noreferrer" style={{ color: "var(--faint)", textDecoration: "underline" }}>Privacy</a>
+        </p>
 
         {account && (
           <AccountSheet user={user} onClose={() => setAccount(false)} onChanged={() => { setAccount(false); onChanged?.(); }} />
