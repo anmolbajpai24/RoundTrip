@@ -39,6 +39,24 @@ VITE_UNSPLASH_ACCESS_KEY=your-access-key
 Photos are only fetched from the trip wizard and trip settings, so the demo
 tier's 50 requests/hour is plenty.
 
+### Optional: virtual try-on ("See it on me")
+
+Upload one photo of yourself (private — nobody else can ever see it) and any
+closet outfit can be rendered on you. Generation runs server-side in
+`api/tryon.js` (a Vercel function, also mounted on the dev server), so engine
+keys never reach the browser. Engines:
+
+- **Free (default):** the public [IDM-VTON](https://huggingface.co/spaces/yisol/IDM-VTON)
+  HuggingFace Space. Add `HF_TOKEN` (free HF account token) to `.env.local`
+  and Vercel to use your own free ZeroGPU quota (~7–14 try-ons/day); without
+  a token it uses the stricter shared anonymous pool. Generations take
+  30–90s. If the Space moves or breaks, point `HF_TRYON_SPACE` at another
+  IDM-VTON space with the same `/tryon` API.
+- **Paid upgrade (optional):** set `GEMINI_API_KEY` and try-ons switch to
+  Gemini 2.5 Flash Image (~$0.04/image, no daily cap, better quality).
+
+Results are cached on the outfit, so each look is only generated when you ask.
+
 ## How trips work
 
 - **Create a trip** in the app: name, dates, currency (plus an optional second

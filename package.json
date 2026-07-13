@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@gradio/client": "^2.3.1",
     "@supabase/supabase-js": "^2.110.1",
     "idb-keyval": "^6.2.2",
     "leaflet": "^1.9.4",

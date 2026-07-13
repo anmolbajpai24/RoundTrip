@@ -14,10 +14,12 @@ const OUTBOX_KEY = "__outbox__";
 
 // Which keys are shared between everyone vs. personal to one member.
 function scopeOf(key) {
-  if (key.startsWith("outfit:")) return "personal";
+  if (key.startsWith("outfit:") || key.startsWith("outfit-item:")) return "personal";
   switch (key) {
     case "trip-packing":
     case "trip-itinerary-override":
+    case "outfit-days":
+    case "tryon-base-photo":
       return "personal";
     default: // trip-itinerary, trip-expenses, trip-bookings, ... are shared
       return "shared";
@@ -88,35 +90,74 @@ export async function loadPersonalAll(key) {
   return result;
 }
 
-// Read outfit photos for EVERY member → { [ownerId]: { d7: {...}, ... } }.
-export async function loadOutfitsAll() {
+// Read every member's outfit closet →
+//   { [ownerId]: { items: { id: {photo,desc,visibility,...} }, days: { dateISO: id }, legacy?: true } }
+// New-model rows are `outfit-item:<id>` (one per outfit) + `outfit-days` (the
+// day → outfit assignment map). Owners with only pre-closet `outfit:<dateISO>`
+// rows get a synthesized closet (one item per day, flagged `legacy`) so their
+// data still renders; those rows stay in place as inert backups.
+export async function loadClosetsAll() {
   const s = getSession();
-  const result = {};
-  if (!s) return result;
+  if (!s) return {};
+
+  // owner → { items, days (null until an outfit-days row is seen), legacy: {date: value} }
+  const raw = {};
+  const bucket = (owner) => (raw[owner] ||= { items: {}, days: null, legacy: {} });
+  const takeRow = (owner, key, value) => {
+    if (key.startsWith("outfit-item:")) {
+      const id = key.slice("outfit-item:".length);
+      const b = bucket(owner);
+      if (value) b.items[id] = value; // null = deleted tombstone
+      b.hasNewModel = true; // even a tombstone marks this owner as new-model
+    } else if (key === "outfit-days") {
+      bucket(owner).days = value || {};
+      bucket(owner).hasNewModel = true;
+    } else if (key.startsWith("outfit:")) {
+      const day = key.slice("outfit:".length);
+      if (!isLegacyDayKey(day) && value) bucket(owner).legacy[day] = value;
+    }
+  };
 
   if (online()) {
     try {
       const { data, error } = await supabase
         .from("trip_kv").select("owner, key, value")
-        .eq("trip_id", s.tripId).neq("owner", SHARED).like("key", "outfit:%");
+        .eq("trip_id", s.tripId).neq("owner", SHARED).like("key", "outfit%");
       if (error) throw error;
       for (const row of data) {
-        const day = row.key.slice("outfit:".length);
-        if (isLegacyDayKey(day)) continue; // pre-migration "d7" rows, kept as inert backups
-        (result[row.owner] ||= {})[day] = row.value;
+        takeRow(row.owner, row.key, row.value);
         await writeCache(s.tripId, row.owner, row.key, row.value);
       }
-      return result;
-    } catch { /* fall through */ }
+      return assembleClosets(raw);
+    } catch { /* fall through to cache */ }
   }
   const all = await keys();
   const base = `kv:${s.tripId}:`;
   for (const k of all) {
-    if (typeof k === "string" && k.startsWith(base) && k.includes(":outfit:")) {
-      const rest = k.slice(base.length); // "<owner>:outfit:<day>"
-      const owner = rest.slice(0, rest.indexOf(":outfit:"));
-      const day = rest.slice(rest.indexOf(":outfit:") + ":outfit:".length);
-      if (owner !== SHARED && !isLegacyDayKey(day)) (result[owner] ||= {})[day] = await get(k);
+    if (typeof k !== "string" || !k.startsWith(base)) continue;
+    const rest = k.slice(base.length); // "<owner>:<key>" — owner is a uuid, no colons
+    const cut = rest.indexOf(":");
+    const owner = rest.slice(0, cut);
+    const key = rest.slice(cut + 1);
+    if (owner !== SHARED && key.startsWith("outfit")) takeRow(owner, key, await get(k));
+  }
+  return assembleClosets(raw);
+}
+
+function assembleClosets(raw) {
+  const result = {};
+  for (const [owner, b] of Object.entries(raw)) {
+    if (b.hasNewModel) {
+      result[owner] = { items: b.items, days: b.days || {} };
+    } else if (Object.keys(b.legacy).length) {
+      // Pre-closet owner: one synthesized item per day, assigned to that day.
+      const items = {}, days = {};
+      for (const [day, value] of Object.entries(b.legacy)) {
+        if (!value?.photo && !value?.desc) continue;
+        items[`legacy:${day}`] = { photo: value.photo || null, desc: value.desc || "", visibility: "trip" };
+        days[day] = `legacy:${day}`;
+      }
+      if (Object.keys(items).length) result[owner] = { items, days, legacy: true };
     }
   }
   return result;

@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { TripConfigContext, CONFIG_KEY, dateRangeLabel, isDuringTrip, tripDayNumber, daysToGo, defaultDay } from "./lib/tripConfig.js";
-import { loadKey, saveKey, loadPersonalAll, loadOutfitsAll, subscribe, subscribeMembers, flushOutbox } from "./lib/storage.js";
+import { loadKey, saveKey, loadPersonalAll, loadClosetsAll, subscribe, subscribeMembers, flushOutbox } from "./lib/storage.js";
+import { migrateMyLegacyOutfits } from "./lib/closet.js";
 import { refreshWeather } from "./lib/weather.js";
 import { loadSession, getSession, ensureAuth, loadMembers, setProfile, leaveToHome, COLORS } from "./lib/session.js";
 import { currentUser } from "./lib/auth.js";
@@ -34,7 +35,7 @@ export default function App() {
   const [members, setMembers] = useState([]);
   const [overrides, setOverrides] = useState({});      // shared per-day notes
   const [notesAll, setNotesAll] = useState({});        // { ownerId: { dateISO: {notes} } }
-  const [outfitsAll, setOutfitsAll] = useState({});    // { ownerId: { dateISO: {photo,desc} } }
+  const [closetsAll, setClosetsAll] = useState({});    // { ownerId: { items: {id: outfit}, days: {dateISO: id} } }
   const [packingAll, setPackingAll] = useState({});    // { ownerId: [items] }
   const [expenses, setExpenses] = useState([]);        // shared
   const [bookings, setBookings] = useState([]);        // shared
@@ -72,13 +73,13 @@ export default function App() {
     (async () => {
       await ensureAuth().catch(() => {});
       flushOutbox();
-      const [cfg, mem, ov, notes, packs, outs, ex, bk, docs, wx] = await Promise.all([
+      const [cfg, mem, ov, notes, packs, closets, ex, bk, docs, wx] = await Promise.all([
         loadKey(CONFIG_KEY, null),
         loadMembers(),
         loadKey("trip-itinerary", {}),
         loadPersonalAll("trip-itinerary-override"),
         loadPersonalAll("trip-packing"),
-        loadOutfitsAll(),
+        loadClosetsAll(),
         loadKey("trip-expenses", []),
         loadKey("trip-bookings", null),
         loadKey("trip-documents", []),
@@ -88,8 +89,12 @@ export default function App() {
       setMembers(mem);
       setOverrides(ov || {});
       setNotesAll(notes || {});
-      setOutfitsAll(outs || {});
+      setClosetsAll(closets || {});
       setWeather(wx);
+      // Upgrade my pre-closet outfit rows (outfit:<date>) into closet items once.
+      migrateMyLegacyOutfits((closets || {})[session.userId])
+        .then((mine) => { if (mine) setClosetsAll((c) => ({ ...c, [session.userId]: mine })); })
+        .catch(() => {});
       // Seed my packing list with the trip's template if I don't have one yet.
       if (cfg && (!packs[session.userId] || packs[session.userId].length === 0)) {
         packs[session.userId] = seedPacking(cfg);
@@ -121,11 +126,22 @@ export default function App() {
     // personal slice belonging to some member
     if (key === "trip-packing") setPackingAll((p) => ({ ...p, [owner]: value || [] }));
     else if (key === "trip-itinerary-override") setNotesAll((n) => ({ ...n, [owner]: value || {} }));
-    else if (key.startsWith("outfit:")) {
-      const day = key.slice("outfit:".length);
-      if (/^d\d+$/.test(day)) return; // legacy pre-ISO row, ignore
-      setOutfitsAll((o) => ({ ...o, [owner]: { ...(o[owner] || {}), [day]: value } }));
+    else if (key.startsWith("outfit-item:")) {
+      const id = key.slice("outfit-item:".length);
+      setClosetsAll((c) => {
+        // A first new-model row replaces any closet synthesized from legacy rows.
+        const closet = !c[owner] || c[owner].legacy ? { items: {}, days: {} } : c[owner];
+        const items = { ...closet.items };
+        if (value) items[id] = value; else delete items[id]; // null = deleted
+        return { ...c, [owner]: { ...closet, items } };
+      });
+    } else if (key === "outfit-days") {
+      setClosetsAll((c) => {
+        const closet = !c[owner] || c[owner].legacy ? { items: {}, days: {} } : c[owner];
+        return { ...c, [owner]: { ...closet, days: value || {} } };
+      });
     }
+    // `outfit:<date>` rows are pre-closet backups — ignored live.
   };
 
   const saveConfig = (next) => { setConfig(next); saveKey(CONFIG_KEY, next); };
@@ -244,7 +260,7 @@ export default function App() {
           <ItineraryTab
             overrides={overrides} setOverrides={setOverrides}
             notesAll={notesAll} setNotesAll={setNotesAll}
-            outfitsAll={outfitsAll} membersById={membersById} members={members} myId={myId}
+            closetsAll={closetsAll} membersById={membersById} members={members} myId={myId}
             weather={weather}
             saveConfig={saveConfig}
             packingItems={(packingAll[myId] || []).map((i) => i.text)}
@@ -253,7 +269,7 @@ export default function App() {
         )}
         {tab === "outfits" && (
           <OutfitsTab
-            outfitsAll={outfitsAll} setOutfitsAll={setOutfitsAll}
+            closetsAll={closetsAll} setClosetsAll={setClosetsAll}
             membersById={membersById} members={members} myId={myId} initialDay={outfitDay || defaultDay(config)}
           />
         )}

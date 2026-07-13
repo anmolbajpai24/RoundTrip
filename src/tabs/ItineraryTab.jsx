@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useTripConfig, dateLabel, weekday, dateRangeLabel, defaultDay, findDay } from "../lib/tripConfig.js";
 import { saveKey } from "../lib/storage.js";
+import { outfitForDay, visibleToOthers } from "../lib/closet.js";
 import SectionTitle from "../components/SectionTitle.jsx";
 import LegChip from "../components/LegChip.jsx";
 import DayStrip from "../components/DayStrip.jsx";
@@ -8,7 +9,7 @@ import PersonBadge from "../components/PersonBadge.jsx";
 import DayWeather from "../components/DayWeather.jsx";
 import TripMap from "../components/TripMap.jsx";
 
-export default function ItineraryTab({ overrides, setOverrides, notesAll, setNotesAll, outfitsAll, membersById, members, myId, weather, goToOutfit, saveConfig, packingItems }) {
+export default function ItineraryTab({ overrides, setOverrides, notesAll, setNotesAll, closetsAll, membersById, members, myId, weather, goToOutfit, saveConfig, packingItems }) {
   const config = useTripConfig();
   const [selected, setSelected] = useState(() => defaultDay(config));
   const [view, setView] = useState("list"); // list | map
@@ -58,10 +59,10 @@ export default function ItineraryTab({ overrides, setOverrides, notesAll, setNot
     .filter((m) => m.user_id !== myId && notesAll[m.user_id]?.[dk]?.notes)
     .map((m) => ({ member: m, notes: notesAll[m.user_id][dk].notes }));
 
-  // Everyone's outfit (with a photo) for this day.
+  // Everyone's outfit (with a photo) for this day — private outfits only for their owner.
   const outfitPeople = (members || [])
-    .map((m) => ({ member: m, outfit: outfitsAll[m.user_id]?.[dk] }))
-    .filter((x) => x.outfit?.photo);
+    .map((m) => ({ member: m, outfit: outfitForDay(closetsAll[m.user_id], dk) }))
+    .filter((x) => x.outfit?.photo && (x.member.user_id === myId || visibleToOthers(x.outfit)));
 
   return (
     <div>
