@@ -3,7 +3,7 @@ import { TripConfigContext, CONFIG_KEY, dateRangeLabel, isDuringTrip, tripDayNum
 import { loadKey, saveKey, loadPersonalAll, loadOutfitsAll, subscribe, subscribeMembers, flushOutbox } from "./lib/storage.js";
 import { refreshWeather } from "./lib/weather.js";
 import { loadSession, getSession, ensureAuth, loadMembers, setProfile, leaveToHome, COLORS } from "./lib/session.js";
-import { currentUser, onAuthChange } from "./lib/auth.js";
+import { currentUser } from "./lib/auth.js";
 import BackupControls from "./components/BackupControls.jsx";
 import TripGate from "./components/TripGate.jsx";
 import TripsHome from "./components/TripsHome.jsx";
@@ -48,7 +48,9 @@ export default function App() {
   const myId = session?.userId;
   const membersById = useMemo(() => Object.fromEntries(members.map((m) => [m.user_id, m])), [members]);
 
-  // 1. Boot: is this device set up?
+  // 1. Boot: is this device set up? (authUser is refreshed explicitly on flow
+  // completion, NOT via onAuthStateChange — a live subscription would re-route
+  // away from the gate/wizard the instant createTrip signs in anonymously.)
   useEffect(() => {
     (async () => {
       const s = await loadSession();
@@ -56,8 +58,9 @@ export default function App() {
       setAuthUser(await currentUser().catch(() => null));
       setBooted(true);
     })();
-    return onAuthChange((u) => setAuthUser(u));
   }, []);
+
+  const refreshAuth = async () => setAuthUser(await currentUser().catch(() => null));
 
   // 2. With a session, load data + subscribe.
   useEffect(() => {
@@ -136,7 +139,7 @@ export default function App() {
 
   if (!session) {
     if (wizardProfile !== undefined) {
-      return <TripWizard profile={wizardProfile} onDone={() => { setWizardProfile(undefined); setSession(getSession()); }} onCancel={() => setWizardProfile(undefined)} />;
+      return <TripWizard profile={wizardProfile} onDone={() => { setWizardProfile(undefined); setSession(getSession()); refreshAuth(); }} onCancel={() => setWizardProfile(undefined)} />;
     }
     if (authUser) {
       return (
@@ -147,11 +150,11 @@ export default function App() {
             onNew={(profile) => setWizardProfile(profile)}
             onAccount={() => setAccountOpen(true)}
           />
-          {accountOpen && <AccountSheet user={authUser} onClose={() => setAccountOpen(false)} onChanged={async () => setAuthUser(await currentUser())} />}
+          {accountOpen && <AccountSheet user={authUser} onClose={() => setAccountOpen(false)} onChanged={refreshAuth} />}
         </>
       );
     }
-    return <TripGate onReady={() => setSession(getSession())} />;
+    return <TripGate onReady={() => { setSession(getSession()); refreshAuth(); }} />;
   }
 
   if (!loaded) return <Splash text="Syncing your trip…" />;
