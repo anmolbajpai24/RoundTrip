@@ -69,16 +69,6 @@ device** as an offline cache with a write outbox.
 If you ever want to swap the backend, everything network-related lives in
 `src/lib/supabase.js`, `src/lib/session.js`, `src/lib/auth.js`, and `src/lib/storage.js`.
 
-## Deploy to Vercel
-
-1. Push the repo to GitHub and import it on [vercel.com](https://vercel.com)
-   (framework preset: Vite).
-2. Add env vars `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`
-   (Production + Preview). The anon key is safe in the client — Row-Level
-   Security is the boundary.
-3. In Supabase **Authentication → URL Configuration**, add the Vercel URL to
-   the redirect allowlist (needed for Google OAuth / email links).
-
 ## Structure
 
 ```
