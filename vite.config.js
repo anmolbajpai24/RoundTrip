@@ -1,35 +1,45 @@
 import { defineConfig, loadEnv } from "vite";
+import { pathToFileURL } from "node:url";
+import { resolve } from "node:path";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { VitePWA } from "vite-plugin-pwa";
 
-// Serve api/tryon.js on the dev server so try-on works under `npm run dev`
-// (in production Vercel serves it as a serverless function). Server-side env
+// Serve the api/ functions on the dev server so they work under `npm run dev`
+// (in production Vercel serves them as serverless functions). Server-side env
 // vars (HF_TOKEN, GEMINI_API_KEY, ...) come from .env.local via loadEnv.
-function tryonDevEndpoint(env) {
+function apiDevEndpoints(env) {
+  // Absolute file URLs: Vite executes this config from a transpiled temp
+  // file, so relative dynamic imports would resolve from the wrong directory.
+  const routes = {
+    "/api/tryon": ["api/tryon.js", "runTryOn"],
+    "/api/itinerary": ["api/itinerary.js", "runItinerary"],
+  };
   return {
-    name: "tryon-dev-endpoint",
+    name: "api-dev-endpoints",
     configureServer(server) {
-      server.middlewares.use("/api/tryon", (req, res) => {
-        let raw = "";
-        req.on("data", (c) => (raw += c));
-        req.on("end", async () => {
-          try {
-            for (const [k, v] of Object.entries(env)) process.env[k] ||= v;
-            const { runTryOn } = await import("./api/tryon.js");
-            const out = req.method === "POST"
-              ? await runTryOn(JSON.parse(raw || "{}"), req.headers.authorization)
-              : { status: 405, body: { error: "method-not-allowed", message: "POST only." } };
-            res.statusCode = out.status;
-            res.setHeader("content-type", "application/json");
-            res.end(JSON.stringify(out.body));
-          } catch (e) {
-            res.statusCode = 500;
-            res.setHeader("content-type", "application/json");
-            res.end(JSON.stringify({ error: "dev-endpoint", message: String(e?.message || e) }));
-          }
+      for (const [path, [mod, fn]] of Object.entries(routes)) {
+        server.middlewares.use(path, (req, res) => {
+          let raw = "";
+          req.on("data", (c) => (raw += c));
+          req.on("end", async () => {
+            try {
+              for (const [k, v] of Object.entries(env)) process.env[k] ||= v;
+              const run = (await import(pathToFileURL(resolve(mod)).href))[fn];
+              const out = req.method === "POST"
+                ? await run(JSON.parse(raw || "{}"), req.headers.authorization)
+                : { status: 405, body: { error: "method-not-allowed", message: "POST only." } };
+              res.statusCode = out.status;
+              res.setHeader("content-type", "application/json");
+              res.end(JSON.stringify(out.body));
+            } catch (e) {
+              res.statusCode = 500;
+              res.setHeader("content-type", "application/json");
+              res.end(JSON.stringify({ error: "dev-endpoint", message: String(e?.message || e) }));
+            }
+          });
         });
-      });
+      }
     },
   };
 }
@@ -38,7 +48,7 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     tailwindcss(),
-    tryonDevEndpoint(loadEnv(mode, process.cwd(), "")),
+    apiDevEndpoints(loadEnv(mode, process.cwd(), "")),
     VitePWA({
       registerType: "autoUpdate",
       includeAssets: ["apple-touch-icon.png"],
