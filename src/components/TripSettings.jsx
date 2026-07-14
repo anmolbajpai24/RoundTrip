@@ -13,7 +13,7 @@ const inputStyle = { borderColor: "var(--border)", backgroundColor: "var(--field
 // day list for the (possibly new) date range while preserving each existing
 // day's title/plan; days outside a shrunk range disappear from view but their
 // notes/outfits stay in the kv store (and reappear if the range grows back).
-export default function TripSettings({ config, onSave, onClose }) {
+export default function TripSettings({ config, onSave, onClose, memberCount = 1, onDelete, onLeave }) {
   const [title, setTitle] = useState(config.title);
   const [startDate, setStartDate] = useState(config.startDate);
   const [endDate, setEndDate] = useState(config.endDate);
@@ -224,6 +224,22 @@ export default function TripSettings({ config, onSave, onClose }) {
         <div className="flex gap-2 mt-4">
           <button onClick={save} className="flex-1 text-sm font-bold text-white py-2.5 rounded-full" style={{ backgroundColor: ACCENT }}>Save</button>
           <button onClick={onClose} className="text-sm font-semibold px-4 py-2.5 rounded-full" style={{ color: MUTED }}>Cancel</button>
+        </div>
+
+        <div className="mt-5 pt-4 border-t text-center" style={{ borderColor: "var(--border)" }}>
+          {memberCount > 1 ? (
+            <button
+              onClick={() => { if (window.confirm("Leave this trip? You'll lose access to it, but it stays for everyone else on it.")) onLeave?.(); }}
+              className="text-xs font-bold" style={{ color: "#C0392B" }}>
+              Leave this trip
+            </button>
+          ) : (
+            <button
+              onClick={() => { if (window.confirm("Delete this trip permanently? This removes its itinerary, outfits, packing, budget, bookings and documents for good. This can't be undone.")) onDelete?.(); }}
+              className="text-xs font-bold" style={{ color: "#C0392B" }}>
+              Delete this trip
+            </button>
+          )}
         </div>
       </div>
     </div>

@@ -3,7 +3,7 @@ import { TripConfigContext, CONFIG_KEY, dateRangeLabel, isDuringTrip, tripDayNum
 import { loadKey, saveKey, loadPersonalAll, loadClosetsAll, subscribe, subscribeMembers, flushOutbox } from "./lib/storage.js";
 import { migrateMyLegacyOutfits } from "./lib/closet.js";
 import { refreshWeather } from "./lib/weather.js";
-import { loadSession, getSession, ensureAuth, loadMembers, setProfile, leaveToHome, COLORS } from "./lib/session.js";
+import { loadSession, getSession, ensureAuth, loadMembers, setProfile, leaveToHome, deleteTrip, leaveTrip, COLORS } from "./lib/session.js";
 import { currentUser } from "./lib/auth.js";
 import BackupControls from "./components/BackupControls.jsx";
 import TripGate from "./components/TripGate.jsx";
@@ -146,13 +146,27 @@ export default function App() {
 
   const saveConfig = (next) => { setConfig(next); saveKey(CONFIG_KEY, next); };
 
-  const goHome = async () => {
-    await leaveToHome();
+  const resetToHome = () => {
     setSession(null);
     setLoaded(false);
     setConfig(null);
     setTab("itinerary");
     setOutfitDay(null);
+  };
+
+  const goHome = async () => {
+    await leaveToHome();
+    resetToHome();
+  };
+
+  const deleteActiveTrip = async () => {
+    try { await deleteTrip(session.tripId); resetToHome(); }
+    catch (e) { alert(e.message || "Couldn't delete the trip."); }
+  };
+
+  const leaveActiveTrip = async () => {
+    try { await leaveTrip(session.tripId); resetToHome(); }
+    catch (e) { alert(e.message || "Couldn't leave the trip."); }
   };
 
   // ---------- top-level routing ----------
@@ -251,7 +265,14 @@ export default function App() {
         />
       )}
       {editingTrip && (
-        <TripSettings config={config} onSave={saveConfig} onClose={() => setEditingTrip(false)} />
+        <TripSettings
+          config={config}
+          onSave={saveConfig}
+          onClose={() => setEditingTrip(false)}
+          memberCount={members.length}
+          onDelete={deleteActiveTrip}
+          onLeave={leaveActiveTrip}
+        />
       )}
 
       {/* Content */}
