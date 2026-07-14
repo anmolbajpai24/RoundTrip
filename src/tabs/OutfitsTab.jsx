@@ -9,6 +9,7 @@ import SectionTitle from "../components/SectionTitle.jsx";
 import LegChip from "../components/LegChip.jsx";
 import DayStrip from "../components/DayStrip.jsx";
 import PersonBadge from "../components/PersonBadge.jsx";
+import OutfitGallery from "../components/OutfitGallery.jsx";
 
 // Outfit planner: upload outfits into your closet first, then assign each one
 // to one or more days (or work day-first — both write the same closet).
@@ -24,6 +25,7 @@ export default function OutfitsTab({ closetsAll, setClosetsAll, membersById, mem
     .sort((a, b) => (b[1]?.createdAt || "").localeCompare(a[1]?.createdAt || ""));
 
   const [editingId, setEditingId] = useState(null);
+  const [galleryOpen, setGalleryOpen] = useState(false);
   const [choosing, setChoosing] = useState(false);
   const [busy, setBusy] = useState(false);
   const fileRef = useRef(null);
@@ -124,9 +126,21 @@ export default function OutfitsTab({ closetsAll, setClosetsAll, membersById, mem
   // Short day chips for a closet card, e.g. "Wed 15".
   const daysOfItem = (id) => config.days.filter((d) => myCloset.days[d.date] === id);
 
+  // Anything to look at in the gallery? (mine, or a trip-mate's visible outfit)
+  const anyViewable = myItems.length > 0 ||
+    others.some((m) => Object.values(closetsAll[m.user_id]?.items || {}).some((it) => it && visibleToOthers(it)));
+
   return (
     <div>
-      <SectionTitle sub={`You've planned ${plannedCount} of ${config.days.length} days`}>Outfit planner</SectionTitle>
+      <div className="flex items-start justify-between">
+        <SectionTitle sub={`You've planned ${plannedCount} of ${config.days.length} days`}>Outfit planner</SectionTitle>
+        {anyViewable && (
+          <button onClick={() => setGalleryOpen(true)} className="text-[11px] font-bold px-3 py-1.5 rounded-full border"
+            style={{ borderColor: "var(--border)", backgroundColor: "var(--card)", color: "var(--ink)" }}>
+            🖼 Gallery
+          </button>
+        )}
+      </div>
       <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onFile} />
 
       {/* ---- My closet ---- */}
@@ -325,6 +339,14 @@ export default function OutfitsTab({ closetsAll, setClosetsAll, membersById, mem
           tryOnError={tryOnError}
           onTryOn={() => doTryOn(editingId)}
           onRemoveTryOn={() => patchItem(editingId, { tryOn: null })}
+        />
+      )}
+
+      {/* ---- Gallery (read-only swipe deck) ---- */}
+      {galleryOpen && (
+        <OutfitGallery
+          closetsAll={closetsAll} members={members} membersById={membersById} myId={myId}
+          onClose={() => setGalleryOpen(false)}
         />
       )}
     </div>
