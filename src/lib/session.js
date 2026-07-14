@@ -1,6 +1,7 @@
 import { get, set, del } from "idb-keyval";
 import { supabase, isConfigured } from "./supabase.js";
 import { getProfile, saveProfile, syncProfileToAuth } from "./profile.js";
+import { clearLocalTrip } from "./storage.js";
 
 // The session ties this device to a shared trip and to the profile (name +
 // colour) this person chose. It's cached locally so the app boots instantly
@@ -153,6 +154,53 @@ export async function enterTrip(trip) {
 // Leave the trip view back to the trips list (keeps auth + memberships).
 export async function leaveToHome() {
   await clearSession();
+}
+
+// Permanently destroy a trip (only allowed when you're its sole member — the
+// RPC enforces this too). Cascades away all members + kv content; we also clear
+// the trip's uploaded documents and this device's local cache.
+export async function deleteTrip(tripId) {
+  requireConfig();
+  await ensureAuth();
+
+  // Uploaded documents live in Storage, which the DB cascade doesn't reach.
+  // Remove them while we're still a member (storage RLS is member-only).
+  try {
+    const { data: files } = await supabase.storage.from("trip-docs").list(tripId);
+    if (files?.length) {
+      await supabase.storage.from("trip-docs").remove(files.map((f) => `${tripId}/${f.name}`));
+    }
+  } catch { /* best-effort — orphaned files are harmless */ }
+
+  const { error } = await supabase.rpc("delete_trip", { p_trip_id: tripId });
+  if (error) {
+    if (rpcMissing(error)) throw new Error("Deleting trips needs a one-time setup: run supabase/migrations/003_delete_trip.sql in the Supabase SQL editor.");
+    throw error;
+  }
+
+  await clearLocalTrip(tripId);
+  if (getSession()?.tripId === tripId) await clearSession();
+}
+
+// Leave a shared trip: remove only your own membership (and your personal data),
+// leaving the trip intact for everyone else.
+export async function leaveTrip(tripId) {
+  requireConfig();
+  await ensureAuth();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not signed in.");
+
+  // Clear your own personal rows first (still permitted while a member).
+  try {
+    await supabase.from("trip_kv").delete().eq("trip_id", tripId).eq("owner", user.id);
+  } catch { /* best-effort */ }
+
+  const { error } = await supabase
+    .from("trip_members").delete().eq("trip_id", tripId).eq("user_id", user.id);
+  if (error) throw error;
+
+  await clearLocalTrip(tripId);
+  if (getSession()?.tripId === tripId) await clearSession();
 }
 
 // All trips this user belongs to, newest membership first:

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { listMyTrips, enterTrip, joinTrip, COLORS } from "../lib/session.js";
+import { listMyTrips, enterTrip, joinTrip, deleteTrip, leaveTrip, COLORS } from "../lib/session.js";
 import { isGuest } from "../lib/auth.js";
 import { getProfile, greeting } from "../lib/profile.js";
 import { dateRangeLabel, todayISO, daysToGo, tripDayNumber, legGradient } from "../lib/tripConfig.js";
@@ -59,6 +59,21 @@ export default function TripsHome({ user, onOpen, onNew, onAuthChanged }) {
     catch (e) { setError(e.message || "Couldn't open the trip."); }
   };
 
+  // Remove a trip from the list: delete outright if you're its only member,
+  // otherwise leave it (it stays for the others). Refreshes the list after.
+  const remove = async (t) => {
+    setError("");
+    const solo = (t.members?.length || 1) <= 1;
+    const ok = window.confirm(solo
+      ? `Delete "${t.config?.title || `Trip ${t.code}`}" permanently? This removes its itinerary, outfits, packing, budget, bookings and documents for good. This can't be undone.`
+      : `Leave "${t.config?.title || `Trip ${t.code}`}"? You'll lose access to it, but it stays for everyone else on it.`);
+    if (!ok) return;
+    try {
+      await (solo ? deleteTrip(t.id) : leaveTrip(t.id));
+      await load();
+    } catch (e) { setError(e.message || "Couldn't remove the trip."); }
+  };
+
   const countdown = (cfg) => {
     if (!cfg) return "Needs setup";
     const dtg = daysToGo(cfg);
@@ -113,7 +128,7 @@ export default function TripsHome({ user, onOpen, onNew, onAuthChanged }) {
 
         {/* Hero: the trip that matters right now */}
         {hero && (
-          <button onClick={() => open(hero)} className="w-full text-left rounded-3xl overflow-hidden relative" style={{ minHeight: 176 }}>
+          <div role="button" tabIndex={0} onClick={() => open(hero)} onKeyDown={keyOpen(hero, open)} className="w-full text-left rounded-3xl overflow-hidden relative cursor-pointer" style={{ minHeight: 176 }}>
             <div
               className="absolute inset-0"
               style={hero.config?.cover?.url
@@ -121,7 +136,8 @@ export default function TripsHome({ user, onOpen, onNew, onAuthChanged }) {
                 : { backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0) 35%, rgba(0,0,0,0.35)), ${legGradient(hero.config)}` }}
             />
             <div className="relative p-4 flex flex-col justify-between" style={{ minHeight: 176 }}>
-              <div className="flex justify-end">
+              <div className="flex justify-between items-start">
+                <RemoveBtn dark onRemove={() => remove(hero)} />
                 <span className="text-[11px] font-bold px-2.5 py-1 rounded-full" style={{ backgroundColor: "rgba(255,255,255,0.92)", color: "#1D2433" }}>
                   {countdown(hero.config)}
                 </span>
@@ -150,7 +166,7 @@ export default function TripsHome({ user, onOpen, onNew, onAuthChanged }) {
                 Photo: {hero.config.cover.author} / Unsplash
               </span>
             )}
-          </button>
+          </div>
         )}
 
         {/* Travel stats */}
@@ -169,7 +185,7 @@ export default function TripsHome({ user, onOpen, onNew, onAuthChanged }) {
         {upcoming.length > 0 && (
           <>
             {sectionTitle("Also planned")}
-            {upcoming.map((t) => <TripCard key={t.id} trip={t} onOpen={open} countdown={countdown} />)}
+            {upcoming.map((t) => <TripCard key={t.id} trip={t} onOpen={open} onRemove={() => remove(t)} countdown={countdown} />)}
           </>
         )}
 
@@ -177,7 +193,7 @@ export default function TripsHome({ user, onOpen, onNew, onAuthChanged }) {
         {past.length > 0 && (
           <>
             {sectionTitle("Past trips")}
-            {past.map((t) => <PastRow key={t.id} trip={t} onOpen={open} />)}
+            {past.map((t) => <PastRow key={t.id} trip={t} onOpen={open} onRemove={() => remove(t)} />)}
           </>
         )}
 
@@ -207,10 +223,36 @@ export default function TripsHome({ user, onOpen, onNew, onAuthChanged }) {
   );
 }
 
-function TripCard({ trip: t, onOpen, countdown }) {
+// The "remove trip" affordance overlaid on a trip card. A real button of its
+// own, and it stops propagation so tapping it never opens the trip.
+function RemoveBtn({ onRemove, dark }) {
+  return (
+    <button
+      onClick={(e) => { e.stopPropagation(); onRemove(); }}
+      title="Delete trip"
+      aria-label="Delete trip"
+      className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center"
+      style={{ backgroundColor: dark ? "rgba(0,0,0,0.35)" : "var(--chip)", color: dark ? "#fff" : "#C0392B" }}>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M3 6h18" />
+        <path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" />
+        <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+        <line x1="10" y1="11" x2="10" y2="17" />
+        <line x1="14" y1="11" x2="14" y2="17" />
+      </svg>
+    </button>
+  );
+}
+
+// Open the trip on Enter/Space for the div-based (non-button) card shells.
+const keyOpen = (t, onOpen) => (e) => {
+  if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(t); }
+};
+
+function TripCard({ trip: t, onOpen, onRemove, countdown }) {
   const cfg = t.config;
   return (
-    <button onClick={() => onOpen(t)} className="w-full text-left rounded-2xl border mb-3 overflow-hidden" style={{ borderColor: "var(--border)", backgroundColor: "var(--card)" }}>
+    <div role="button" tabIndex={0} onClick={() => onOpen(t)} onKeyDown={keyOpen(t, onOpen)} className="w-full text-left rounded-2xl border mb-3 overflow-hidden cursor-pointer" style={{ borderColor: "var(--border)", backgroundColor: "var(--card)" }}>
       {cfg && (
         <div className="flex h-1.5">
           {cfg.legOrder.map((k, i) => (
@@ -221,7 +263,10 @@ function TripCard({ trip: t, onOpen, countdown }) {
       <div className="p-4">
         <div className="flex items-center justify-between">
           <span className="text-base font-bold" style={{ color: INK }}>{cfg?.title || `Trip ${t.code}`}</span>
-          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: "var(--chip)", color: MUTED }}>{countdown(cfg)}</span>
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: "var(--chip)", color: MUTED }}>{countdown(cfg)}</span>
+            <RemoveBtn onRemove={onRemove} />
+          </div>
         </div>
         <div className="text-xs mt-0.5" style={{ color: MUTED, fontFamily: "ui-monospace, monospace" }}>
           {cfg ? dateRangeLabel(cfg) : "Needs setup"} · code {t.code}
@@ -233,18 +278,19 @@ function TripCard({ trip: t, onOpen, countdown }) {
           </div>
         )}
       </div>
-    </button>
+    </div>
   );
 }
 
-function PastRow({ trip: t, onOpen }) {
+function PastRow({ trip: t, onOpen, onRemove }) {
   const cfg = t.config;
   return (
-    <button onClick={() => onOpen(t)} className="w-full text-left rounded-xl border mb-2 px-3 py-2.5 flex items-center gap-3" style={{ borderColor: "var(--border)", backgroundColor: "var(--card)", opacity: 0.7 }}>
+    <div role="button" tabIndex={0} onClick={() => onOpen(t)} onKeyDown={keyOpen(t, onOpen)} className="w-full text-left rounded-xl border mb-2 px-3 py-2.5 flex items-center gap-3 cursor-pointer" style={{ borderColor: "var(--border)", backgroundColor: "var(--card)", opacity: 0.7 }}>
       <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: legGradient(cfg) }} />
       <span className="text-sm font-semibold truncate flex-1" style={{ color: INK }}>{cfg?.title || `Trip ${t.code}`}</span>
       <span className="text-[11px] flex-shrink-0" style={{ color: MUTED, fontFamily: "ui-monospace, monospace" }}>{cfg ? dateRangeLabel(cfg) : t.code}</span>
-    </button>
+      <RemoveBtn onRemove={onRemove} />
+    </div>
   );
 }
 

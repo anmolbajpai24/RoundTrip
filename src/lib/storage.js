@@ -1,4 +1,4 @@
-import { get, set, keys } from "idb-keyval";
+import { get, set, del, keys } from "idb-keyval";
 import { supabase, isConfigured } from "./supabase.js";
 import { getSession, myId } from "./session.js";
 import { APP_SLUG, LEGACY_APP_SLUG } from "../theme.js";
@@ -202,6 +202,19 @@ export async function flushOutbox() {
   } catch { /* stay queued */ } finally {
     flushing = false;
   }
+}
+
+// Drop every local trace of a trip (its cached kv rows + any queued outbox
+// writes). Used after a trip is deleted or left so stale data doesn't linger.
+export async function clearLocalTrip(tripId) {
+  const all = await keys();
+  for (const k of all)
+    if (typeof k === "string" && k.startsWith(`kv:${tripId}:`)) await del(k);
+  const box = (await get(OUTBOX_KEY)) || {};
+  let changed = false;
+  for (const [id, e] of Object.entries(box))
+    if (e.tripId === tripId) { delete box[id]; changed = true; }
+  if (changed) await set(OUTBOX_KEY, box);
 }
 
 // ---------- realtime ----------
