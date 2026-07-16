@@ -1,9 +1,12 @@
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { generateDays, listDates, softOf, slugify, legGradient } from "../lib/tripConfig.js";
-import { searchPlaces } from "../lib/geocode.js";
+import usePlaceSearch from "../lib/usePlaceSearch.js";
+import Spinner from "./Spinner.jsx";
 import { searchCoverPhotos, trackDownload, asCover, unsplashEnabled } from "../lib/unsplash.js";
 import { CURRENCIES } from "../data/currencies.js";
 import { COLORS } from "../lib/session.js";
+import { confirmDialog } from "./dialogs.jsx";
+import useBackClose from "../lib/useBackClose.js";
 import { ACCENT, INK, MUTED } from "../theme.js";
 
 const MAX_TRIP_DAYS = 60;
@@ -28,19 +31,11 @@ export default function TripSettings({ config, onSave, onClose, memberCount = 1,
   const [coverChoices, setCoverChoices] = useState(null);
   const [coverBusy, setCoverBusy] = useState(false);
   const [error, setError] = useState("");
+  const requestClose = useBackClose(onClose);
 
   // destination search
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState([]);
-  const timer = useRef(null);
-  useEffect(() => {
-    clearTimeout(timer.current);
-    if (query.trim().length < 2) { setResults([]); return; }
-    timer.current = setTimeout(async () => {
-      try { setResults(await searchPlaces(query)); } catch { setResults([]); }
-    }, 350);
-    return () => clearTimeout(timer.current);
-  }, [query]);
+  const { results, searching } = usePlaceSearch(query);
 
   const uniqueLegKeys = [...new Set(legOrder)];
 
@@ -59,7 +54,7 @@ export default function TripSettings({ config, onSave, onClose, memberCount = 1,
       [key]: { name: place.name, color: COLORS[Object.keys(l).length % COLORS.length], soft: softOf(COLORS[Object.keys(l).length % COLORS.length]), lat: place.lat, lon: place.lon, norm: null },
     }));
     setLegOrder((o) => [...o, key]);
-    setQuery(""); setResults([]);
+    setQuery("");
   };
 
   const save = () => {
@@ -89,13 +84,13 @@ export default function TripSettings({ config, onSave, onClose, memberCount = 1,
       legOrder: legOrder.length ? legOrder : uniqueLegKeys,
       days: days.map((d) => (legs[d.leg] ? d : { ...d, leg: fallbackLeg })),
     });
-    onClose();
+    requestClose();
   };
 
   const label = (t) => <label className="text-xs font-bold uppercase tracking-wide" style={{ color: MUTED }}>{t}</label>;
 
   return (
-    <div className="fixed inset-0 z-40 flex items-end sm:items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.4)" }} onClick={onClose}>
+    <div className="fixed inset-0 z-40 flex items-end sm:items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.4)" }} onClick={requestClose}>
       <div className="w-full max-w-sm m-4 rounded-2xl p-5 overflow-y-auto" style={{ backgroundColor: "var(--card)", maxHeight: "85vh" }} onClick={(e) => e.stopPropagation()}>
         <h2 className="text-base font-bold mb-4" style={{ color: INK }}>Trip settings</h2>
 
@@ -211,6 +206,7 @@ export default function TripSettings({ config, onSave, onClose, memberCount = 1,
         })}
         <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Add a destination…"
           className="w-full text-sm rounded-xl border px-4 py-2.5" style={inputStyle} />
+        {searching && <p className="text-xs mt-2 flex items-center gap-2" style={{ color: MUTED }}><Spinner className="w-3.5 h-3.5" /> Searching…</p>}
         {results.map((r, i) => (
           <button key={i} onClick={() => addLeg(r)} className="w-full text-left rounded-xl border px-3 py-2 mt-1.5 text-sm" style={{ borderColor: "var(--border)", color: INK }}>
             <span className="font-semibold">{r.name}</span>
@@ -223,19 +219,19 @@ export default function TripSettings({ config, onSave, onClose, memberCount = 1,
 
         <div className="flex gap-2 mt-4">
           <button onClick={save} className="flex-1 text-sm font-bold text-white py-2.5 rounded-full" style={{ backgroundColor: ACCENT }}>Save</button>
-          <button onClick={onClose} className="text-sm font-semibold px-4 py-2.5 rounded-full" style={{ color: MUTED }}>Cancel</button>
+          <button onClick={requestClose} className="text-sm font-semibold px-4 py-2.5 rounded-full" style={{ color: MUTED }}>Cancel</button>
         </div>
 
         <div className="mt-5 pt-4 border-t text-center" style={{ borderColor: "var(--border)" }}>
           {memberCount > 1 ? (
             <button
-              onClick={() => { if (window.confirm("Leave this trip? You'll lose access to it, but it stays for everyone else on it.")) onLeave?.(); }}
+              onClick={async () => { if (await confirmDialog({ title: "Leave this trip?", message: "You'll lose access to it, but it stays for everyone else on it.", confirmLabel: "Leave trip", danger: true })) onLeave?.(); }}
               className="text-xs font-bold" style={{ color: "#C0392B" }}>
               Leave this trip
             </button>
           ) : (
             <button
-              onClick={() => { if (window.confirm("Delete this trip permanently? This removes its itinerary, outfits, packing, budget, bookings and documents for good. This can't be undone.")) onDelete?.(); }}
+              onClick={async () => { if (await confirmDialog({ title: "Delete this trip?", message: "This permanently removes its itinerary, outfits, packing, budget, bookings and documents. This can't be undone.", confirmLabel: "Delete forever", danger: true })) onDelete?.(); }}
               className="text-xs font-bold" style={{ color: "#C0392B" }}>
               Delete this trip
             </button>

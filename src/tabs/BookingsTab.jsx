@@ -1,6 +1,8 @@
 import { useState, useRef } from "react";
 import { saveKey } from "../lib/storage.js";
 import { DOCS_KEY, uploadDocument, docUrl, removeDocument, docIcon, docSize } from "../lib/documents.js";
+import { confirmDialog } from "../components/dialogs.jsx";
+import useBackClose from "../lib/useBackClose.js";
 import SectionTitle from "../components/SectionTitle.jsx";
 import PersonBadge from "../components/PersonBadge.jsx";
 
@@ -122,7 +124,12 @@ function DocumentsSection({ documents, setDocuments, bookings, persistBookings, 
   };
 
   const del = async (doc) => {
-    if (!window.confirm(`Delete "${doc.name}" for everyone on the trip?`)) return;
+    const ok = await confirmDialog({
+      title: "Delete this document?",
+      message: `"${doc.name}" will be removed for everyone on the trip.`,
+      confirmLabel: "Delete", danger: true,
+    });
+    if (!ok) return;
     setError("");
     try {
       await removeDocument(doc);
@@ -166,14 +173,21 @@ function DocumentsSection({ documents, setDocuments, bookings, persistBookings, 
       </p>
       {error && <p className="text-xs mt-2" style={{ color: "#C8102E" }}>{error}</p>}
 
-      {viewer && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: "rgba(0,0,0,0.85)" }} onClick={() => setViewer(null)}>
-          <div className="max-w-lg w-full">
-            <img src={viewer.url} alt={viewer.name} className="w-full rounded-xl" style={{ maxHeight: "80vh", objectFit: "contain" }} />
-            <p className="text-center text-xs text-white mt-2 opacity-80">{viewer.name} · tap to close</p>
-          </div>
-        </div>
-      )}
+      {viewer && <ImageViewer viewer={viewer} onClose={() => setViewer(null)} />}
+    </div>
+  );
+}
+
+// Full-screen document image preview (own component so it can register with
+// the Back-button stack).
+function ImageViewer({ viewer, onClose }) {
+  const requestClose = useBackClose(onClose);
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: "rgba(0,0,0,0.85)" }} onClick={requestClose}>
+      <div className="max-w-lg w-full">
+        <img src={viewer.url} alt={viewer.name} className="w-full rounded-xl" style={{ maxHeight: "80vh", objectFit: "contain" }} />
+        <p className="text-center text-xs text-white mt-2 opacity-80">{viewer.name} · tap to close</p>
+      </div>
     </div>
   );
 }

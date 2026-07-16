@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { isGuest, linkEmailStart, linkEmailVerify, linkGoogle, signInEmailStart, signInEmailVerify, signInGoogle, signOut } from "../lib/auth.js";
+import useBackClose from "../lib/useBackClose.js";
 import { APP_NAME, ACCENT, INK, MUTED } from "../theme.js";
 
 const inputStyle = { borderColor: "var(--border)", backgroundColor: "var(--field)", color: INK };
@@ -15,14 +16,17 @@ export default function AccountSheet({ user, mode = "link", onClose, onChanged }
   const [stage, setStage] = useState("start"); // start | code | done
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const requestClose = useBackClose(onClose);
 
   const run = async (fn, nextStage) => {
     setBusy(true); setError("");
     try { await fn(); if (nextStage) setStage(nextStage); }
     catch (e) {
-      const msg = e.message || "Something went wrong.";
+      let msg = e.message || "Something went wrong.";
       if (/manual linking/i.test(msg)) {
+        // Deploy misconfiguration — tell the maintainer in the console, the user in plain words.
         console.warn('Roundtrip setup: enable "Allow manual linking" in Supabase → Authentication → Settings so guests can link Google/email to their existing anonymous user.');
+        msg = "Sign-in isn't available right now — you can keep using the app as a guest.";
       }
       setError(msg);
     }
@@ -43,10 +47,10 @@ export default function AccountSheet({ user, mode = "link", onClose, onChanged }
     });
   };
   const google = () => run(() => (signin ? signInGoogle() : linkGoogle()));
-  const doSignOut = () => run(async () => { await signOut(); onChanged?.(); onClose(); });
+  const doSignOut = () => run(async () => { await signOut(); onChanged?.(); requestClose(); });
 
   return (
-    <div className="fixed inset-0 z-40 flex items-end sm:items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.4)" }} onClick={onClose}>
+    <div className="fixed inset-0 z-40 flex items-end sm:items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.4)" }} onClick={requestClose}>
       <div className="w-full max-w-sm m-4 rounded-2xl p-5" style={{ backgroundColor: "var(--card)" }} onClick={(e) => e.stopPropagation()}>
         {signin ? (
           <>
@@ -69,7 +73,7 @@ export default function AccountSheet({ user, mode = "link", onClose, onChanged }
             <button onClick={doSignOut} disabled={busy} className="w-full text-sm font-bold py-2.5 rounded-full border mb-2" style={{ borderColor: "var(--border)", color: ACCENT }}>
               {busy ? "…" : "Sign out"}
             </button>
-            <button onClick={onClose} className="w-full text-sm font-semibold py-2 rounded-full" style={{ color: MUTED }}>Close</button>
+            <button onClick={requestClose} className="w-full text-sm font-semibold py-2 rounded-full" style={{ color: MUTED }}>Close</button>
             {error && <p className="text-xs mt-2 text-center" style={{ color: ACCENT }}>{error}</p>}
           </>
         )}
@@ -109,14 +113,14 @@ export default function AccountSheet({ user, mode = "link", onClose, onChanged }
         {(signin || guest) && stage === "done" && (
           <>
             <p className="text-sm font-semibold mb-3 text-center" style={{ color: "#2E7D4F" }}>✓ {signin ? "Signed in" : "Account saved"}</p>
-            <button onClick={onClose} className="w-full text-sm font-bold text-white py-3 rounded-full" style={{ backgroundColor: ACCENT }}>Done</button>
+            <button onClick={requestClose} className="w-full text-sm font-bold text-white py-3 rounded-full" style={{ backgroundColor: ACCENT }}>Done</button>
           </>
         )}
 
         {(signin || guest) && stage !== "done" && (
           <>
             {error && <p className="text-xs mt-2 text-center" style={{ color: ACCENT }}>{error}</p>}
-            <button onClick={onClose} className="w-full text-sm font-semibold py-2 mt-2 rounded-full" style={{ color: MUTED }}>Not now</button>
+            <button onClick={requestClose} className="w-full text-sm font-semibold py-2 mt-2 rounded-full" style={{ color: MUTED }}>Not now</button>
           </>
         )}
       </div>

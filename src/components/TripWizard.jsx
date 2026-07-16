@@ -3,10 +3,12 @@ import { COLORS, createTrip } from "../lib/session.js";
 import { saveKey } from "../lib/storage.js";
 import { CONFIG_KEY, generateDays, listDates, softOf, slugify, dateLabel, weekday, addDays, softBg, todayISO } from "../lib/tripConfig.js";
 import { searchPlaces } from "../lib/geocode.js";
+import usePlaceSearch from "../lib/usePlaceSearch.js";
 import { generateItinerary, aiItineraryAvailable } from "../lib/itinerary.js";
 import { getLocalProfile } from "../lib/profile.js";
 import { searchCoverPhotos, trackDownload, asCover } from "../lib/unsplash.js";
 import { CURRENCIES } from "../data/currencies.js";
+import Spinner from "./Spinner.jsx";
 import { APP_NAME, ACCENT, INK, MUTED } from "../theme.js";
 
 const MAX_TRIP_DAYS = 60;
@@ -322,7 +324,8 @@ export default function TripWizard({ profile, onDone, onCancel }) {
         {error && <p className="text-xs mt-3" style={{ color: ACCENT }}>{error}</p>}
 
         <button onClick={step === reviewStep ? create : next} disabled={busy || aiBusy}
-          className="mt-5 w-full text-sm font-bold text-white py-3 rounded-full" style={{ backgroundColor: ACCENT }}>
+          className="mt-5 w-full text-sm font-bold text-white py-3 rounded-full inline-flex items-center justify-center gap-2" style={{ backgroundColor: ACCENT }}>
+          {busy && <Spinner className="w-4 h-4" light />}
           {busy ? "Creating…" : step === reviewStep ? "Create trip" : aiOn && step === 4 && !aiAccepted ? "Skip for now" : "Continue"}
         </button>
       </div>
@@ -343,20 +346,7 @@ function CurrencySelect({ value, onChange, exclude }) {
 
 function DestinationsStep({ dests, setDests, startDate, endDate }) {
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState([]);
-  const [searching, setSearching] = useState(false);
-  const timer = useRef(null);
-
-  useEffect(() => {
-    clearTimeout(timer.current);
-    if (query.trim().length < 2) { setResults([]); return; }
-    timer.current = setTimeout(async () => {
-      setSearching(true);
-      try { setResults(await searchPlaces(query)); } catch { setResults([]); }
-      setSearching(false);
-    }, 350);
-    return () => clearTimeout(timer.current);
-  }, [query]);
+  const { results, searching } = usePlaceSearch(query);
 
   const addDest = (place) => {
     setDests((ds) => [...ds, {
@@ -367,7 +357,7 @@ function DestinationsStep({ dests, setDests, startDate, endDate }) {
       color: COLORS[ds.length % COLORS.length],
       arrival: ds.length === 0 ? startDate : "",
     }]);
-    setQuery(""); setResults([]);
+    setQuery("");
   };
 
   return (
@@ -397,7 +387,7 @@ function DestinationsStep({ dests, setDests, startDate, endDate }) {
 
       <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={dests.length ? "Add another place…" : "Search a city, e.g. Kyoto"}
         className="w-full text-sm rounded-xl border px-4 py-3" style={inputStyle} />
-      {searching && <p className="text-xs mt-2" style={{ color: MUTED }}>Searching…</p>}
+      {searching && <p className="text-xs mt-2 flex items-center gap-2" style={{ color: MUTED }}><Spinner className="w-3.5 h-3.5" /> Searching…</p>}
       {results.map((r, i) => (
         <button key={i} onClick={() => addDest(r)} className="w-full text-left rounded-xl border px-3 py-2.5 mt-1.5 text-sm" style={{ borderColor: "var(--border)", backgroundColor: "var(--card)", color: INK }}>
           <span className="font-semibold">{r.name}</span>
@@ -423,9 +413,10 @@ function AiItineraryStep({ desc, setDesc, days, legs, busy, error, accepted, onG
         className="mb-3 w-full text-sm rounded-xl border px-4 py-3 resize-none" style={inputStyle} />
       {!disabled && (
         <button onClick={onGenerate} disabled={busy}
-          className="w-full text-sm font-bold py-3 rounded-full border"
+          className="w-full text-sm font-bold py-3 rounded-full border inline-flex items-center justify-center gap-2"
           style={{ color: ACCENT, borderColor: ACCENT, opacity: busy ? 0.6 : 1 }}>
-          {busy ? "Asking the AI…" : days ? "Regenerate" : "Draft my itinerary"}
+          {busy && <Spinner className="w-4 h-4" />}
+          {busy ? "Asking the AI… (can take ~30s)" : days ? "Regenerate" : "Draft my itinerary"}
         </button>
       )}
       {error && (

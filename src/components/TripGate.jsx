@@ -24,15 +24,22 @@ export default function TripGate({ onReady }) {
   const wrap = { minHeight: "100vh", backgroundColor: "var(--bg)", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" };
 
   if (!isConfigured) {
+    // Real users should never see setup internals — those go to the console
+    // (and the full walkthrough is shown in dev builds only).
+    console.error(`${APP_NAME} setup: Supabase isn't configured. Follow supabase/SETUP.md and add the keys to .env.local, then reload.`);
     return (
       <div className="flex items-center justify-center px-6" style={wrap}>
         <div className="max-w-sm text-center">
           <div className="text-4xl mb-3">🔌</div>
-          <h1 className="text-lg font-bold mb-2" style={{ color: INK }}>Almost there</h1>
+          <h1 className="text-lg font-bold mb-2" style={{ color: INK }}>{APP_NAME} can't connect right now</h1>
           <p className="text-sm leading-relaxed" style={{ color: MUTED }}>
-            Cross-device sync needs a free Supabase project. Follow the steps in{" "}
-            <span className="font-semibold" style={{ color: INK }}>supabase/SETUP.md</span>{" "}
-            and add your keys to <span className="font-semibold" style={{ color: INK }}>.env.local</span>, then reload.
+            {import.meta.env.DEV ? (
+              <>Cross-device sync needs a free Supabase project. Follow the steps in{" "}
+              <span className="font-semibold" style={{ color: INK }}>supabase/SETUP.md</span>{" "}
+              and add your keys to <span className="font-semibold" style={{ color: INK }}>.env.local</span>, then reload.</>
+            ) : (
+              <>Something's wrong on our side — please try again a bit later.</>
+            )}
           </p>
         </div>
       </div>

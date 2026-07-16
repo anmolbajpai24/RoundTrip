@@ -4,6 +4,7 @@ import { getProfile, saveProfile } from "../lib/profile.js";
 import { COLORS } from "../lib/session.js";
 import Avatar from "./Avatar.jsx";
 import AccountSheet from "./AccountSheet.jsx";
+import useBackClose from "../lib/useBackClose.js";
 import { APP_NAME, ACCENT, INK, MUTED, getThemePref, setThemePref } from "../theme.js";
 import pkg from "../../package.json";
 
@@ -25,6 +26,7 @@ export default function ProfileSheet({ user, stats, onClose, onChanged }) {
   const [error, setError] = useState("");
   const [account, setAccount] = useState(false);
   const [theme, setTheme] = useState(getThemePref());
+  const requestClose = useBackClose(onClose);
 
   const saveName = async () => {
     if (!name.trim()) { setError("Enter a name."); return; }
@@ -39,7 +41,7 @@ export default function ProfileSheet({ user, stats, onClose, onChanged }) {
 
   const doSignOut = async () => {
     setBusy(true); setError("");
-    try { await signOut(); onChanged?.(); onClose(); }
+    try { await signOut(); onChanged?.(); requestClose(); }
     catch (e) { setError(e.message || "Couldn't sign out."); }
     setBusy(false);
   };
@@ -51,7 +53,7 @@ export default function ProfileSheet({ user, stats, onClose, onChanged }) {
   );
 
   return (
-    <div className="fixed inset-0 z-40 flex items-end sm:items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.4)" }} onClick={onClose}>
+    <div className="fixed inset-0 z-40 flex items-end sm:items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.4)" }} onClick={requestClose}>
       <div className="w-full max-w-sm m-4 rounded-2xl p-5 overflow-y-auto" style={{ backgroundColor: "var(--card)", maxHeight: "85vh" }} onClick={(e) => e.stopPropagation()}>
 
         {/* Identity */}
@@ -153,7 +155,7 @@ export default function ProfileSheet({ user, stats, onClose, onChanged }) {
 
         {error && <p className="text-xs mt-2 text-center" style={{ color: ACCENT }}>{error}</p>}
 
-        <button onClick={onClose} className="w-full text-sm font-semibold py-2.5 mt-3 rounded-full" style={{ color: MUTED }}>Close</button>
+        <button onClick={requestClose} className="w-full text-sm font-semibold py-2.5 mt-3 rounded-full" style={{ color: MUTED }}>Close</button>
         <p className="text-center text-[10px] mt-1" style={{ color: "var(--faint)" }}>
           {APP_NAME} v{pkg.version} · <a href="/privacy.html" target="_blank" rel="noreferrer" style={{ color: "var(--faint)", textDecoration: "underline" }}>Privacy</a>
         </p>

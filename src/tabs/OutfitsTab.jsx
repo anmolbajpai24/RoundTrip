@@ -4,6 +4,8 @@ import { saveKey } from "../lib/storage.js";
 import { compressImage, compressImageToBlob } from "../lib/image.js";
 import { outfitForDay, visibleToOthers, hasPhoto } from "../lib/closet.js";
 import { uploadOutfitPhoto, deleteOutfitPhoto } from "../lib/outfitPhotos.js";
+import { confirmDialog } from "../components/dialogs.jsx";
+import useBackClose from "../lib/useBackClose.js";
 import { loadBasePhoto, saveBasePhoto, generateTryOn } from "../lib/tryon.js";
 import { FEATURES } from "../appConfig.js";
 import SectionTitle from "../components/SectionTitle.jsx";
@@ -69,8 +71,13 @@ export default function OutfitsTab({ closetsAll, setClosetsAll, membersById, mem
   };
   const toggleDayForItem = (id, date) =>
     myCloset.days[date] === id ? unassignDay(date) : assignDay(date, id);
-  const deleteItem = (id) => {
-    if (!window.confirm("Delete this outfit? Days it was assigned to will be cleared.")) return;
+  const deleteItem = async (id) => {
+    const ok = await confirmDialog({
+      title: "Delete this outfit?",
+      message: "Days it was assigned to will be cleared.",
+      confirmLabel: "Delete", danger: true,
+    });
+    if (!ok) return;
     const items = { ...myCloset.items };
     const gone = items[id];
     delete items[id];
@@ -409,13 +416,14 @@ function OutfitEditor({ item, itemId, busy, config, daysMap, onToggleDay, onSave
   basePhoto, onAddBasePhoto, tryOnBusy, tryOnError, onTryOn, onRemoveTryOn }) {
   const [desc, setDesc] = useState(item.desc || "");
   const isPrivate = item.visibility === "private";
+  const requestClose = useBackClose(onClose);
 
   return (
-    <div className="fixed inset-0 z-30 flex items-end sm:items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.4)" }} onClick={onClose}>
+    <div className="fixed inset-0 z-30 flex items-end sm:items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.4)" }} onClick={requestClose}>
       <div className="w-full max-w-sm m-0 sm:m-4 rounded-t-2xl sm:rounded-2xl p-5 overflow-y-auto" style={{ backgroundColor: "var(--card)", maxHeight: "85vh" }} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-base font-bold" style={{ color: "var(--ink)" }}>Your outfit</h2>
-          <button onClick={onClose} className="text-sm font-bold px-3 py-1.5 rounded-full text-white" style={{ backgroundColor: "var(--solid)" }}>Done</button>
+          <button onClick={requestClose} className="text-sm font-bold px-3 py-1.5 rounded-full text-white" style={{ backgroundColor: "var(--solid)" }}>Done</button>
         </div>
 
         {hasPhoto(item) ? (

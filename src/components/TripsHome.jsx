@@ -6,6 +6,7 @@ import { dateRangeLabel, todayISO, daysToGo, tripDayNumber, legGradient } from "
 import PersonBadge from "./PersonBadge.jsx";
 import Avatar from "./Avatar.jsx";
 import ProfileSheet from "./ProfileSheet.jsx";
+import { confirmDialog } from "./dialogs.jsx";
 import { APP_NAME, ACCENT, INK, MUTED } from "../theme.js";
 
 const inputStyle = { borderColor: "var(--border)", backgroundColor: "var(--card)", color: INK };
@@ -64,9 +65,10 @@ export default function TripsHome({ user, onOpen, onNew, onAuthChanged }) {
   const remove = async (t) => {
     setError("");
     const solo = (t.members?.length || 1) <= 1;
-    const ok = window.confirm(solo
-      ? `Delete "${t.config?.title || `Trip ${t.code}`}" permanently? This removes its itinerary, outfits, packing, budget, bookings and documents for good. This can't be undone.`
-      : `Leave "${t.config?.title || `Trip ${t.code}`}"? You'll lose access to it, but it stays for everyone else on it.`);
+    const title = t.config?.title || `Trip ${t.code}`;
+    const ok = await confirmDialog(solo
+      ? { title: `Delete "${title}"?`, message: "This permanently removes its itinerary, outfits, packing, budget, bookings and documents. This can't be undone.", confirmLabel: "Delete forever", danger: true }
+      : { title: `Leave "${title}"?`, message: "You'll lose access to it, but it stays for everyone else on it.", confirmLabel: "Leave trip", danger: true });
     if (!ok) return;
     try {
       await (solo ? deleteTrip(t.id) : leaveTrip(t.id));
@@ -231,15 +233,17 @@ function RemoveBtn({ onRemove, dark }) {
       onClick={(e) => { e.stopPropagation(); onRemove(); }}
       title="Delete trip"
       aria-label="Delete trip"
-      className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center"
-      style={{ backgroundColor: dark ? "rgba(0,0,0,0.35)" : "var(--chip)", color: dark ? "#fff" : "#C0392B" }}>
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <path d="M3 6h18" />
-        <path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" />
-        <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-        <line x1="10" y1="11" x2="10" y2="17" />
-        <line x1="14" y1="11" x2="14" y2="17" />
-      </svg>
+      className="flex-shrink-0 w-11 h-11 -m-2 rounded-full flex items-center justify-center"
+      style={{ color: dark ? "#fff" : "#C0392B" }}>
+      <span className="w-7 h-7 rounded-full flex items-center justify-center" style={{ backgroundColor: dark ? "rgba(0,0,0,0.35)" : "var(--chip)" }}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M3 6h18" />
+          <path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" />
+          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+          <line x1="10" y1="11" x2="10" y2="17" />
+          <line x1="14" y1="11" x2="14" y2="17" />
+        </svg>
+      </span>
     </button>
   );
 }
@@ -320,9 +324,11 @@ function JoinForm({ defaultProfile, onJoined, onCancel }) {
         className="w-full text-sm rounded-full border px-4 py-2.5 mb-2" style={inputStyle} />
       <div className="flex gap-2 mb-3">
         {COLORS.map((c) => (
-          <button key={c} onClick={() => setColor(c)} className="w-7 h-7 rounded-full flex items-center justify-center"
-            style={{ backgroundColor: c, outline: color === c ? "2px solid var(--ink)" : "none", outlineOffset: 2 }}>
-            {color === c && <span className="text-white text-[10px] font-bold">✓</span>}
+          <button key={c} onClick={() => setColor(c)} aria-label={`Colour ${c}`} className="w-11 h-11 -m-1 rounded-full flex items-center justify-center">
+            <span className="w-7 h-7 rounded-full flex items-center justify-center"
+              style={{ backgroundColor: c, outline: color === c ? "2px solid var(--ink)" : "none", outlineOffset: 2 }}>
+              {color === c && <span className="text-white text-[10px] font-bold">✓</span>}
+            </span>
           </button>
         ))}
       </div>

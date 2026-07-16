@@ -13,6 +13,9 @@ import TripSettings from "./components/TripSettings.jsx";
 import LegacyUpgrade from "./components/LegacyUpgrade.jsx";
 import PersonBadge from "./components/PersonBadge.jsx";
 import SyncChip from "./components/SyncChip.jsx";
+import Spinner from "./components/Spinner.jsx";
+import { toast } from "./components/dialogs.jsx";
+import useBackClose, { setTabPopHandler } from "./lib/useBackClose.js";
 import ItineraryTab from "./tabs/ItineraryTab.jsx";
 import OutfitsTab from "./tabs/OutfitsTab.jsx";
 import PackingTab from "./tabs/PackingTab.jsx";
@@ -24,8 +27,30 @@ const SHARED = "__shared__";
 const seedPacking = (config) =>
   (config?.packingTemplate || []).flatMap(([cat, items], ci) => items.map((text, ii) => ({ id: ci * 100 + ii, cat, text, done: false })));
 
+const TAB_STORE = "roundtrip:tab";
+const TAB_IDS = ["itinerary", "outfits", "packing", "budget", "bookings"];
+const storedTab = () => {
+  try { const t = sessionStorage.getItem(TAB_STORE); return TAB_IDS.includes(t) ? t : "itinerary"; }
+  catch { return "itinerary"; }
+};
+
 export default function App() {
-  const [tab, setTab] = useState("itinerary");
+  // Survives refresh via sessionStorage; hardware Back walks visited tabs
+  // (and closes overlays first) via the useBackClose history stack.
+  const [tab, setTabState] = useState(storedTab);
+  const setTab = (next, { push = true } = {}) => {
+    setTabState(next);
+    try { sessionStorage.setItem(TAB_STORE, next); } catch { /* private mode */ }
+    if (push && next !== tab) window.history.pushState({ tab: next }, "");
+  };
+  useEffect(() => {
+    window.history.replaceState({ tab: storedTab() }, "");
+    setTabPopHandler((t) => {
+      setTabState(t);
+      try { sessionStorage.setItem(TAB_STORE, t); } catch { /* private mode */ }
+    });
+    return () => setTabPopHandler(null);
+  }, []);
   const [booted, setBooted] = useState(false);
   const [session, setSession] = useState(null);
   const [authUser, setAuthUser] = useState(null);
@@ -146,7 +171,7 @@ export default function App() {
     setSession(null);
     setLoaded(false);
     setConfig(null);
-    setTab("itinerary");
+    setTab("itinerary", { push: false });
     setOutfitDay(null);
   };
 
@@ -157,12 +182,12 @@ export default function App() {
 
   const deleteActiveTrip = async () => {
     try { await deleteTrip(session.tripId); resetToHome(); }
-    catch (e) { alert(e.message || "Couldn't delete the trip."); }
+    catch (e) { toast(e.message || "Couldn't delete the trip.", { kind: "error" }); }
   };
 
   const leaveActiveTrip = async () => {
     try { await leaveTrip(session.tripId); resetToHome(); }
-    catch (e) { alert(e.message || "Couldn't leave the trip."); }
+    catch (e) { toast(e.message || "Couldn't leave the trip.", { kind: "error" }); }
   };
 
   // ---------- top-level routing ----------
@@ -215,14 +240,16 @@ export default function App() {
             <button onClick={goHome} className="text-[11px] font-bold uppercase tracking-widest flex items-center gap-1" style={{ color: ACCENT }}>
               ‹ Trips <span style={{ color: MUTED }}>· {dateRangeLabel(config)}</span>
             </button>
-            <div className="flex items-center gap-2 mt-0.5">
+            <div className="flex items-center gap-1 mt-0.5">
               <h1 className="text-white text-xl font-bold truncate">{config.title}</h1>
-              <button onClick={() => setEditingTrip(true)} title="Trip settings" className="text-sm" style={{ color: MUTED }}>⚙</button>
+              <button onClick={() => setEditingTrip(true)} title="Trip settings" aria-label="Trip settings"
+                className="text-sm w-11 h-11 -my-3 -mx-1.5 flex-shrink-0 inline-flex items-center justify-center" style={{ color: MUTED }}>⚙</button>
             </div>
           </div>
           <div className="text-right flex-shrink-0">
             <div className="text-white text-sm font-bold" style={{ fontFamily: "ui-monospace, monospace" }}>{countdownText}</div>
-            <button onClick={() => setEditingProfile(true)} className="mt-1 inline-flex items-center gap-1.5">
+            <button onClick={() => setEditingProfile(true)} aria-label="Edit profile"
+              className="mt-1 inline-flex items-center gap-1.5 py-2 -my-2 pl-2 -ml-2">
               <PersonBadge member={me} />
               <span className="text-[11px]" style={{ color: MUTED }}>· {session.code} ✎</span>
             </button>
@@ -323,7 +350,9 @@ function Splash({ text }) {
     <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: "var(--bg)" }}>
       <div className="text-center">
         <div className="text-3xl mb-2">✈️</div>
-        <div className="text-sm font-semibold" style={{ color: MUTED }}>{text}</div>
+        <div className="text-sm font-semibold flex items-center justify-center gap-2" style={{ color: MUTED }}>
+          <Spinner className="w-3.5 h-3.5" /> {text}
+        </div>
       </div>
     </div>
   );
@@ -361,6 +390,7 @@ function ProfileEditor({ session, onClose, onSaved }) {
   const [name, setName] = useState(session.name || "");
   const [color, setColor] = useState(session.color || COLORS[0]);
   const [busy, setBusy] = useState(false);
+  const requestClose = useBackClose(onClose);
   const save = async () => {
     if (!name.trim()) return;
     setBusy(true);
@@ -368,7 +398,7 @@ function ProfileEditor({ session, onClose, onSaved }) {
     onSaved(next);
   };
   return (
-    <div className="fixed inset-0 z-30 flex items-end sm:items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.4)" }} onClick={onClose}>
+    <div className="fixed inset-0 z-30 flex items-end sm:items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.4)" }} onClick={requestClose}>
       <div className="w-full max-w-sm m-4 rounded-2xl p-5" style={{ backgroundColor: "var(--card)" }} onClick={(e) => e.stopPropagation()}>
         <h2 className="text-base font-bold mb-3" style={{ color: INK }}>Your profile</h2>
         <label className="text-xs font-bold uppercase tracking-wide" style={{ color: MUTED }}>Name</label>
@@ -387,7 +417,7 @@ function ProfileEditor({ session, onClose, onSaved }) {
           <button onClick={save} disabled={busy} className="flex-1 text-sm font-bold text-white py-2.5 rounded-full" style={{ backgroundColor: ACCENT }}>
             {busy ? "Saving…" : "Save"}
           </button>
-          <button onClick={onClose} className="text-sm font-semibold px-4 py-2.5 rounded-full" style={{ color: MUTED }}>Cancel</button>
+          <button onClick={requestClose} className="text-sm font-semibold px-4 py-2.5 rounded-full" style={{ color: MUTED }}>Cancel</button>
         </div>
       </div>
     </div>

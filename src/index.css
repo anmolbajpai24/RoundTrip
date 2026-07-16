@@ -13,7 +13,7 @@
   --chip-ink: #5A5F6A;
   --ink: #1D2433;
   --muted: #8A8F98;
-  --faint: #B8B5AD;
+  --faint: #8F8B81; /* AA-ish on --bg/--card; was #B8B5AD (≈1.9:1, unreadable) */
   --solid: #1D2433; /* dark surfaces (header, primary dark buttons) */
   --warn-bg: #FDF6E3;
   --warn-border: #F0D9A8;

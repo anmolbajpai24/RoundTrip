@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTripConfig, dateLabel, weekday } from "../lib/tripConfig.js";
 import { outfitForDay, visibleToOthers, hasPhoto } from "../lib/closet.js";
 import { FEATURES } from "../appConfig.js";
+import useBackClose from "../lib/useBackClose.js";
 import LegChip from "./LegChip.jsx";
 import OutfitImage from "./OutfitImage.jsx";
 
@@ -10,8 +11,8 @@ import OutfitImage from "./OutfitImage.jsx";
 // viewer — planning/editing stays in the Outfits tab underneath.
 
 const BG = "#0D1017";
-const DIM = "rgba(255,255,255,0.55)";
-const FAINT = "rgba(255,255,255,0.35)";
+const DIM = "rgba(255,255,255,0.65)";
+const FAINT = "rgba(255,255,255,0.6)";
 
 export default function OutfitGallery({ closetsAll, members, membersById, myId, onClose }) {
   const config = useTripConfig();
@@ -47,11 +48,12 @@ export default function OutfitGallery({ closetsAll, members, membersById, myId, 
   const go = (next) => setIndex(Math.max(0, Math.min(count - 1, next)));
   const switchMode = (m) => { setMode(m); setIndex(0); };
   const switchMember = (id) => { setMemberId(id); setIndex(0); };
+  const requestClose = useBackClose(onClose);
 
   // Keyboard + body scroll lock while open.
   useEffect(() => {
     const onKey = (e) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") requestClose();
       else if (e.key === "ArrowRight") setIndex((v) => Math.min(count - 1, v + 1));
       else if (e.key === "ArrowLeft") setIndex((v) => Math.max(0, v - 1));
     };
@@ -59,7 +61,8 @@ export default function OutfitGallery({ closetsAll, members, membersById, myId, 
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => { window.removeEventListener("keydown", onKey); document.body.style.overflow = prev; };
-  }, [count, onClose]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [count]);
 
   const onTouchStart = (e) => { touch.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }; };
   const onTouchEnd = (e) => {
@@ -85,7 +88,7 @@ export default function OutfitGallery({ closetsAll, members, membersById, myId, 
             </button>
           ))}
         </div>
-        <button onClick={onClose} aria-label="Close gallery" className="w-9 h-9 rounded-full text-base font-bold" style={{ backgroundColor: "rgba(255,255,255,0.08)" }}>✕</button>
+        <button onClick={requestClose} aria-label="Close gallery" className="w-11 h-11 rounded-full text-base font-bold" style={{ backgroundColor: "rgba(255,255,255,0.08)" }}>✕</button>
       </div>
 
       {/* Member chips */}
@@ -106,7 +109,9 @@ export default function OutfitGallery({ closetsAll, members, membersById, myId, 
       )}
 
       {/* Deck */}
-      <div className="relative flex-1 min-h-0 overflow-hidden" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+      {/* touch-action: pan-y — the browser keeps vertical scrolling, we take
+          horizontal swipes (otherwise some browsers hijack them for history). */}
+      <div className="relative flex-1 min-h-0 overflow-hidden" style={{ touchAction: "pan-y" }} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
         {count === 0 ? (
           <div className="h-full flex flex-col items-center justify-center gap-2 px-8 text-center">
             <span className="text-4xl">🪞</span>
@@ -130,10 +135,10 @@ export default function OutfitGallery({ closetsAll, members, membersById, myId, 
         {count > 1 && (
           <>
             <button onClick={() => go(i - 1)} disabled={i === 0} aria-label="Previous"
-              className="absolute left-1.5 top-1/2 -translate-y-1/2 w-9 h-14 rounded-xl text-xl font-bold"
+              className="absolute left-1.5 top-1/2 -translate-y-1/2 w-11 h-14 rounded-xl text-xl font-bold"
               style={{ backgroundColor: "rgba(13,16,23,0.5)", color: i === 0 ? FAINT : "#FFF" }}>‹</button>
             <button onClick={() => go(i + 1)} disabled={i === count - 1} aria-label="Next"
-              className="absolute right-1.5 top-1/2 -translate-y-1/2 w-9 h-14 rounded-xl text-xl font-bold"
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 w-11 h-14 rounded-xl text-xl font-bold"
               style={{ backgroundColor: "rgba(13,16,23,0.5)", color: i === count - 1 ? FAINT : "#FFF" }}>›</button>
           </>
         )}
@@ -146,8 +151,9 @@ export default function OutfitGallery({ closetsAll, members, membersById, myId, 
           count <= 10 ? (
             <div className="flex justify-center gap-1.5 mt-2.5">
               {slides.map((s, j) => (
-                <button key={s.key} onClick={() => go(j)} aria-label={`Slide ${j + 1}`} className="w-2 h-2 rounded-full"
-                  style={{ backgroundColor: j === i ? "#FFF" : FAINT }} />
+                <button key={s.key} onClick={() => go(j)} aria-label={`Slide ${j + 1}`} className="p-1.5 -m-1 rounded-full">
+                  <span className="block w-2 h-2 rounded-full" style={{ backgroundColor: j === i ? "#FFF" : FAINT }} />
+                </button>
               ))}
             </div>
           ) : (
