@@ -100,10 +100,37 @@ export async function loadClosetsAll() {
   const s = getSession();
   if (!s) return {};
 
+  if (online()) {
+    try {
+      const { data, error } = await supabase
+        .from("trip_kv").select("owner, key, value")
+        .eq("trip_id", s.tripId).neq("owner", SHARED).like("key", "outfit%");
+      if (error) throw error;
+      for (const row of data) await writeCache(s.tripId, row.owner, row.key, row.value);
+      return foldClosetRows(data);
+    } catch { /* fall through to cache */ }
+  }
+  const all = await keys();
+  const base = `kv:${s.tripId}:`;
+  const rows = [];
+  for (const k of all) {
+    if (typeof k !== "string" || !k.startsWith(base)) continue;
+    const rest = k.slice(base.length); // "<owner>:<key>" — owner is a uuid, no colons
+    const cut = rest.indexOf(":");
+    const owner = rest.slice(0, cut);
+    const key = rest.slice(cut + 1);
+    if (owner !== SHARED && key.startsWith("outfit")) rows.push({ owner, key, value: await get(k) });
+  }
+  return foldClosetRows(rows);
+}
+
+// [{owner, key, value}] → assembled closets. Pure (unit-tested); the exported
+// loadClosetsAll wraps it with the network/cache plumbing.
+export function foldClosetRows(rows) {
   // owner → { items, days (null until an outfit-days row is seen), legacy: {date: value} }
   const raw = {};
   const bucket = (owner) => (raw[owner] ||= { items: {}, days: null, legacy: {} });
-  const takeRow = (owner, key, value) => {
+  for (const { owner, key, value } of rows) {
     if (key.startsWith("outfit-item:")) {
       const id = key.slice("outfit-item:".length);
       const b = bucket(owner);
@@ -116,30 +143,6 @@ export async function loadClosetsAll() {
       const day = key.slice("outfit:".length);
       if (!isLegacyDayKey(day) && value) bucket(owner).legacy[day] = value;
     }
-  };
-
-  if (online()) {
-    try {
-      const { data, error } = await supabase
-        .from("trip_kv").select("owner, key, value")
-        .eq("trip_id", s.tripId).neq("owner", SHARED).like("key", "outfit%");
-      if (error) throw error;
-      for (const row of data) {
-        takeRow(row.owner, row.key, row.value);
-        await writeCache(s.tripId, row.owner, row.key, row.value);
-      }
-      return assembleClosets(raw);
-    } catch { /* fall through to cache */ }
-  }
-  const all = await keys();
-  const base = `kv:${s.tripId}:`;
-  for (const k of all) {
-    if (typeof k !== "string" || !k.startsWith(base)) continue;
-    const rest = k.slice(base.length); // "<owner>:<key>" — owner is a uuid, no colons
-    const cut = rest.indexOf(":");
-    const owner = rest.slice(0, cut);
-    const key = rest.slice(cut + 1);
-    if (owner !== SHARED && key.startsWith("outfit")) takeRow(owner, key, await get(k));
   }
   return assembleClosets(raw);
 }

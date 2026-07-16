@@ -21,7 +21,7 @@ import OutfitsTab from "./tabs/OutfitsTab.jsx";
 import PackingTab from "./tabs/PackingTab.jsx";
 import BudgetTab from "./tabs/BudgetTab.jsx";
 import BookingsTab from "./tabs/BookingsTab.jsx";
-import { APP_NAME, ACCENT, INK, MUTED } from "./theme.js";
+import { ACCENT, INK, MUTED } from "./theme.js";
 
 const SHARED = "__shared__";
 const seedPacking = (config) =>
@@ -90,6 +90,37 @@ export default function App() {
 
   const refreshAuth = async () => setAuthUser(await currentUser().catch(() => null));
 
+  const onRemoteChange = (key, value, owner) => {
+    if (owner === SHARED) {
+      if (key === CONFIG_KEY) setConfig(value || null);
+      else if (key === "trip-itinerary") setOverrides(value || {});
+      else if (key === "trip-expenses") setExpenses(value || []);
+      else if (key === "trip-bookings") setBookings(value || []);
+      else if (key === "trip-documents") setDocuments(value || []);
+      else if (key === "trip-weather") setWeather(value || null);
+      return;
+    }
+    // personal slice belonging to some member
+    if (key === "trip-packing") setPackingAll((p) => ({ ...p, [owner]: value || [] }));
+    else if (key === "trip-itinerary-override") setNotesAll((n) => ({ ...n, [owner]: value || {} }));
+    else if (key.startsWith("outfit-item:")) {
+      const id = key.slice("outfit-item:".length);
+      setClosetsAll((c) => {
+        // A first new-model row replaces any closet synthesized from legacy rows.
+        const closet = !c[owner] || c[owner].legacy ? { items: {}, days: {} } : c[owner];
+        const items = { ...closet.items };
+        if (value) items[id] = value; else delete items[id]; // null = deleted
+        return { ...c, [owner]: { ...closet, items } };
+      });
+    } else if (key === "outfit-days") {
+      setClosetsAll((c) => {
+        const closet = !c[owner] || c[owner].legacy ? { items: {}, days: {} } : c[owner];
+        return { ...c, [owner]: { ...closet, days: value || {} } };
+      });
+    }
+    // `outfit:<date>` rows are pre-closet backups — ignored live.
+  };
+
   // 2. With a session, load data + subscribe.
   useEffect(() => {
     if (!session) return;
@@ -131,39 +162,7 @@ export default function App() {
       if (cfg) refreshWeather(wx, cfg).then((next) => { if (next) setWeather(next); }).catch(() => {});
     })();
     return () => { unsub(); unsubMembers(); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session]);
-
-  const onRemoteChange = (key, value, owner) => {
-    if (owner === SHARED) {
-      if (key === CONFIG_KEY) setConfig(value || null);
-      else if (key === "trip-itinerary") setOverrides(value || {});
-      else if (key === "trip-expenses") setExpenses(value || []);
-      else if (key === "trip-bookings") setBookings(value || []);
-      else if (key === "trip-documents") setDocuments(value || []);
-      else if (key === "trip-weather") setWeather(value || null);
-      return;
-    }
-    // personal slice belonging to some member
-    if (key === "trip-packing") setPackingAll((p) => ({ ...p, [owner]: value || [] }));
-    else if (key === "trip-itinerary-override") setNotesAll((n) => ({ ...n, [owner]: value || {} }));
-    else if (key.startsWith("outfit-item:")) {
-      const id = key.slice("outfit-item:".length);
-      setClosetsAll((c) => {
-        // A first new-model row replaces any closet synthesized from legacy rows.
-        const closet = !c[owner] || c[owner].legacy ? { items: {}, days: {} } : c[owner];
-        const items = { ...closet.items };
-        if (value) items[id] = value; else delete items[id]; // null = deleted
-        return { ...c, [owner]: { ...closet, items } };
-      });
-    } else if (key === "outfit-days") {
-      setClosetsAll((c) => {
-        const closet = !c[owner] || c[owner].legacy ? { items: {}, days: {} } : c[owner];
-        return { ...c, [owner]: { ...closet, days: value || {} } };
-      });
-    }
-    // `outfit:<date>` rows are pre-closet backups — ignored live.
-  };
 
   const saveConfig = (next) => { setConfig(next); saveKey(CONFIG_KEY, next); };
 

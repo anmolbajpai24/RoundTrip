@@ -1,8 +1,9 @@
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { COLORS, createTrip } from "../lib/session.js";
 import { saveKey } from "../lib/storage.js";
-import { CONFIG_KEY, generateDays, listDates, softOf, slugify, dateLabel, weekday, addDays, softBg, todayISO } from "../lib/tripConfig.js";
+import { CONFIG_KEY, listDates, softOf, slugify, dateLabel, weekday, addDays, softBg, todayISO } from "../lib/tripConfig.js";
 import { searchPlaces } from "../lib/geocode.js";
+import buildTripConfig from "../lib/buildTripConfig.js";
 import usePlaceSearch from "../lib/usePlaceSearch.js";
 import { generateItinerary, aiItineraryAvailable } from "../lib/itinerary.js";
 import { getLocalProfile } from "../lib/profile.js";
@@ -139,49 +140,16 @@ export default function TripWizard({ profile, onDone, onCancel }) {
     setAiBusy(false);
   };
 
-  const buildConfig = () => {
-    // When an AI itinerary is accepted, its cities define the legs; otherwise
-    // the typed destinations and their arrival dates do (unchanged behaviour).
-    const useAi = aiAccepted && aiDays && aiLegs && aiLegs.legOrder.length > 0;
-    let legs, legOrder, legForDate, planFor;
-    if (useAi) {
-      ({ legs, legOrder } = aiLegs);
-      legForDate = (iso) => aiLegs.dateKey[iso] || legOrder[0];
-      planFor = Object.fromEntries(aiDays.map((d) => [d.date, d.plan]));
-    } else {
-      legs = {};
-      legOrder = [];
-      const keyed = dests.map((d) => {
-        let key = slugify(d.name);
-        while (legs[key]) key += "2";
-        legs[key] = { name: d.name, color: d.color, soft: softOf(d.color), lat: d.lat, lon: d.lon, norm: null };
-        legOrder.push(key);
-        return { ...d, key };
-      });
-      const sorted = [...keyed].sort((a, b) => (a.arrival < b.arrival ? -1 : 1));
-      legForDate = (iso) => {
-        let leg = sorted[0].key;
-        for (const d of sorted) if (d.arrival <= iso) leg = d.key;
-        return leg;
-      };
-      planFor = {};
-    }
-    return {
-      v: 1,
-      title: title.trim(),
-      startDate, endDate,
-      currency,
-      homeCurrency: homeOn ? homeCurrency : null,
-      homeRate: homeOn ? parseFloat(homeRate) : null,
-      budget: parseFloat(budget) > 0 ? parseFloat(budget) : null,
-      legs, legOrder,
-      days: generateDays(startDate, endDate, legForDate).map((d, i) => {
-        const legName = legs[d.leg]?.name || "";
-        return { ...d, title: `Day ${i + 1} · ${legName}`, plan: planFor[d.date] || "" };
-      }),
+  // When an AI itinerary is accepted, its cities define the legs; otherwise
+  // the typed destinations and their arrival dates do (see lib/buildTripConfig).
+  const buildConfig = () =>
+    buildTripConfig({
+      title, startDate, endDate, currency,
+      homeOn, homeCurrency, homeRate, budget,
+      dests,
+      ai: aiAccepted && aiDays && aiLegs ? { days: aiDays, legs: aiLegs } : null,
       packingTemplate: GENERIC_PACKING,
-    };
-  };
+    });
 
   const create = async () => {
     setBusy(true); setError("");

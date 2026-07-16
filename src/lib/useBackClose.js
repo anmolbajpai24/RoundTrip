@@ -35,8 +35,8 @@ if (typeof window !== "undefined") {
 // history entry is consumed and Back stays in sync.
 export default function useBackClose(onClose) {
   const closeRef = useRef(onClose);
-  closeRef.current = onClose;
   const entryRef = useRef(null);
+  useEffect(() => { closeRef.current = onClose; }); // keep the latest close handler
 
   useEffect(() => {
     const entry = { onClose: () => closeRef.current?.(), stale: false };
