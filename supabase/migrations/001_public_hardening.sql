@@ -32,6 +32,9 @@ end $fn$;
 create or replace function public.join_trip_with_code(p_code text, p_name text, p_color text)
 returns table (trip_id uuid, trip_code text)
 language plpgsql security definer set search_path = public as $fn$
+-- use_column: the RETURNS TABLE OUT param trip_id would otherwise be ambiguous
+-- with trip_members.trip_id in the ON CONFLICT clause below.
+#variable_conflict use_column
 declare t public.trips%rowtype;
 begin
   if auth.uid() is null then
