@@ -1,14 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 import { useTripConfig, dateLabel, weekday, defaultDay, findDay, softBg } from "../lib/tripConfig.js";
 import { saveKey } from "../lib/storage.js";
-import { compressImage } from "../lib/image.js";
-import { outfitForDay, visibleToOthers } from "../lib/closet.js";
+import { compressImage, compressImageToBlob } from "../lib/image.js";
+import { outfitForDay, visibleToOthers, hasPhoto } from "../lib/closet.js";
+import { uploadOutfitPhoto, deleteOutfitPhoto } from "../lib/outfitPhotos.js";
 import { loadBasePhoto, saveBasePhoto, generateTryOn } from "../lib/tryon.js";
 import { FEATURES } from "../appConfig.js";
 import SectionTitle from "../components/SectionTitle.jsx";
 import LegChip from "../components/LegChip.jsx";
 import DayStrip from "../components/DayStrip.jsx";
 import PersonBadge from "../components/PersonBadge.jsx";
+import OutfitImage from "../components/OutfitImage.jsx";
 import OutfitGallery from "../components/OutfitGallery.jsx";
 
 // Outfit planner: upload outfits into your closet first, then assign each one
@@ -28,6 +30,7 @@ export default function OutfitsTab({ closetsAll, setClosetsAll, membersById, mem
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [choosing, setChoosing] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [photoError, setPhotoError] = useState("");
   const fileRef = useRef(null);
   const fileAction = useRef(null); // what to do with the next picked photo
 
@@ -69,14 +72,16 @@ export default function OutfitsTab({ closetsAll, setClosetsAll, membersById, mem
   const deleteItem = (id) => {
     if (!window.confirm("Delete this outfit? Days it was assigned to will be cleared.")) return;
     const items = { ...myCloset.items };
+    const gone = items[id];
     delete items[id];
     const days = Object.fromEntries(Object.entries(myCloset.days).filter(([, v]) => v !== id));
     commit({ ...myCloset, items, days }, [[`outfit-item:${id}`, null], ["outfit-days", days]]);
+    deleteOutfitPhoto(gone?.photoPath);
     setEditingId(null);
   };
-  const addOutfit = (photo, assignTo) => {
+  const addOutfit = (photoPath, assignTo) => {
     const id = crypto.randomUUID();
-    const item = { photo, desc: "", visibility: "trip", createdAt: new Date().toISOString() };
+    const item = { photoPath, desc: "", visibility: "trip", createdAt: new Date().toISOString() };
     const items = { ...myCloset.items, [id]: item };
     if (assignTo) {
       const days = { ...myCloset.days, [assignTo]: id };
@@ -86,12 +91,23 @@ export default function OutfitsTab({ closetsAll, setClosetsAll, membersById, mem
       setEditingId(id); // straight into the editor to pick days
     }
   };
+  const replacePhoto = (id, item, photoPath) => {
+    const old = item.photoPath;
+    const { photo: _legacy, ...rest } = item; // drop any legacy base64 on replace
+    saveItem(id, { ...rest, photoPath });
+    if (old && old !== photoPath) deleteOutfitPhoto(old);
+  };
 
-  const pickFile = (action) => { fileAction.current = action; fileRef.current?.click(); };
+  // Closet picks upload to Storage and hand back a path; `raw` picks (the
+  // private try-on base photo, kv-stored) hand back a data-URL instead.
+  const pickFile = (action, opts) => { fileAction.current = { action, ...(opts || {}) }; fileRef.current?.click(); };
 
   // ---- try-on ----
   const setMyBasePhoto = (photo) => { setBasePhoto(photo ? { photo } : null); saveBasePhoto(photo); };
   const doTryOn = async (id) => {
+    // NOTE: try-on still expects a data-URL in item.photo; new-model items only
+    // carry photoPath. Before re-enabling FEATURES.tryOn, fetch the blob via
+    // outfitPhotos.getOutfitPhotoUrl and pass a data-URL here.
     const item = myCloset.items[id];
     if (!item?.photo || !basePhoto?.photo || tryOnBusy) return;
     setTryOnError("");
@@ -111,8 +127,20 @@ export default function OutfitsTab({ closetsAll, setClosetsAll, membersById, mem
     const file = e.target.files?.[0];
     if (!file) return;
     setBusy(true);
-    try { const photo = await compressImage(file); fileAction.current?.(photo); }
-    catch (err) { console.error(err); }
+    setPhotoError("");
+    try {
+      if (fileAction.current?.raw) {
+        const photo = await compressImage(file);
+        fileAction.current.action?.(photo);
+      } else {
+        const blob = await compressImageToBlob(file);
+        const path = await uploadOutfitPhoto(blob);
+        fileAction.current?.action?.(path);
+      }
+    } catch (err) {
+      console.error(err);
+      setPhotoError(err.message || "Couldn't save the photo — please try again.");
+    }
     setBusy(false);
     e.target.value = "";
   };
@@ -160,7 +188,7 @@ export default function OutfitsTab({ closetsAll, setClosetsAll, membersById, mem
             <div className="text-[11px]" style={{ color: "var(--faint)" }}>Used for "See it on me" — only you can ever see it.</div>
           </div>
           <div className="flex flex-col items-end gap-1">
-            <button onClick={() => pickFile((p) => setMyBasePhoto(p))} disabled={busy} className="text-xs font-semibold" style={{ color: L.color }}>{basePhoto ? "Replace" : "Add"}</button>
+            <button onClick={() => pickFile((p) => setMyBasePhoto(p), { raw: true })} disabled={busy} className="text-xs font-semibold" style={{ color: L.color }}>{basePhoto ? "Replace" : "Add"}</button>
             {basePhoto && <button onClick={() => setMyBasePhoto(null)} className="text-xs font-semibold" style={{ color: "var(--muted)" }}>Remove</button>}
           </div>
         </div>
@@ -178,8 +206,8 @@ export default function OutfitsTab({ closetsAll, setClosetsAll, membersById, mem
             return (
               <button key={id} onClick={() => setEditingId(id)} className="rounded-xl overflow-hidden border text-left relative h-32 flex flex-col"
                 style={{ borderColor: "var(--border)", backgroundColor: "var(--card)" }}>
-                {item.photo ? (
-                  <img src={item.photo} alt={item.desc || "Outfit"} className="w-full flex-1 object-cover min-h-0" />
+                {hasPhoto(item) ? (
+                  <OutfitImage item={item} alt={item.desc || "Outfit"} className="w-full flex-1 object-cover min-h-0" />
                 ) : (
                   <div className="w-full flex-1 flex items-center justify-center text-lg" style={{ backgroundColor: "var(--field)" }}>📝</div>
                 )}
@@ -195,6 +223,9 @@ export default function OutfitsTab({ closetsAll, setClosetsAll, membersById, mem
         </div>
         {myItems.length === 0 && (
           <p className="text-xs mt-2" style={{ color: "var(--faint)" }}>Your closet is empty — add an outfit, then choose its days.</p>
+        )}
+        {photoError && (
+          <p className="text-xs mt-2 font-semibold" style={{ color: "#C0392B" }}>{photoError}</p>
         )}
       </div>
 
@@ -214,7 +245,7 @@ export default function OutfitsTab({ closetsAll, setClosetsAll, membersById, mem
             <div className="mb-2"><PersonBadge member={membersById[myId]} size="xs" /></div>
             {mineToday ? (
               <div>
-                {mineToday.photo && (
+                {hasPhoto(mineToday) && (
                   <OutfitPhoto key={`${mineTodayId}:${dk}`} item={mineToday} alt={`Outfit for ${dateLabel(dk)}`} mine />
                 )}
                 {mineToday.desc && <p className="text-sm mt-2" style={{ color: "var(--ink)" }}>{mineToday.desc}</p>}
@@ -253,8 +284,8 @@ export default function OutfitsTab({ closetsAll, setClosetsAll, membersById, mem
                   {myItems.map(([id, item]) => (
                     <button key={id} onClick={() => { assignDay(dk, id); setChoosing(false); }}
                       className="flex-shrink-0 rounded-lg overflow-hidden border" style={{ borderColor: id === mineTodayId ? L.color : "var(--border)", borderWidth: id === mineTodayId ? 2 : 1 }}>
-                      {item.photo ? (
-                        <img src={item.photo} alt={item.desc || "Outfit"} className="w-20 h-20 object-cover" />
+                      {hasPhoto(item) ? (
+                        <OutfitImage item={item} alt={item.desc || "Outfit"} className="w-20 h-20 object-cover" />
                       ) : (
                         <div className="w-20 h-20 flex items-center justify-center" style={{ backgroundColor: "var(--card)" }}>📝</div>
                       )}
@@ -272,7 +303,7 @@ export default function OutfitsTab({ closetsAll, setClosetsAll, membersById, mem
             return (
               <div key={m.user_id} className="p-4 border-t" style={{ borderColor: "var(--divider)" }}>
                 <div className="mb-2"><PersonBadge member={m} size="xs" /></div>
-                {shown && o.photo ? (
+                {shown && hasPhoto(o) ? (
                   <OutfitPhoto key={`${m.user_id}:${dk}`} item={o} alt={`${m.name}'s outfit`} />
                 ) : (
                   <div className="w-full rounded-xl py-8 text-center text-sm" style={{ backgroundColor: "var(--field)", color: "var(--faint)" }}>
@@ -296,13 +327,13 @@ export default function OutfitsTab({ closetsAll, setClosetsAll, membersById, mem
             const otherDots = (members || []).filter((m) => {
               if (m.user_id === myId) return false;
               const theirs = outfitForDay(closetsAll[m.user_id], d.date);
-              return theirs && visibleToOthers(theirs) && theirs.photo;
+              return theirs && visibleToOthers(theirs) && hasPhoto(theirs);
             });
             return (
               <button key={d.date} onClick={() => { selectDay(d.date); window.scrollTo({ top: 0, behavior: "smooth" }); }}
                 className="rounded-xl overflow-hidden border text-left relative" style={{ borderColor: "var(--border)", backgroundColor: "var(--card)" }}>
-                {o?.photo ? (
-                  <img src={o.photo} alt="" className="w-full h-20 object-cover" />
+                {hasPhoto(o) ? (
+                  <OutfitImage item={o} alt="" className="w-full h-20 object-cover" />
                 ) : (
                   <div className="w-full h-20 flex items-center justify-center text-lg" style={{ backgroundColor: softBg(Lg.color) }}>{o?.desc ? "📝" : "＋"}</div>
                 )}
@@ -330,11 +361,11 @@ export default function OutfitsTab({ closetsAll, setClosetsAll, membersById, mem
           onToggleDay={(date) => toggleDayForItem(editingId, date)}
           onSaveDesc={(desc) => saveItem(editingId, { ...editingItem, desc })}
           onSetVisibility={(visibility) => saveItem(editingId, { ...editingItem, visibility })}
-          onReplacePhoto={() => pickFile((photo) => saveItem(editingId, { ...editingItem, photo }))}
+          onReplacePhoto={() => pickFile((path) => replacePhoto(editingId, editingItem, path))}
           onDelete={() => deleteItem(editingId)}
           onClose={() => { setEditingId(null); setTryOnError(""); }}
           basePhoto={basePhoto}
-          onAddBasePhoto={() => pickFile((p) => setMyBasePhoto(p))}
+          onAddBasePhoto={() => pickFile((p) => setMyBasePhoto(p), { raw: true })}
           tryOnBusy={tryOnBusy}
           tryOnError={tryOnError}
           onTryOn={() => doTryOn(editingId)}
@@ -358,10 +389,9 @@ export default function OutfitsTab({ closetsAll, setClosetsAll, membersById, mem
 function OutfitPhoto({ item, alt, mine }) {
   const [onMe, setOnMe] = useState(false);
   const t = FEATURES.tryOn ? item.tryOn?.photo : null;
-  const src = onMe && t ? t : item.photo;
   return (
     <div className="relative">
-      <img src={src} alt={alt} className="w-full rounded-xl object-cover" style={{ maxHeight: 380 }} />
+      <OutfitImage item={item} src={onMe && t ? t : undefined} alt={alt} className="w-full rounded-xl object-cover" style={{ maxHeight: 380, minHeight: 96 }} />
       {t && (
         <button onClick={(e) => { e.stopPropagation(); setOnMe(!onMe); }}
           className="absolute bottom-2 right-2 text-[11px] font-bold px-2.5 py-1 rounded-full text-white"
@@ -388,8 +418,8 @@ function OutfitEditor({ item, itemId, busy, config, daysMap, onToggleDay, onSave
           <button onClick={onClose} className="text-sm font-bold px-3 py-1.5 rounded-full text-white" style={{ backgroundColor: "var(--solid)" }}>Done</button>
         </div>
 
-        {item.photo ? (
-          <img src={item.photo} alt={item.desc || "Outfit"} className="w-full rounded-xl object-cover" style={{ maxHeight: 300 }} />
+        {hasPhoto(item) ? (
+          <OutfitImage item={item} alt={item.desc || "Outfit"} className="w-full rounded-xl object-cover" style={{ maxHeight: 300, minHeight: 96 }} />
         ) : (
           <div className="w-full rounded-xl py-10 text-center text-2xl" style={{ backgroundColor: "var(--field)" }}>📝</div>
         )}

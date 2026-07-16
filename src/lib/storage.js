@@ -177,10 +177,25 @@ export async function saveKey(key, value) {
 }
 
 // ---------- write outbox ----------
+// Sync status is observable so the UI can show "n to sync / sync failed"
+// instead of silently holding changes in the queue.
+let syncStatus = { pending: 0, error: null };
+const syncListeners = new Set();
+export function subscribeSyncStatus(cb) {
+  syncListeners.add(cb);
+  cb(syncStatus);
+  return () => syncListeners.delete(cb);
+}
+function setSyncStatus(patch) {
+  syncStatus = { ...syncStatus, ...patch };
+  for (const cb of syncListeners) cb(syncStatus);
+}
+
 async function enqueue(entry) {
   const box = (await get(OUTBOX_KEY)) || {};
-  box[`${entry.owner}:${entry.key}`] = entry;
+  box[`${entry.owner}:${entry.key}`] = { ...entry, at: Date.now() };
   await set(OUTBOX_KEY, box);
+  setSyncStatus({ pending: Object.keys(box).length });
 }
 
 let flushing = false;
@@ -188,28 +203,39 @@ export async function flushOutbox() {
   if (!online() || flushing) return;
   flushing = true;
   try {
-    let box = (await get(OUTBOX_KEY)) || {};
-    for (const [id, entry] of Object.entries(box)) {
+    const snapshot = (await get(OUTBOX_KEY)) || {};
+    for (const [id, entry] of Object.entries(snapshot)) {
       const { error } = await supabase.from("trip_kv").upsert(
         { trip_id: entry.tripId, owner: entry.owner, key: entry.key, value: entry.value, updated_at: new Date().toISOString() },
         { onConflict: "trip_id,owner,key" }
       );
       if (error) throw error;
-      box = (await get(OUTBOX_KEY)) || {};
-      delete box[id];
-      await set(OUTBOX_KEY, box);
+      // Dequeue only if the entry wasn't superseded while the upsert was in
+      // flight — otherwise the newer value must survive for the next flush.
+      const box = (await get(OUTBOX_KEY)) || {};
+      if (box[id] && box[id].at === entry.at) {
+        delete box[id];
+        await set(OUTBOX_KEY, box);
+      }
+      setSyncStatus({ pending: Object.keys(box).length });
     }
-  } catch { /* stay queued */ } finally {
+    const left = (await get(OUTBOX_KEY)) || {};
+    setSyncStatus({ pending: Object.keys(left).length, error: null });
+  } catch (e) {
+    // Queue stays intact; surface the failure instead of swallowing it.
+    setSyncStatus({ error: e?.message || "Sync failed" });
+  } finally {
     flushing = false;
   }
 }
 
-// Drop every local trace of a trip (its cached kv rows + any queued outbox
-// writes). Used after a trip is deleted or left so stale data doesn't linger.
+// Drop every local trace of a trip (its cached kv rows, cached photo blobs +
+// any queued outbox writes). Used after a trip is deleted or left so stale
+// data doesn't linger.
 export async function clearLocalTrip(tripId) {
   const all = await keys();
   for (const k of all)
-    if (typeof k === "string" && k.startsWith(`kv:${tripId}:`)) await del(k);
+    if (typeof k === "string" && (k.startsWith(`kv:${tripId}:`) || k.startsWith(`photo:${tripId}/`))) await del(k);
   const box = (await get(OUTBOX_KEY)) || {};
   let changed = false;
   for (const [id, e] of Object.entries(box))
@@ -318,4 +344,6 @@ export async function migrateLegacyData() {
 
 if (typeof window !== "undefined") {
   window.addEventListener("online", () => flushOutbox());
+  // Surface any queue left over from a previous session right away.
+  get(OUTBOX_KEY).then((box) => { if (box) setSyncStatus({ pending: Object.keys(box).length }); }).catch(() => {});
 }

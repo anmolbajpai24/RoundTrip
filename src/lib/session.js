@@ -142,14 +142,17 @@ export async function deleteTrip(tripId) {
   requireConfig();
   await ensureAuth();
 
-  // Uploaded documents live in Storage, which the DB cascade doesn't reach.
-  // Remove them while we're still a member (storage RLS is member-only).
-  try {
-    const { data: files } = await supabase.storage.from("trip-docs").list(tripId);
-    if (files?.length) {
-      await supabase.storage.from("trip-docs").remove(files.map((f) => `${tripId}/${f.name}`));
-    }
-  } catch { /* best-effort — orphaned files are harmless */ }
+  // Uploaded documents and outfit photos live in Storage, which the DB
+  // cascade doesn't reach. Remove them while we're still a member (storage
+  // RLS is member-only).
+  for (const bucket of ["trip-docs", "outfit-photos"]) {
+    try {
+      const { data: files } = await supabase.storage.from(bucket).list(tripId);
+      if (files?.length) {
+        await supabase.storage.from(bucket).remove(files.map((f) => `${tripId}/${f.name}`));
+      }
+    } catch { /* best-effort — orphaned files are harmless */ }
+  }
 
   const { error } = await supabase.rpc("delete_trip", { p_trip_id: tripId });
   if (error) {
@@ -168,6 +171,15 @@ export async function leaveTrip(tripId) {
   await ensureAuth();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not signed in.");
+
+  // Your outfit photos live in Storage — remove them while still a member,
+  // before the kv rows holding their paths go away.
+  try {
+    const { data: rows } = await supabase.from("trip_kv").select("value")
+      .eq("trip_id", tripId).eq("owner", user.id).like("key", "outfit-item:%");
+    const paths = (rows || []).map((r) => r.value?.photoPath).filter(Boolean);
+    if (paths.length) await supabase.storage.from("outfit-photos").remove(paths);
+  } catch { /* best-effort — orphaned files are harmless */ }
 
   // Clear your own personal rows first (still permitted while a member).
   try {

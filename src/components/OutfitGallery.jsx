@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTripConfig, dateLabel, weekday } from "../lib/tripConfig.js";
-import { outfitForDay, visibleToOthers } from "../lib/closet.js";
+import { outfitForDay, visibleToOthers, hasPhoto } from "../lib/closet.js";
 import { FEATURES } from "../appConfig.js";
 import LegChip from "./LegChip.jsx";
+import OutfitImage from "./OutfitImage.jsx";
 
 // Full-screen swipe-deck gallery: one outfit photo at a time, flicked
 // left/right through a member's closet or through the trip days. Read-only
@@ -176,11 +177,12 @@ function Slide({ slide, mine, memberName, active }) {
   }
 
   const t = FEATURES.tryOn ? item.tryOn?.photo : null;
-  const src = onMe && t ? t : item.photo;
+  const showTry = onMe && t;
   return (
     <div className="relative h-full">
-      {src ? (
-        <img src={src} alt={item.desc || "Outfit"} className="w-full h-full object-contain rounded-2xl" />
+      {showTry || hasPhoto(item) ? (
+        <OutfitImage item={item} src={showTry ? t : undefined} alt={item.desc || "Outfit"}
+          className="w-full h-full object-contain rounded-2xl" style={{ backgroundColor: "rgba(255,255,255,0.04)" }} />
       ) : (
         <div className="h-full rounded-2xl flex flex-col items-center justify-center gap-3 px-8" style={{ backgroundColor: "rgba(255,255,255,0.04)" }}>
           <span className="text-4xl">📝</span>

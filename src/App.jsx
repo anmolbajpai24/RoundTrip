@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { TripConfigContext, CONFIG_KEY, dateRangeLabel, isDuringTrip, tripDayNumber, daysToGo, defaultDay } from "./lib/tripConfig.js";
 import { loadKey, saveKey, loadPersonalAll, loadClosetsAll, subscribe, subscribeMembers, flushOutbox } from "./lib/storage.js";
-import { migrateMyLegacyOutfits } from "./lib/closet.js";
 import { refreshWeather } from "./lib/weather.js";
 import { loadSession, getSession, ensureAuth, loadMembers, setProfile, leaveToHome, deleteTrip, leaveTrip, COLORS } from "./lib/session.js";
 import { currentUser } from "./lib/auth.js";
@@ -13,6 +12,7 @@ import TripWizard from "./components/TripWizard.jsx";
 import TripSettings from "./components/TripSettings.jsx";
 import LegacyUpgrade from "./components/LegacyUpgrade.jsx";
 import PersonBadge from "./components/PersonBadge.jsx";
+import SyncChip from "./components/SyncChip.jsx";
 import ItineraryTab from "./tabs/ItineraryTab.jsx";
 import OutfitsTab from "./tabs/OutfitsTab.jsx";
 import PackingTab from "./tabs/PackingTab.jsx";
@@ -91,10 +91,6 @@ export default function App() {
       setNotesAll(notes || {});
       setClosetsAll(closets || {});
       setWeather(wx);
-      // Upgrade my pre-closet outfit rows (outfit:<date>) into closet items once.
-      migrateMyLegacyOutfits((closets || {})[session.userId])
-        .then((mine) => { if (mine) setClosetsAll((c) => ({ ...c, [session.userId]: mine })); })
-        .catch(() => {});
       // Seed my packing list with the trip's template if I don't have one yet.
       if (cfg && (!packs[session.userId] || packs[session.userId].length === 0)) {
         packs[session.userId] = seedPacking(cfg);
@@ -232,6 +228,7 @@ export default function App() {
             </button>
           </div>
         </div>
+        <SyncChip />
         {/* Who's on this trip */}
         {members.length > 1 && (
           <div className="flex items-center gap-1.5 mt-2 flex-wrap">

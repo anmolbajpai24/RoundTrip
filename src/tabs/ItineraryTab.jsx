@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useTripConfig, dateLabel, weekday, dateRangeLabel, defaultDay, findDay } from "../lib/tripConfig.js";
 import { saveKey } from "../lib/storage.js";
-import { outfitForDay, visibleToOthers } from "../lib/closet.js";
+import { outfitForDay, visibleToOthers, hasPhoto } from "../lib/closet.js";
+import OutfitImage from "../components/OutfitImage.jsx";
 import SectionTitle from "../components/SectionTitle.jsx";
 import LegChip from "../components/LegChip.jsx";
 import DayStrip from "../components/DayStrip.jsx";
@@ -62,7 +63,7 @@ export default function ItineraryTab({ overrides, setOverrides, notesAll, setNot
   // Everyone's outfit (with a photo) for this day — private outfits only for their owner.
   const outfitPeople = (members || [])
     .map((m) => ({ member: m, outfit: outfitForDay(closetsAll[m.user_id], dk) }))
-    .filter((x) => x.outfit?.photo && (x.member.user_id === myId || visibleToOthers(x.outfit)));
+    .filter((x) => hasPhoto(x.outfit) && (x.member.user_id === myId || visibleToOthers(x.outfit)));
 
   return (
     <div>
@@ -133,7 +134,7 @@ export default function ItineraryTab({ overrides, setOverrides, notesAll, setNot
             <div className="mt-3 flex gap-2 flex-wrap">
               {outfitPeople.map(({ member, outfit }) => (
                 <button key={member.user_id} onClick={() => goToOutfit(dk)} className="flex items-center gap-2 rounded-xl border p-2" style={{ borderColor: "var(--border)" }}>
-                  <img src={outfit.photo} alt="Outfit" className="w-10 h-10 rounded-lg object-cover" />
+                  <OutfitImage item={outfit} alt="Outfit" className="w-10 h-10 rounded-lg object-cover" />
                   <PersonBadge member={member} size="xs" />
                 </button>
               ))}
