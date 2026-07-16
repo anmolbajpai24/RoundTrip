@@ -2,8 +2,13 @@ node_modules
 dist
 dev-dist
 .vercel
+
+# local design/redesign working docs — not part of the app
+docs/redesign/
 .DS_Store
 *.local
 .env
 .env.*
 !.env.example
+
+.vercel
