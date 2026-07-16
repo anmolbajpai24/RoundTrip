@@ -82,13 +82,13 @@ function requireConfig() {
   if (!isConfigured) throw new Error("Supabase isn't set up yet — see supabase/SETUP.md.");
 }
 
-// True when the DB error means "that RPC doesn't exist (yet)" — the hardening
-// migration (supabase/migrations/001_public_hardening.sql) hasn't been run, so
-// fall back to the original direct table access, which the pre-hardening RLS
-// policies still allow.
+// True when the DB error means "that RPC doesn't exist (yet)" — the matching
+// migration in supabase/migrations/ hasn't been run on this database.
 const rpcMissing = (error) => error && (error.code === "PGRST202" || error.code === "42883");
 
 // Create a brand-new trip, join it with your profile, return the session.
+// Goes through the create_trip_with_code RPC (001); direct table access is
+// blocked by the members-only trips_select policy (005).
 export async function createTrip(name, color) {
   requireConfig();
   const userId = await ensureAuth();
@@ -98,25 +98,12 @@ export async function createTrip(name, color) {
     const code = generateCode();
     const { data, error } = await supabase.rpc("create_trip_with_code", { p_code: code, p_name: name, p_color: color });
     if (!error) { const row = Array.isArray(data) ? data[0] : data; trip = { id: row.trip_id, code: row.trip_code }; break; }
-    if (rpcMissing(error)) { trip = await createTripDirect(); break; }
+    if (rpcMissing(error)) throw new Error("The app's backend isn't fully set up — please try again later.");
     if (error.code !== "23505" && !`${error.message}`.includes("23505")) throw error; // duplicate code → retry
   }
   if (!trip) throw new Error("Couldn't create a trip — please try again.");
   await adoptProfile(name, color);
   return saveSession({ tripId: trip.id, code: trip.code, userId, name, color });
-
-  async function createTripDirect() {
-    let t;
-    for (let attempt = 0; attempt < 5 && !t; attempt++) {
-      const code = generateCode();
-      const { data, error } = await supabase.from("trips").insert({ code }).select().single();
-      if (!error) { t = data; break; }
-      if (error.code !== "23505") throw error;
-    }
-    if (!t) throw new Error("Couldn't create a trip — please try again.");
-    await upsertMember(t.id, name, color);
-    return t;
-  }
 }
 
 // Join an existing trip by code with your profile.
@@ -126,22 +113,14 @@ export async function joinTrip(code, name, color) {
   const normalized = code.trim().toUpperCase();
 
   const { data, error } = await supabase.rpc("join_trip_with_code", { p_code: normalized, p_name: name, p_color: color });
-  if (!error) {
-    const row = Array.isArray(data) ? data[0] : data;
-    if (!row) throw new Error("No trip found with that code. Check the letters and try again.");
-    await adoptProfile(name, color);
-    return saveSession({ tripId: row.trip_id, code: row.trip_code, userId, name, color });
+  if (error) {
+    if (rpcMissing(error)) throw new Error("The app's backend isn't fully set up — please try again later.");
+    throw error;
   }
-  if (!rpcMissing(error)) throw error;
-
-  // Pre-hardening fallback: direct lookup + membership insert.
-  const { data: trip, error: selErr } = await supabase
-    .from("trips").select("id, code").eq("code", normalized).maybeSingle();
-  if (selErr) throw selErr;
-  if (!trip) throw new Error("No trip found with that code. Check the letters and try again.");
-  await upsertMember(trip.id, name, color);
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) throw new Error("No trip found with that code. Check the letters and try again.");
   await adoptProfile(name, color);
-  return saveSession({ tripId: trip.id, code: trip.code, userId, name, color });
+  return saveSession({ tripId: row.trip_id, code: row.trip_code, userId, name, color });
 }
 
 // Re-enter a trip this user already belongs to (from the Your Trips screen).

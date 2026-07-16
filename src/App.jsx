@@ -193,7 +193,7 @@ export default function App() {
   }
 
   if (!loaded) return <Splash text="Syncing your trip…" />;
-  if (!config) return <LegacyUpgrade onDone={() => window.location.reload()} />;
+  if (!config) return <TripSetupPending onDone={() => window.location.reload()} />;
 
   const me = membersById[myId] || { name: session.name, color: session.color };
   const dtg = daysToGo(config);
@@ -327,6 +327,34 @@ function Splash({ text }) {
       <div className="text-center">
         <div className="text-3xl mb-2">✈️</div>
         <div className="text-sm font-semibold" style={{ color: MUTED }}>{text}</div>
+      </div>
+    </div>
+  );
+}
+
+// Session exists but the trip has no `trip-config` row yet. For a freshly
+// joined trip that just means the creator's setup hasn't synced — the live
+// subscription delivers the config row and this screen dismisses itself.
+// Only the original pre-wizard trip actually needs the legacy upgrade, so
+// that path hides behind an explicit link instead of being the default.
+function TripSetupPending({ onDone }) {
+  const [showUpgrade, setShowUpgrade] = useState(false);
+  if (showUpgrade) return <LegacyUpgrade onDone={onDone} />;
+  return (
+    <div className="min-h-screen flex items-center justify-center px-6" style={{ backgroundColor: "var(--bg)" }}>
+      <div className="max-w-sm w-full text-center">
+        <div className="text-3xl mb-2">⏳</div>
+        <h1 className="text-lg font-bold mb-2" style={{ color: INK }}>Setting up this trip…</h1>
+        <p className="text-sm leading-relaxed mb-4" style={{ color: MUTED }}>
+          The trip's setup hasn't reached this device yet. It finishes on its
+          own once the trip creator completes their setup — hang tight, or reload.
+        </p>
+        <button onClick={() => window.location.reload()} className="w-full text-sm font-bold text-white py-3 rounded-full mb-3" style={{ backgroundColor: ACCENT }}>
+          Reload
+        </button>
+        <button onClick={() => setShowUpgrade(true)} className="w-full text-xs font-semibold py-2" style={{ color: MUTED }}>
+          Is this a trip from before in-app setup existed? Upgrade it
+        </button>
       </div>
     </div>
   );

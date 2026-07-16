@@ -37,14 +37,31 @@ export async function runItinerary(body, authHeader) {
     cleanDays.push({ date, legName: String(d?.legName || "").slice(0, 60) });
   }
 
-  // Only signed-in users may spend the free Gemini quota: verify the Supabase JWT.
+  // Only signed-in users may spend the free Gemini quota: verify the Supabase
+  // JWT. Fail closed — a misconfigured deploy must not become an open endpoint.
   const supaUrl = process.env.VITE_SUPABASE_URL;
   const supaKey = process.env.VITE_SUPABASE_ANON_KEY;
-  if (supaUrl && supaKey) {
-    const token = String(authHeader || "").replace(/^Bearer\s+/i, "");
-    if (!token) return reply(401, "unauthorized", "Sign in to use AI suggestions.");
-    const { data, error } = await createClient(supaUrl, supaKey).auth.getUser(token);
-    if (error || !data?.user) return reply(401, "unauthorized", "Sign in to use AI suggestions.");
+  if (!supaUrl || !supaKey) {
+    console.error("itinerary: VITE_SUPABASE_URL/ANON_KEY missing — refusing unauthenticated access");
+    return reply(503, "misconfigured", "AI suggestions are temporarily unavailable.");
+  }
+  const token = String(authHeader || "").replace(/^Bearer\s+/i, "");
+  if (!token) return reply(401, "unauthorized", "Sign in to use AI suggestions.");
+  const supa = createClient(supaUrl, supaKey, { global: { headers: { Authorization: `Bearer ${token}` } } });
+  const { data, error } = await supa.auth.getUser(token);
+  if (error || !data?.user) return reply(401, "unauthorized", "Sign in to use AI suggestions.");
+
+  // Per-user daily cap (anonymous sign-in is free, so the JWT alone isn't
+  // enough to protect the quota). Counted via a SECURITY DEFINER RPC — see
+  // supabase/migrations/006_ai_usage.sql. Fail closed if the RPC errors.
+  const cap = Number(process.env.AI_DAILY_CAP) || 10;
+  const { data: used, error: capErr } = await supa.rpc("consume_ai_credit");
+  if (capErr) {
+    console.error("itinerary: consume_ai_credit failed:", capErr.message);
+    return reply(503, "misconfigured", "AI suggestions are temporarily unavailable.");
+  }
+  if (used > cap) {
+    return reply(429, "quota", "You've used today's AI suggestions — try again tomorrow.");
   }
 
   try {

@@ -43,9 +43,14 @@ export default function TripMap({ selected, onSelectDay }) {
     const layer = L.layerGroup().addTo(map);
     layerRef.current = layer;
 
+    // Leg names/colors come from member-editable trip config and Leaflet
+    // renders tooltip/divIcon content as raw HTML — escape/validate both.
+    const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    const safeColor = (c) => (/^#[0-9a-fA-F]{3,8}$/.test(String(c)) ? c : "#1D2433");
+
     const pin = (color, px = 18) => L.divIcon({
       className: "",
-      html: `<div style="width:${px}px;height:${px}px;border-radius:50%;background:${color};border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.4)"></div>`,
+      html: `<div style="width:${px}px;height:${px}px;border-radius:50%;background:${safeColor(color)};border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.4)"></div>`,
       iconSize: [px, px],
       iconAnchor: [px / 2, px / 2],
     });
@@ -71,7 +76,7 @@ export default function TripMap({ selected, onSelectDay }) {
       if (drawn.has(key)) continue;
       drawn.add(key);
       const m = L.marker([leg.lat, leg.lon], { icon: pin(leg.color) }).addTo(layer);
-      m.bindTooltip(leg.name, { direction: "top", offset: [0, -10] });
+      m.bindTooltip(esc(leg.name), { direction: "top", offset: [0, -10] });
       m.on("click", () => {
         const first = config.days.find((d) => d.leg === key);
         if (first && onSelectDay) onSelectDay(first.date);
@@ -83,7 +88,7 @@ export default function TripMap({ selected, onSelectDay }) {
     if (day?.place && day.lat != null && day.lon != null) {
       const color = config.legs[day.leg]?.color || "#1D2433";
       const m = L.marker([day.lat, day.lon], { icon: pin(color, 12) }).addTo(layer);
-      m.bindTooltip(`${day.place} · day trip`, { direction: "top", offset: [0, -8] });
+      m.bindTooltip(`${esc(day.place)} · day trip`, { direction: "top", offset: [0, -8] });
     }
 
     if (!fittedRef.current && stops.length) {

@@ -26,14 +26,17 @@ export async function runTryOn(body, authHeader) {
   }
 
   // Only trip members may spend the GPU quota: verify the Supabase JWT.
+  // Fail closed — a misconfigured deploy must not become an open endpoint.
   const supaUrl = process.env.VITE_SUPABASE_URL;
   const supaKey = process.env.VITE_SUPABASE_ANON_KEY;
-  if (supaUrl && supaKey) {
-    const token = String(authHeader || "").replace(/^Bearer\s+/i, "");
-    if (!token) return reply(401, "unauthorized", "Sign in to use try-on.");
-    const { data, error } = await createClient(supaUrl, supaKey).auth.getUser(token);
-    if (error || !data?.user) return reply(401, "unauthorized", "Sign in to use try-on.");
+  if (!supaUrl || !supaKey) {
+    console.error("tryon: VITE_SUPABASE_URL/ANON_KEY missing — refusing unauthenticated access");
+    return reply(503, "misconfigured", "Try-on is temporarily unavailable.");
   }
+  const token = String(authHeader || "").replace(/^Bearer\s+/i, "");
+  if (!token) return reply(401, "unauthorized", "Sign in to use try-on.");
+  const { data, error } = await createClient(supaUrl, supaKey).auth.getUser(token);
+  if (error || !data?.user) return reply(401, "unauthorized", "Sign in to use try-on.");
 
   try {
     const photo = process.env.GEMINI_API_KEY
