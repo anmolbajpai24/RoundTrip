@@ -41,10 +41,16 @@ create policy "outfit photos delete" on storage.objects
   );
 
 -- ---------------------------------------------------------------------------
--- ONE-OFF PURGE — run once, AFTER the new frontend is deployed.
--- Owner confirmed existing base64 outfit photos are disposable (16 Jul 2026);
--- deleting the rows is the whole "migration" — no conversion.
--- Removes closet items, day assignments and pre-closet legacy rows.
+-- PURGE — deletes only outfit rows that carry inline base64 images (the old
+-- format). Owner confirmed those photos are disposable (16 Jul 2026).
+--
+-- Safe to run at ANY time and MORE THAN ONCE: rows written by the new build
+-- store a photoPath string (no data:image payload) and are never matched, so
+-- no coordination with other devices is needed. If a phone on a stale cached
+-- build adds another base64 photo later, just run this again.
+-- (Day-assignment `outfit-days` rows are left in place — entries pointing at
+-- purged items are simply rendered as "nothing planned".)
 -- ---------------------------------------------------------------------------
 -- delete from public.trip_kv
---   where key like 'outfit-item:%' or key like 'outfit:%' or key = 'outfit-days';
+--   where (key like 'outfit-item:%' or key like 'outfit:%')
+--     and value::text like '%data:image%';
