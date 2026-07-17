@@ -1,0 +1,542 @@
+.head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.galleryBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: none;
+  padding: 6px 11px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+  background-color: var(--surface);
+  font: 600 11px/1 var(--font-text);
+  color: var(--ink);
+}
+
+.hiddenFile {
+  display: none;
+}
+
+.closet {
+  margin-top: 4px;
+}
+
+.section {
+  margin-top: 20px;
+}
+
+/* ---- base photo (try-on) ---- */
+.baseCard {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  background-color: var(--surface);
+}
+
+.baseThumb,
+.basePlaceholder {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--r-thumb);
+  object-fit: cover;
+  flex: none;
+}
+
+.basePlaceholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--field);
+  color: var(--ink-faint);
+}
+
+.baseText {
+  flex: 1;
+  min-width: 0;
+}
+
+.baseTitle {
+  font: 600 12px/1 var(--font-text);
+  color: var(--ink);
+}
+
+.baseSub {
+  font: 400 11px/1.3 var(--font-text);
+  color: var(--ink-faint);
+  margin-top: 3px;
+}
+
+.baseActions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+}
+
+/* ---- shared links ---- */
+.linkAccent {
+  font: 600 12px/1 var(--font-text);
+  color: var(--accent);
+}
+
+.linkMuted {
+  font: 600 12px/1 var(--font-text);
+  color: var(--ink-muted);
+}
+
+/* ---- closet grid ---- */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.addTile {
+  height: 128px;
+  border: 1.5px dashed var(--c);
+  border-radius: var(--r-card);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  color: color-mix(in srgb, var(--c) 72%, var(--ink));
+}
+
+.addLabel {
+  font: 600 11px/1.2 var(--font-text);
+  text-align: center;
+  padding: 0 4px;
+}
+
+.tile {
+  position: relative;
+  height: 128px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  background-color: var(--surface);
+}
+
+.tileImg {
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  object-fit: cover;
+}
+
+.tilePlaceholder {
+  width: 100%;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--field);
+  color: var(--ink-faint);
+}
+
+.lockBadge {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  display: inline-flex;
+  padding: 3px;
+  border-radius: var(--r-pill);
+  background-color: rgb(20 12 7 / 0.6);
+  color: #FBF6EC;
+}
+
+.tileDays,
+.tileDaysEmpty {
+  padding: 4px 6px;
+  font: 600 10px/1.2 var(--font-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tileDays {
+  color: var(--ink);
+}
+
+.tileDaysEmpty {
+  color: var(--ink-faint);
+}
+
+.emptyNote {
+  font: 400 12px/1.4 var(--font-text);
+  color: var(--ink-faint);
+  margin-top: 8px;
+}
+
+.error {
+  font: 600 12px/1.4 var(--font-text);
+  color: var(--danger);
+  margin-top: 8px;
+}
+
+/* ---- day planner card ---- */
+.dayCard {
+  margin-top: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  overflow: hidden;
+  background-color: var(--surface);
+}
+
+.dayHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 11px 16px;
+  border-bottom: 1px solid var(--divider);
+}
+
+.dayTitle {
+  font: 500 13px/1.2 var(--font-text);
+  color: var(--ink);
+}
+
+.dayBody {
+  padding: 16px;
+}
+
+.badgeRow {
+  margin-bottom: 8px;
+}
+
+.desc {
+  font: var(--type-run);
+  color: var(--ink);
+  margin-top: 8px;
+}
+
+.actionRow {
+  display: flex;
+  gap: 14px;
+  margin-top: 10px;
+}
+
+.uploadZone {
+  width: 100%;
+  border: 1.5px dashed var(--c);
+  border-radius: var(--r-card);
+  padding: 28px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: color-mix(in srgb, var(--c) 72%, var(--ink));
+}
+
+.uploadTitle {
+  font: 600 14px/1.2 var(--font-text);
+}
+
+.uploadSub {
+  font: 400 12px/1 var(--font-text);
+  color: var(--ink-muted);
+}
+
+.chooseBtn {
+  margin-top: 8px;
+}
+
+/* ---- closet picker ---- */
+.picker {
+  margin-top: 12px;
+  padding: 8px;
+  border: 1px solid var(--divider);
+  border-radius: var(--r-card);
+  background-color: var(--field);
+}
+
+.pickerHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 4px;
+  margin-bottom: 6px;
+}
+
+.pickerLabel {
+  composes: label from "../styles/type.module.css";
+  font-size: 9px;
+}
+
+.pickerClose {
+  color: var(--ink-muted);
+}
+
+.pickerRow {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.pickerTile {
+  flex: none;
+  border: 1px solid var(--border);
+  border-radius: var(--r-thumb);
+  overflow: hidden;
+}
+
+.pickerTileActive {
+  border: 2px solid var(--accent);
+}
+
+.pickerImg {
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+}
+
+.pickerPlaceholder {
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--surface);
+  color: var(--ink-faint);
+}
+
+/* ---- other members ---- */
+.otherRow {
+  padding: 16px;
+  border-top: 1px solid var(--divider);
+}
+
+.otherEmpty {
+  width: 100%;
+  border-radius: var(--r-card);
+  padding: 28px 0;
+  text-align: center;
+  font: 400 13px/1.4 var(--font-text);
+  background-color: var(--field);
+  color: var(--ink-faint);
+}
+
+/* ---- all-days grid ---- */
+.gridTile {
+  position: relative;
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  overflow: hidden;
+  text-align: left;
+  background-color: var(--surface);
+}
+
+.gridImg {
+  width: 100%;
+  height: 80px;
+  object-fit: cover;
+}
+
+.gridPlaceholder {
+  width: 100%;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-faint);
+}
+
+.gridDots {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: flex;
+  gap: 2px;
+}
+
+.gridDot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--surface);
+}
+
+.gridDate {
+  padding: 4px 6px;
+  font: 600 10px/1.2 var(--font-text);
+  color: var(--ink);
+}
+
+/* ---- outfit photo + flip ---- */
+.photoWrap {
+  position: relative;
+}
+
+.photo {
+  width: 100%;
+  border-radius: var(--r-card);
+  object-fit: cover;
+  max-height: 380px;
+  min-height: 96px;
+}
+
+.flipBtn {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: var(--r-pill);
+  background-color: rgb(20 12 7 / 0.6);
+  color: #FBF6EC;
+  font: 600 11px/1 var(--font-text);
+}
+
+/* ---- editor ---- */
+.editorHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.editorTitle {
+  composes: titleSm from "../styles/type.module.css";
+}
+
+.editorPhoto {
+  width: 100%;
+  border-radius: var(--r-card);
+  object-fit: cover;
+  max-height: 300px;
+  min-height: 96px;
+}
+
+.editorPlaceholder {
+  width: 100%;
+  border-radius: var(--r-card);
+  padding: 40px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--field);
+  color: var(--ink-faint);
+}
+
+.replaceLink {
+  font: 600 12px/1 var(--font-text);
+  color: var(--ink-muted);
+  margin-top: 8px;
+}
+
+.field {
+  margin-top: 16px;
+}
+
+.fieldLabel {
+  composes: label from "../styles/type.module.css";
+  display: block;
+  margin-bottom: 7px;
+}
+
+.fieldHint {
+  font: 400 11px/1.4 var(--font-text);
+  color: var(--ink-faint);
+  margin-top: 6px;
+}
+
+.visPicker {
+  width: 100%;
+  display: flex;
+}
+
+.visPicker > * {
+  flex: 1;
+  justify-content: center;
+}
+
+.tryOnImg {
+  width: 100%;
+  border-radius: var(--r-card);
+  object-fit: cover;
+  max-height: 300px;
+  margin-bottom: 8px;
+}
+
+.tryOnRow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.dayList {
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  overflow: hidden;
+}
+
+.dayRow {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  text-align: left;
+}
+
+.dayRow + .dayRow {
+  border-top: 1px solid var(--divider);
+}
+
+.dayRowChecked {
+  background-color: var(--field);
+}
+
+.dayRowText {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 400 13px/1.2 var(--font-text);
+  color: var(--ink);
+}
+
+.dayRowStrong {
+  font-weight: 600;
+}
+
+.dayRowSub {
+  color: var(--ink-muted);
+}
+
+.dayRowMark {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  font: 600 11px/1 var(--font-text);
+  color: var(--ink-faint);
+}
+
+.dayRowChecked .dayRowMark {
+  color: var(--accent);
+}
+
+.deleteLink {
+  display: block;
+  margin-top: 18px;
+  font: 700 12px/1 var(--font-text);
+  color: var(--danger);
+}
