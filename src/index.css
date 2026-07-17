@@ -1,5 +1,9 @@
-/* Style entry. Order matters: Tailwind (preflight for unmigrated screens,
-   removed in Wave 10) → tokens → base overrides. */
+/* Style entry. Order matters: fonts first (start woff2 requests early) →
+   Tailwind (preflight for unmigrated screens, removed in Wave 10) → tokens →
+   base overrides. Latin subsets only — keeps the PWA precache lean. */
+@import "@fontsource/instrument-serif/latin-400.css";
+@import "@fontsource/instrument-serif/latin-400-italic.css";
+@import "@fontsource-variable/instrument-sans/standard.css";
 @import "tailwindcss";
 @import "./styles/tokens.css";
 @import "./styles/base.css";
