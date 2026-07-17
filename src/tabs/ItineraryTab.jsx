@@ -12,7 +12,7 @@ import DayWeather from "../components/DayWeather.jsx";
 import TripMap from "../components/TripMap.jsx";
 import Icon from "../components/ui/icons.jsx";
 import Button from "../components/ui/Button.jsx";
-import Field, { Input, TextArea } from "../components/ui/Field.jsx";
+import Field, { Input, TextArea, FormStack } from "../components/ui/Field.jsx";
 import Segmented from "../components/ui/Segmented.jsx";
 import s from "./ItineraryTab.module.css";
 
@@ -106,26 +106,28 @@ export default function ItineraryTab({ overrides, setOverrides, notesAll, setNot
           <div className={s.dayBody}>
             {dayEditing ? (
               <div className={s.editor}>
-                <Field label="Day title">
-                  <Input value={dayDraft.title} onChange={(e) => setDayDraft((d) => ({ ...d, title: e.target.value }))} maxLength={60} />
-                </Field>
-                <Field label="Plan">
-                  <TextArea value={dayDraft.plan} onChange={(e) => setDayDraft((d) => ({ ...d, plan: e.target.value }))} rows={3} placeholder="What's happening this day?" />
-                </Field>
-                <Field label="Destination">
-                  <div className={s.legPick}>
-                    {Object.entries(config.legs).map(([key, leg]) => {
-                      const on = dayDraft.leg === key;
-                      return (
-                        <button key={key} onClick={() => setDayDraft((d) => ({ ...d, leg: key }))}
-                          className={[s.legOption, on && s.legOn].filter(Boolean).join(" ")}
-                          style={{ "--c": leg.color, "--on": onColor(leg.color) }}>
-                          {leg.name}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </Field>
+                <FormStack>
+                  <Field label="Day title">
+                    <Input value={dayDraft.title} onChange={(e) => setDayDraft((d) => ({ ...d, title: e.target.value }))} maxLength={60} />
+                  </Field>
+                  <Field label="Plan">
+                    <TextArea value={dayDraft.plan} onChange={(e) => setDayDraft((d) => ({ ...d, plan: e.target.value }))} rows={3} placeholder="What's happening this day?" />
+                  </Field>
+                  <Field label="Destination">
+                    <div className={s.legPick}>
+                      {Object.entries(config.legs).map(([key, leg]) => {
+                        const on = dayDraft.leg === key;
+                        return (
+                          <button key={key} onClick={() => setDayDraft((d) => ({ ...d, leg: key }))}
+                            className={[s.legOption, on && s.legOn].filter(Boolean).join(" ")}
+                            style={{ "--c": leg.color, "--on": onColor(leg.color) }}>
+                            {leg.name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </Field>
+                </FormStack>
                 <div className={s.editActions}>
                   <Button size="sm" onClick={saveDayEdit}>Save day</Button>
                   <Button size="sm" variant="ghost" onClick={() => setDayEditing(false)}>Cancel</Button>

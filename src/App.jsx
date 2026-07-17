@@ -24,7 +24,7 @@ import BookingsTab from "./tabs/BookingsTab.jsx";
 import Icon from "./components/ui/icons.jsx";
 import Sheet from "./components/ui/Sheet.jsx";
 import Button from "./components/ui/Button.jsx";
-import Field, { Input } from "./components/ui/Field.jsx";
+import Field, { Input, FormStack } from "./components/ui/Field.jsx";
 import SwatchPicker from "./components/ui/SwatchPicker.jsx";
 import RouteLine from "./components/ui/RouteLine.jsx";
 import s from "./App.module.css";
@@ -399,12 +399,14 @@ function ProfileEditor({ session, onClose, onSaved }) {
       {(requestClose) => (
         <>
           <h2 className={s.sheetTitle}>Your profile</h2>
-          <Field label="Name">
-            <Input value={name} onChange={(e) => setName(e.target.value)} maxLength={24} />
-          </Field>
-          <Field label="Colour">
-            <SwatchPicker colors={COLORS} value={color} onChange={setColor} />
-          </Field>
+          <FormStack>
+            <Field label="Name">
+              <Input value={name} onChange={(e) => setName(e.target.value)} maxLength={24} />
+            </Field>
+            <Field label="Colour">
+              <SwatchPicker colors={COLORS} value={color} onChange={setColor} />
+            </Field>
+          </FormStack>
           <div className={s.sheetActions}>
             <Button full onClick={save} disabled={busy}>{busy ? "Saving…" : "Save"}</Button>
             <Button variant="ghost" onClick={requestClose}>Cancel</Button>

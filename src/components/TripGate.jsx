@@ -6,7 +6,7 @@ import TripWizard from "./TripWizard.jsx";
 import AccountSheet from "./AccountSheet.jsx";
 import { APP_NAME, APP_TAGLINE } from "../theme.js";
 import Button from "./ui/Button.jsx";
-import Field, { Input } from "./ui/Field.jsx";
+import Field, { Input, FormStack } from "./ui/Field.jsx";
 import SwatchPicker from "./ui/SwatchPicker.jsx";
 import EmptyState from "./ui/EmptyState.jsx";
 import s from "./TripGate.module.css";
@@ -70,14 +70,14 @@ export default function TripGate({ onReady }) {
         </div>
 
         {askName && (
-          <div className={s.nameBlock}>
+          <FormStack className={s.nameBlock}>
             <Field label="Your name">
               <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Sam" maxLength={24} />
             </Field>
             <Field label="Your colour">
               <SwatchPicker colors={COLORS} value={color} onChange={setColor} />
             </Field>
-          </div>
+          </FormStack>
         )}
 
         <Button full onClick={() => { setError(""); setWizard(true); }} disabled={busy} className={s.plan}>

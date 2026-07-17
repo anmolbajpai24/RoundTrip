@@ -2,8 +2,26 @@
   display: block;
 }
 
-.field + .field {
-  margin-top: 14px;
+/* Container-owned form rhythm: the stack spaces ALL children uniformly
+   (Fields, toggle rows, row pairs), so spacing never depends on what kind of
+   element a Field happens to sit next to. */
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Side-by-side pair (dates, currency+rate). Children are margin-free so no
+   sibling rule can ever misalign the columns. */
+.row {
+  display: flex;
+  gap: 10px;
+}
+
+.row > * {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
 }
 
 .label {

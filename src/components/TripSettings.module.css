@@ -4,50 +4,23 @@
   margin-bottom: 16px;
 }
 
-.block {
-  display: block;
-  margin-top: 14px;
-}
-
-.dateRow {
-  display: flex;
-  gap: 10px;
-  margin-top: 14px;
-}
-
-.dateCol {
-  flex: 1;
-  min-width: 0;
-}
-
 .dateNote {
   font: 400 11px/1.45 var(--font-text);
   color: var(--warning);
   margin: 7px 0 0;
 }
 
+/* vertical rhythm comes from the FormStack it sits in */
 .toggleRow {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  margin-top: 14px;
 }
 
 .toggleLabel {
   font: 600 13px/1.2 var(--font-text);
   color: var(--ink);
-}
-
-.homeRow {
-  display: flex;
-  gap: 8px;
-  margin-top: 10px;
-}
-
-.homeRow > * {
-  flex: 1;
-  min-width: 0;
 }
 
 .sectionLabel {

@@ -13,7 +13,7 @@ import Spinner from "./Spinner.jsx";
 import { APP_NAME, DEST_COLORS } from "../theme.js";
 import Icon from "./ui/icons.jsx";
 import Button from "./ui/Button.jsx";
-import Field, { Input, TextArea, Select } from "./ui/Field.jsx";
+import Field, { Input, TextArea, Select, FormStack, FieldRow } from "./ui/Field.jsx";
 import SwatchPicker from "./ui/SwatchPicker.jsx";
 import Toggle from "./ui/Toggle.jsx";
 import s from "./TripWizard.module.css";
@@ -215,23 +215,25 @@ export default function TripWizard({ profile, onDone, onCancel }) {
         {step === 1 && (
           <div>
             <h1 className={s.h1}>New trip</h1>
-            <Field label="Your name">
-              <Input value={name} onChange={(e) => setName(e.target.value)} maxLength={24} placeholder="e.g. Sam" />
-            </Field>
-            <Field label="Your colour">
-              <SwatchPicker colors={COLORS} value={color} onChange={setColor} />
-            </Field>
-            <Field label="Trip name">
-              <Input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={40} placeholder="e.g. Japan in Spring" />
-            </Field>
-            <div className={s.dateRow}>
-              <Field label="First day">
-                <Input type="date" value={startDate} min={todayISO()} onChange={(e) => setStartDate(e.target.value)} />
+            <FormStack>
+              <Field label="Your name">
+                <Input value={name} onChange={(e) => setName(e.target.value)} maxLength={24} placeholder="e.g. Sam" />
               </Field>
-              <Field label="Last day">
-                <Input type="date" value={endDate} min={startDate || todayISO()} onChange={(e) => setEndDate(e.target.value)} />
+              <Field label="Your colour">
+                <SwatchPicker colors={COLORS} value={color} onChange={setColor} />
               </Field>
-            </div>
+              <Field label="Trip name">
+                <Input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={40} placeholder="e.g. Japan in Spring" />
+              </Field>
+              <FieldRow>
+                <Field label="First day">
+                  <Input type="date" value={startDate} min={todayISO()} onChange={(e) => setStartDate(e.target.value)} />
+                </Field>
+                <Field label="Last day">
+                  <Input type="date" value={endDate} min={startDate || todayISO()} onChange={(e) => setEndDate(e.target.value)} />
+                </Field>
+              </FieldRow>
+            </FormStack>
             {tripLen > 0 && <p className={s.dayCount}>{tripLen} day{tripLen === 1 ? "" : "s"}</p>}
           </div>
         )}
@@ -239,26 +241,28 @@ export default function TripWizard({ profile, onDone, onCancel }) {
         {step === 2 && (
           <div>
             <h1 className={s.h1}>Money</h1>
-            <Field label="Trip currency">
-              <CurrencySelect value={currency} onChange={setCurrency} />
-            </Field>
-            <div className={s.toggleRow}>
-              <span className={s.toggleLabel}>Also show amounts in a second currency</span>
-              <Toggle checked={homeOn} onChange={setHomeOn} />
-            </div>
-            {homeOn && (
-              <>
-                <Field label="Home currency">
-                  <CurrencySelect value={homeCurrency} onChange={setHomeCurrency} exclude={currency} />
-                </Field>
-                <Field label={`1 ${currency} = ? ${homeCurrency}`}>
-                  <Input value={homeRate} onChange={(e) => setHomeRate(e.target.value)} inputMode="decimal" placeholder="e.g. 127" />
-                </Field>
-              </>
-            )}
-            <Field label={`Total budget in ${currency} (optional)`}>
-              <Input value={budget} onChange={(e) => setBudget(e.target.value)} inputMode="decimal" placeholder="Leave empty for no budget bar" />
-            </Field>
+            <FormStack>
+              <Field label="Trip currency">
+                <CurrencySelect value={currency} onChange={setCurrency} />
+              </Field>
+              <div className={s.toggleRow}>
+                <span className={s.toggleLabel}>Also show amounts in a second currency</span>
+                <Toggle checked={homeOn} onChange={setHomeOn} />
+              </div>
+              {homeOn && (
+                <FieldRow>
+                  <Field label="Home currency">
+                    <CurrencySelect value={homeCurrency} onChange={setHomeCurrency} exclude={currency} />
+                  </Field>
+                  <Field label={`1 ${currency} = ?`}>
+                    <Input value={homeRate} onChange={(e) => setHomeRate(e.target.value)} inputMode="decimal" placeholder="e.g. 127" />
+                  </Field>
+                </FieldRow>
+              )}
+              <Field label={`Total budget in ${currency} (optional)`}>
+                <Input value={budget} onChange={(e) => setBudget(e.target.value)} inputMode="decimal" placeholder="Leave empty for no budget bar" />
+              </Field>
+            </FormStack>
           </div>
         )}
 

@@ -8,7 +8,7 @@ import { DEST_COLORS } from "../theme.js";
 import { confirmDialog } from "./dialogs.jsx";
 import Sheet from "./ui/Sheet.jsx";
 import Button from "./ui/Button.jsx";
-import Field, { Input, Select } from "./ui/Field.jsx";
+import Field, { Input, Select, FormStack, FieldRow } from "./ui/Field.jsx";
 import Toggle from "./ui/Toggle.jsx";
 import SwatchPicker from "./ui/SwatchPicker.jsx";
 import Icon from "./ui/icons.jsx";
@@ -103,54 +103,50 @@ export default function TripSettings({ config, onSave, onClose, memberCount = 1,
         <>
           <h2 className={s.title}>Trip settings</h2>
 
-          <Field label="Trip name">
-            <Input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={40} />
-          </Field>
+          <FormStack>
+            <Field label="Trip name">
+              <Input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={40} />
+            </Field>
 
-          <div className={s.dateRow}>
-            <div className={s.dateCol}>
-              <Field label="First day">
-                <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-              </Field>
+            <div>
+              <FieldRow>
+                <Field label="First day">
+                  <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+                </Field>
+                <Field label="Last day">
+                  <Input type="date" value={endDate} min={startDate} onChange={(e) => setEndDate(e.target.value)} />
+                </Field>
+              </FieldRow>
+              {(startDate !== config.startDate || endDate !== config.endDate) && (
+                <p className={s.dateNote}>
+                  Changing dates re-generates the day list. Notes and outfits on removed dates are kept and come back if the dates return.
+                </p>
+              )}
             </div>
-            <div className={s.dateCol}>
-              <Field label="Last day">
-                <Input type="date" value={endDate} min={startDate} onChange={(e) => setEndDate(e.target.value)} />
-              </Field>
-            </div>
-          </div>
-          {(startDate !== config.startDate || endDate !== config.endDate) && (
-            <p className={s.dateNote}>
-              Changing dates re-generates the day list. Notes and outfits on removed dates are kept and come back if the dates return.
-            </p>
-          )}
 
-          <div className={s.block}>
             <Field label="Trip currency">
               <Select value={currency} onChange={(e) => setCurrency(e.target.value)}>
                 {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code} · {c.name}</option>)}
               </Select>
             </Field>
-          </div>
 
-          <div className={s.toggleRow}>
-            <span className={s.toggleLabel}>Second currency</span>
-            <Toggle checked={homeOn} onChange={setHomeOn} />
-          </div>
-          {homeOn && (
-            <div className={s.homeRow}>
-              <Select value={homeCurrency} onChange={(e) => setHomeCurrency(e.target.value)}>
-                {CURRENCIES.filter((c) => c.code !== currency).map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
-              </Select>
-              <Input value={homeRate} onChange={(e) => setHomeRate(e.target.value)} inputMode="decimal" placeholder={`1 ${currency} = ?`} />
+            <div className={s.toggleRow}>
+              <span className={s.toggleLabel}>Second currency</span>
+              <Toggle checked={homeOn} onChange={setHomeOn} />
             </div>
-          )}
+            {homeOn && (
+              <FieldRow>
+                <Select value={homeCurrency} onChange={(e) => setHomeCurrency(e.target.value)}>
+                  {CURRENCIES.filter((c) => c.code !== currency).map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
+                </Select>
+                <Input value={homeRate} onChange={(e) => setHomeRate(e.target.value)} inputMode="decimal" placeholder={`1 ${currency} = ?`} />
+              </FieldRow>
+            )}
 
-          <div className={s.block}>
             <Field label={`Budget in ${currency} (optional)`}>
               <Input value={budget} onChange={(e) => setBudget(e.target.value)} inputMode="decimal" placeholder="No budget bar when empty" />
             </Field>
-          </div>
+          </FormStack>
 
           <div className={s.sectionLabel}>Cover photo</div>
           <div className={s.coverPreview}>

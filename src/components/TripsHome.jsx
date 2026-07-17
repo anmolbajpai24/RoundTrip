@@ -10,7 +10,7 @@ import { confirmDialog } from "./dialogs.jsx";
 import { APP_NAME } from "../theme.js";
 import Icon from "./ui/icons.jsx";
 import Button from "./ui/Button.jsx";
-import Field, { Input } from "./ui/Field.jsx";
+import Field, { Input, FormStack } from "./ui/Field.jsx";
 import SwatchPicker from "./ui/SwatchPicker.jsx";
 import RouteLine from "./ui/RouteLine.jsx";
 import Skeleton from "./ui/Skeleton.jsx";
@@ -291,15 +291,17 @@ function JoinForm({ defaultProfile, onJoined, onCancel }) {
 
   return (
     <div className={s.joinForm}>
-      <Field label="Trip code">
-        <Input code value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="ABC123" maxLength={6} />
-      </Field>
-      <Field label="Your name on this trip">
-        <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Priya" maxLength={24} />
-      </Field>
-      <Field label="Colour">
-        <SwatchPicker colors={COLORS} value={color} onChange={setColor} />
-      </Field>
+      <FormStack>
+        <Field label="Trip code">
+          <Input code value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="ABC123" maxLength={6} />
+        </Field>
+        <Field label="Your name on this trip">
+          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Priya" maxLength={24} />
+        </Field>
+        <Field label="Colour">
+          <SwatchPicker colors={COLORS} value={color} onChange={setColor} />
+        </Field>
+      </FormStack>
       <div className={s.joinActions}>
         <Button full onClick={join} disabled={busy}>{busy ? "Joining…" : "Join"}</Button>
         <Button variant="ghost" onClick={onCancel}>Cancel</Button>

@@ -12,6 +12,19 @@ export default function Field({ label, hint, children }) {
   );
 }
 
+// Vertical form container that owns the rhythm between its children — Fields,
+// toggle rows, FieldRows alike. Always wrap a form in this; Field itself
+// carries no outer margin.
+export function FormStack({ className, children }) {
+  return <div className={[s.stack, className].filter(Boolean).join(" ")}>{children}</div>;
+}
+
+// Side-by-side pair inside a FormStack (e.g. first/last day). Children split
+// the width evenly; give one a width via className for fixed columns.
+export function FieldRow({ className, children }) {
+  return <div className={[s.row, className].filter(Boolean).join(" ")}>{children}</div>;
+}
+
 // Grand Tour text input: field bg, hairline border, control radius/height.
 // `code` styles one-shot codes (tracked caps, centered, tabular).
 export function Input({ code = false, className, ...rest }) {
