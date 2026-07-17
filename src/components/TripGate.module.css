@@ -1,0 +1,105 @@
+.page {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+  background-color: var(--bg);
+}
+
+.centerPage {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background-color: var(--bg);
+}
+
+.wrap {
+  max-width: 24rem;
+  width: 100%;
+}
+
+.hero {
+  text-align: center;
+  margin-bottom: 26px;
+}
+
+.kicker {
+  composes: label from "../styles/type.module.css";
+  color: var(--accent);
+  letter-spacing: 0.2em;
+  margin-bottom: 8px;
+}
+
+.title {
+  font: 400 34px/1.1 var(--font-display);
+  color: var(--ink);
+}
+
+.em {
+  font-style: italic;
+  color: var(--accent);
+}
+
+.tagline {
+  font: 400 14px/1.5 var(--font-text);
+  color: var(--ink-muted);
+  margin-top: 8px;
+}
+
+.nameBlock {
+  margin-bottom: 22px;
+}
+
+.plan {
+  margin-bottom: 16px;
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.rule {
+  flex: 1;
+  height: 1px;
+  background-color: var(--border);
+}
+
+.or {
+  font: 600 11px/1 var(--font-text);
+  color: var(--ink-faint);
+}
+
+.joinRow {
+  display: flex;
+  gap: 8px;
+}
+
+.joinInput {
+  flex: 1;
+}
+
+.signin {
+  display: block;
+  width: 100%;
+  text-align: center;
+  font: 600 12px/1 var(--font-text);
+  color: var(--ink-muted);
+  margin-top: 24px;
+}
+
+.signinLink {
+  color: var(--accent);
+}
+
+.error {
+  font: 500 12px/1.4 var(--font-text);
+  color: var(--danger);
+  text-align: center;
+  margin-top: 12px;
+}

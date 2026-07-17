@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { COLORS, createTrip } from "../lib/session.js";
 import { saveKey } from "../lib/storage.js";
-import { CONFIG_KEY, listDates, softOf, slugify, dateLabel, weekday, addDays, softBg, todayISO } from "../lib/tripConfig.js";
+import { CONFIG_KEY, listDates, softOf, slugify, dateLabel, weekday, addDays, softBg, softBorder, todayISO } from "../lib/tripConfig.js";
 import { searchPlaces } from "../lib/geocode.js";
 import buildTripConfig from "../lib/buildTripConfig.js";
 import usePlaceSearch from "../lib/usePlaceSearch.js";
@@ -10,15 +10,19 @@ import { getLocalProfile } from "../lib/profile.js";
 import { searchCoverPhotos, trackDownload, asCover } from "../lib/unsplash.js";
 import { CURRENCIES } from "../data/currencies.js";
 import Spinner from "./Spinner.jsx";
-import { APP_NAME, ACCENT, INK, MUTED } from "../theme.js";
+import { APP_NAME, DEST_COLORS } from "../theme.js";
+import Icon from "./ui/icons.jsx";
+import Button from "./ui/Button.jsx";
+import Field, { Input, TextArea, Select } from "./ui/Field.jsx";
+import SwatchPicker from "./ui/SwatchPicker.jsx";
+import Toggle from "./ui/Toggle.jsx";
+import s from "./TripWizard.module.css";
 
 const MAX_TRIP_DAYS = 60;
 
 // New trips start with an empty packing list — the Pack tab shows suggested
 // categories and a sample hint so travellers build their own list.
 const GENERIC_PACKING = [];
-
-const inputStyle = { borderColor: "var(--border)", backgroundColor: "var(--field)", color: INK };
 
 // Multi-step create-trip flow. `profile` = { name, color } from the caller
 // (TripGate inputs or an existing membership); shown editable on step 1.
@@ -96,7 +100,7 @@ export default function TripWizard({ profile, onDone, onCancel }) {
   // buildConfig's legForDate, kept in sync so the AI payload can't diverge).
   const destForDate = (iso) => {
     const sorted = [...dests].sort((a, b) => (a.arrival < b.arrival ? -1 : 1));
-    let cur = sorted[0] || { name: "", color: MUTED };
+    let cur = sorted[0] || { name: "", color: "var(--ink-faint)" };
     for (const d of sorted) if (d.arrival <= iso) cur = d;
     return cur;
   };
@@ -125,8 +129,8 @@ export default function TripWizard({ profile, onDone, onCancel }) {
             const typed = dests.find((x) => x.name.toLowerCase() === city.toLowerCase());
             let geo = typed;
             if (!geo) { try { geo = (await searchPlaces(city))[0]; } catch { geo = null; } }
-            const color = COLORS[legOrder.length % COLORS.length];
-            legs[key] = { name: city, color, soft: softOf(color), lat: geo?.lat ?? null, lon: geo?.lon ?? null, norm: null };
+            const legColor = DEST_COLORS[legOrder.length % DEST_COLORS.length];
+            legs[key] = { name: city, color: legColor, soft: softOf(legColor), lat: geo?.lat ?? null, lon: geo?.lon ?? null, norm: null };
             legOrder.push(key);
           }
         }
@@ -163,9 +167,9 @@ export default function TripWizard({ profile, onDone, onCancel }) {
         const photos = await searchCoverPhotos(`${coverName} travel`);
         if (photos[0]) { config.cover = asCover(photos[0]); trackDownload(photos[0]); }
       } catch { /* gradient fallback */ }
-      const s = await createTrip(name.trim(), color);
+      const sess = await createTrip(name.trim(), color);
       await saveKey(CONFIG_KEY, config);
-      setCreated(s.code);
+      setCreated(sess.code);
     } catch (e) { setError(e.message || "Something went wrong."); }
     setBusy(false);
   };
@@ -178,100 +182,83 @@ export default function TripWizard({ profile, onDone, onCancel }) {
     } catch { /* cancelled */ }
   };
 
-  const wrap = { minHeight: "100vh", backgroundColor: "var(--bg)", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" };
-  const label = (t) => <label className="text-xs font-bold uppercase tracking-wide" style={{ color: MUTED }}>{t}</label>;
-
   if (created) {
     return (
-      <div className="flex items-center justify-center px-6" style={wrap}>
-        <div className="max-w-sm w-full text-center">
-          <div className="text-4xl mb-3">🎉</div>
-          <h1 className="text-lg font-bold mb-1" style={{ color: INK }}>Trip created</h1>
-          <p className="text-sm mb-5" style={{ color: MUTED }}>
+      <div className={s.centerPage}>
+        <div className={s.createdWrap}>
+          <div className={s.createdMark}><Icon name="check" size={24} strokeWidth={2} /></div>
+          <h1 className={s.createdTitle}>Trip created</h1>
+          <p className={s.createdBody}>
             Share this code so others can join. Everyone sees the whole trip, with each person's additions clearly labelled.
           </p>
-          <div className="rounded-2xl border px-6 py-5 mb-3" style={{ borderColor: "var(--border)", backgroundColor: "var(--card)" }}>
-            <div className="text-[11px] font-bold uppercase tracking-widest mb-1" style={{ color: MUTED }}>Trip code</div>
-            <div className="text-3xl font-bold tracking-[0.3em]" style={{ color: INK, fontFamily: "ui-monospace, monospace" }}>{created}</div>
+          <div className={s.codeCard}>
+            <div className={s.codeLabel}>Trip code</div>
+            <div className={s.codeValue}>{created}</div>
           </div>
-          <button onClick={share} className="text-sm font-semibold mb-5" style={{ color: ACCENT }}>Share / copy code</button>
-          <button onClick={onDone} className="w-full text-sm font-bold text-white py-3 rounded-full" style={{ backgroundColor: ACCENT }}>
-            Open the trip
-          </button>
+          <button onClick={share} className={s.shareBtn}><Icon name="share" size={14} /> Share / copy code</button>
+          <Button full onClick={onDone}>Open the trip</Button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex justify-center px-6 py-8" style={wrap}>
-      <div className="max-w-sm w-full">
-        <div className="flex items-center justify-between mb-5">
-          <button onClick={step === 1 ? onCancel : () => setStep(step - 1)} className="text-sm font-semibold" style={{ color: MUTED }}>‹ Back</button>
-          <span className="text-[11px] font-bold uppercase tracking-widest" style={{ color: MUTED }}>Step {step} of {totalSteps}</span>
+    <div className={s.page}>
+      <div className={s.wrap}>
+        <div className={s.topbar}>
+          <button onClick={step === 1 ? onCancel : () => setStep(step - 1)} className={s.back}>
+            <Icon name="back" size={14} strokeWidth={1.8} /> Back
+          </button>
+          <span className={s.stepLabel}>Step {step} of {totalSteps}</span>
         </div>
 
         {step === 1 && (
           <div>
-            <h1 className="text-xl font-bold mb-4" style={{ color: INK }}>New trip</h1>
-            {label("Your name")}
-            <input value={name} onChange={(e) => setName(e.target.value)} maxLength={24} placeholder="e.g. Sam"
-              className="mt-1 mb-3 w-full text-sm rounded-xl border px-4 py-3" style={inputStyle} />
-            <div className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: MUTED }}>Your colour</div>
-            <div className="flex gap-2 mb-4">
-              {COLORS.map((c) => (
-                <button key={c} onClick={() => setColor(c)} className="w-8 h-8 rounded-full flex items-center justify-center"
-                  style={{ backgroundColor: c, outline: color === c ? "3px solid var(--ink)" : "none", outlineOffset: 2 }}>
-                  {color === c && <span className="text-white text-xs font-bold">✓</span>}
-                </button>
-              ))}
+            <h1 className={s.h1}>New trip</h1>
+            <Field label="Your name">
+              <Input value={name} onChange={(e) => setName(e.target.value)} maxLength={24} placeholder="e.g. Sam" />
+            </Field>
+            <Field label="Your colour">
+              <SwatchPicker colors={COLORS} value={color} onChange={setColor} />
+            </Field>
+            <Field label="Trip name">
+              <Input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={40} placeholder="e.g. Japan in Spring" />
+            </Field>
+            <div className={s.dateRow}>
+              <Field label="First day">
+                <Input type="date" value={startDate} min={todayISO()} onChange={(e) => setStartDate(e.target.value)} />
+              </Field>
+              <Field label="Last day">
+                <Input type="date" value={endDate} min={startDate || todayISO()} onChange={(e) => setEndDate(e.target.value)} />
+              </Field>
             </div>
-            {label("Trip name")}
-            <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={40} placeholder="e.g. Japan in Spring"
-              className="mt-1 mb-3 w-full text-sm rounded-xl border px-4 py-3" style={inputStyle} />
-            <div className="flex gap-2 mb-1">
-              <div className="flex-1">
-                {label("First day")}
-                <input type="date" value={startDate} min={todayISO()} onChange={(e) => setStartDate(e.target.value)}
-                  className="mt-1 w-full text-sm rounded-xl border px-3 py-3" style={inputStyle} />
-              </div>
-              <div className="flex-1">
-                {label("Last day")}
-                <input type="date" value={endDate} min={startDate || todayISO()} onChange={(e) => setEndDate(e.target.value)}
-                  className="mt-1 w-full text-sm rounded-xl border px-3 py-3" style={inputStyle} />
-              </div>
-            </div>
-            {tripLen > 0 && <p className="text-xs mb-2" style={{ color: MUTED }}>{tripLen} day{tripLen === 1 ? "" : "s"}</p>}
+            {tripLen > 0 && <p className={s.dayCount}>{tripLen} day{tripLen === 1 ? "" : "s"}</p>}
           </div>
         )}
 
         {step === 2 && (
           <div>
-            <h1 className="text-xl font-bold mb-4" style={{ color: INK }}>Money</h1>
-            {label("Trip currency")}
-            <CurrencySelect value={currency} onChange={setCurrency} />
-            <div className="flex items-center justify-between mt-4 mb-2">
-              <span className="text-sm font-semibold" style={{ color: INK }}>Also show amounts in a second currency</span>
-              <button onClick={() => setHomeOn(!homeOn)} className="w-11 h-6 rounded-full relative transition-colors" style={{ backgroundColor: homeOn ? "#2E7D4F" : "var(--chip)" }}>
-                <span className="absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all" style={{ left: homeOn ? 22 : 2 }} />
-              </button>
+            <h1 className={s.h1}>Money</h1>
+            <Field label="Trip currency">
+              <CurrencySelect value={currency} onChange={setCurrency} />
+            </Field>
+            <div className={s.toggleRow}>
+              <span className={s.toggleLabel}>Also show amounts in a second currency</span>
+              <Toggle checked={homeOn} onChange={setHomeOn} />
             </div>
             {homeOn && (
-              <div className="mb-3">
-                {label("Home currency")}
-                <CurrencySelect value={homeCurrency} onChange={setHomeCurrency} exclude={currency} />
-                <div className="mt-2">
-                  {label(`1 ${currency} = ? ${homeCurrency}`)}
-                  <input value={homeRate} onChange={(e) => setHomeRate(e.target.value)} inputMode="decimal" placeholder="e.g. 127"
-                    className="mt-1 w-full text-sm rounded-xl border px-4 py-3" style={inputStyle} />
-                </div>
-              </div>
+              <>
+                <Field label="Home currency">
+                  <CurrencySelect value={homeCurrency} onChange={setHomeCurrency} exclude={currency} />
+                </Field>
+                <Field label={`1 ${currency} = ? ${homeCurrency}`}>
+                  <Input value={homeRate} onChange={(e) => setHomeRate(e.target.value)} inputMode="decimal" placeholder="e.g. 127" />
+                </Field>
+              </>
             )}
-            <div className="mt-3">
-              {label(`Total budget in ${currency} (optional)`)}
-              <input value={budget} onChange={(e) => setBudget(e.target.value)} inputMode="decimal" placeholder="Leave empty for no budget bar"
-                className="mt-1 w-full text-sm rounded-xl border px-4 py-3" style={inputStyle} />
-            </div>
+            <Field label={`Total budget in ${currency} (optional)`}>
+              <Input value={budget} onChange={(e) => setBudget(e.target.value)} inputMode="decimal" placeholder="Leave empty for no budget bar" />
+            </Field>
           </div>
         )}
 
@@ -289,13 +276,12 @@ export default function TripWizard({ profile, onDone, onCancel }) {
           <ReviewStep config={buildConfig()} />
         )}
 
-        {error && <p className="text-xs mt-3" style={{ color: ACCENT }}>{error}</p>}
+        {error && <p className={s.error}>{error}</p>}
 
-        <button onClick={step === reviewStep ? create : next} disabled={busy || aiBusy}
-          className="mt-5 w-full text-sm font-bold text-white py-3 rounded-full inline-flex items-center justify-center gap-2" style={{ backgroundColor: ACCENT }}>
+        <Button full onClick={step === reviewStep ? create : next} disabled={busy || aiBusy} className={s.continue}>
           {busy && <Spinner size={16} on="accent" />}
           {busy ? "Creating…" : step === reviewStep ? "Create trip" : aiOn && step === 4 && !aiAccepted ? "Skip for now" : "Continue"}
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -303,12 +289,11 @@ export default function TripWizard({ profile, onDone, onCancel }) {
 
 function CurrencySelect({ value, onChange, exclude }) {
   return (
-    <select value={value} onChange={(e) => onChange(e.target.value)}
-      className="mt-1 w-full text-sm rounded-xl border px-3 py-3" style={inputStyle}>
+    <Select value={value} onChange={(e) => onChange(e.target.value)}>
       {CURRENCIES.filter((c) => c.code !== exclude).map((c) => (
         <option key={c.code} value={c.code}>{c.code} · {c.name} ({c.symbol})</option>
       ))}
-    </select>
+    </Select>
   );
 }
 
@@ -322,7 +307,7 @@ function DestinationsStep({ dests, setDests, startDate, endDate }) {
       country: place.country,
       lat: place.lat,
       lon: place.lon,
-      color: COLORS[ds.length % COLORS.length],
+      color: DEST_COLORS[ds.length % DEST_COLORS.length],
       arrival: ds.length === 0 ? startDate : "",
     }]);
     setQuery("");
@@ -330,36 +315,36 @@ function DestinationsStep({ dests, setDests, startDate, endDate }) {
 
   return (
     <div>
-      <h1 className="text-xl font-bold mb-1" style={{ color: INK }}>Destinations</h1>
-      <p className="text-xs mb-4" style={{ color: MUTED }}>Add the places you'll stay, in order. Days are assigned by each place's arrival date.</p>
+      <h1 className={s.h1}>Destinations</h1>
+      <p className={s.sub}>Add the places you'll stay, in order. Days are assigned by each place's arrival date.</p>
 
       {dests.map((d, i) => (
-        <div key={i} className="rounded-xl border p-3 mb-2" style={{ borderColor: "var(--border)", backgroundColor: "var(--card)" }}>
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-bold inline-flex items-center gap-2" style={{ color: INK }}>
-              <span className="w-3 h-3 rounded-full" style={{ backgroundColor: d.color }} />
+        <div key={i} className={s.destCard}>
+          <div className={s.destHead}>
+            <span className={s.destName}>
+              <span className={s.destDot} style={{ backgroundColor: d.color }} />
               {d.name}{d.country ? `, ${d.country}` : ""}
             </span>
-            <button onClick={() => setDests((ds) => ds.filter((_, j) => j !== i))} className="text-xs" style={{ color: "var(--faint)" }}>✕</button>
+            <button onClick={() => setDests((ds) => ds.filter((_, j) => j !== i))} aria-label="Remove destination" className={s.destRemove}>
+              <Icon name="x" size={14} strokeWidth={2} />
+            </button>
           </div>
-          <div className="flex items-center gap-2 mt-2">
-            <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: MUTED }}>{i === 0 ? "From the start" : "Arriving on"}</span>
+          <div className={s.destArrival}>
+            <span className={s.arrivalLabel}>{i === 0 ? "From the start" : "Arriving on"}</span>
             {i > 0 && (
-              <input type="date" value={d.arrival} min={startDate ? addDays(startDate, 1) : undefined} max={endDate || undefined}
-                onChange={(e) => setDests((ds) => ds.map((x, j) => (j === i ? { ...x, arrival: e.target.value } : x)))}
-                className="text-xs rounded-lg border px-2 py-1.5" style={inputStyle} />
+              <Input type="date" value={d.arrival} min={startDate ? addDays(startDate, 1) : undefined} max={endDate || undefined}
+                onChange={(e) => setDests((ds) => ds.map((x, j) => (j === i ? { ...x, arrival: e.target.value } : x)))} className={s.arrivalInput} />
             )}
           </div>
         </div>
       ))}
 
-      <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={dests.length ? "Add another place…" : "Search a city, e.g. Kyoto"}
-        className="w-full text-sm rounded-xl border px-4 py-3" style={inputStyle} />
-      {searching && <p className="text-xs mt-2 flex items-center gap-2" style={{ color: MUTED }}><Spinner size={14} /> Searching…</p>}
+      <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={dests.length ? "Add another place…" : "Search a city, e.g. Kyoto"} />
+      {searching && <p className={s.searching}><Spinner size={14} /> Searching…</p>}
       {results.map((r, i) => (
-        <button key={i} onClick={() => addDest(r)} className="w-full text-left rounded-xl border px-3 py-2.5 mt-1.5 text-sm" style={{ borderColor: "var(--border)", backgroundColor: "var(--card)", color: INK }}>
-          <span className="font-semibold">{r.name}</span>
-          <span style={{ color: MUTED }}> · {[r.admin1, r.country].filter(Boolean).join(", ")}</span>
+        <button key={i} onClick={() => addDest(r)} className={s.result}>
+          <span className={s.resultName}>{r.name}</span>
+          <span className={s.resultMeta}> · {[r.admin1, r.country].filter(Boolean).join(", ")}</span>
         </button>
       ))}
     </div>
@@ -372,52 +357,49 @@ function AiItineraryStep({ desc, setDesc, days, legs, busy, error, accepted, onG
   const disabled = error?.code === "disabled";
   return (
     <div>
-      <h1 className="text-xl font-bold mb-1" style={{ color: INK }}>Plan it with AI</h1>
-      <p className="text-xs mb-4" style={{ color: MUTED }}>
+      <h1 className={s.h1}>Plan it with AI</h1>
+      <p className={s.sub}>
         Optional — describe the trip you want and get a suggested day-by-day plan. You can edit everything later from the itinerary.
       </p>
-      <textarea value={desc} onChange={(e) => setDesc(e.target.value)} rows={5} maxLength={2000}
-        placeholder="e.g. First time here — love food markets, museums and quiet neighbourhoods. Relaxed pace, and we must catch a sunset by the river."
-        className="mb-3 w-full text-sm rounded-xl border px-4 py-3 resize-none" style={inputStyle} />
+      <Field>
+        <TextArea value={desc} onChange={(e) => setDesc(e.target.value)} rows={5} maxLength={2000}
+          placeholder="e.g. First time here — love food markets, museums and quiet neighbourhoods. Relaxed pace, and we must catch a sunset by the river." />
+      </Field>
       {!disabled && (
-        <button onClick={onGenerate} disabled={busy}
-          className="w-full text-sm font-bold py-3 rounded-full border inline-flex items-center justify-center gap-2"
-          style={{ color: ACCENT, borderColor: ACCENT, opacity: busy ? 0.6 : 1 }}>
+        <Button full variant="tonal" onClick={onGenerate} disabled={busy} className={s.aiGen}>
           {busy && <Spinner size={16} />}
           {busy ? "Asking the AI… (can take ~30s)" : days ? "Regenerate" : "Draft my itinerary"}
-        </button>
+        </Button>
       )}
       {error && (
-        <p className="text-xs mt-2" style={{ color: ACCENT }}>
+        <p className={s.error}>
           {disabled ? "AI suggestions aren't set up on this deployment — you can skip this step." : String(error.message || error)}
         </p>
       )}
       {days && (
-        <div className="mt-4">
-          <div className="rounded-2xl border overflow-hidden" style={{ borderColor: "var(--border)", backgroundColor: "var(--card)", maxHeight: 320, overflowY: "auto" }}>
+        <div className={s.aiPreview}>
+          <div className={s.planList}>
             {days.map((d, i) => {
               const leg = legs?.[slugify(d.city || "")] || {};
-              const cityColor = leg.color || MUTED;
+              const cityColor = leg.color || "var(--ink-faint)";
               return (
-                <div key={d.date} className="px-3 py-2" style={{ borderBottom: i < days.length - 1 ? "1px solid var(--divider)" : "none" }}>
-                  <div className="flex items-center gap-3">
-                    <span className="text-[11px] w-16 flex-shrink-0" style={{ color: MUTED, fontFamily: "ui-monospace, monospace" }}>{weekday(d.date)} {dateLabel(d.date)}</span>
-                    {d.city && <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full" style={{ color: cityColor, backgroundColor: softBg(cityColor) }}>{d.city}</span>}
+                <div key={d.date} className={s.planRow} style={{ borderBottom: i < days.length - 1 ? "1px solid var(--divider)" : "none" }}>
+                  <div className={s.planRowHead}>
+                    <span className={s.planDate}>{weekday(d.date)} {dateLabel(d.date)}</span>
+                    {d.city && <span className={s.destChip} style={{ "--c": cityColor, backgroundColor: softBg(cityColor), borderColor: softBorder(cityColor) }}>{d.city}</span>}
                   </div>
-                  <p className="text-xs mt-1.5" style={{ color: INK, whiteSpace: "pre-wrap" }}>{d.plan || "—"}</p>
+                  <p className={s.planText}>{d.plan || "—"}</p>
                 </div>
               );
             })}
           </div>
           {accepted ? (
-            <div className="flex items-center justify-between mt-2">
-              <span className="text-xs font-semibold" style={{ color: "#2E7D4F" }}>✓ Added — you'll see it on the review step</span>
-              <button onClick={onRemove} className="text-xs font-semibold" style={{ color: MUTED }}>Remove</button>
+            <div className={s.aiAcceptedRow}>
+              <span className={s.aiAccepted}><Icon name="check" size={13} strokeWidth={2} /> Added — you'll see it on the review step</span>
+              <button onClick={onRemove} className={s.aiRemove}>Remove</button>
             </div>
           ) : (
-            <button onClick={onAccept} className="mt-2 w-full text-sm font-bold text-white py-3 rounded-full" style={{ backgroundColor: "#2E7D4F" }}>
-              Use this itinerary
-            </button>
+            <Button full onClick={onAccept} className={s.aiUse}>Use this itinerary</Button>
           )}
         </div>
       )}
@@ -428,24 +410,24 @@ function AiItineraryStep({ desc, setDesc, days, legs, busy, error, accepted, onG
 function ReviewStep({ config }) {
   return (
     <div>
-      <h1 className="text-xl font-bold mb-1" style={{ color: INK }}>{config.title}</h1>
-      <p className="text-xs mb-4" style={{ color: MUTED }}>
+      <h1 className={s.h1}>{config.title}</h1>
+      <p className={s.sub}>
         {config.days.length} days · {config.legOrder.map((k) => config.legs[k].name).join(" → ")} · {config.currency}
         {config.homeCurrency ? ` (+${config.homeCurrency})` : ""}
         {config.days.some((d) => d.plan) ? " · AI itinerary added" : ""}
       </p>
-      <div className="rounded-2xl border overflow-hidden" style={{ borderColor: "var(--border)", backgroundColor: "var(--card)", maxHeight: 320, overflowY: "auto" }}>
+      <div className={s.planList}>
         {config.days.map((d, i) => {
           const L = config.legs[d.leg];
           return (
-            <div key={d.date} className="flex items-center gap-3 px-3 py-2" style={{ borderBottom: i < config.days.length - 1 ? "1px solid var(--divider)" : "none" }}>
-              <span className="text-[11px] w-16 flex-shrink-0" style={{ color: MUTED, fontFamily: "ui-monospace, monospace" }}>{weekday(d.date)} {dateLabel(d.date)}</span>
-              <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full" style={{ color: L.color, backgroundColor: softBg(L.color) }}>{L.name}</span>
+            <div key={d.date} className={s.reviewRow} style={{ borderBottom: i < config.days.length - 1 ? "1px solid var(--divider)" : "none" }}>
+              <span className={s.planDate}>{weekday(d.date)} {dateLabel(d.date)}</span>
+              <span className={s.destChip} style={{ "--c": L.color, backgroundColor: softBg(L.color), borderColor: softBorder(L.color) }}>{L.name}</span>
             </div>
           );
         })}
       </div>
-      <p className="text-[11px] mt-2" style={{ color: MUTED }}>You can rename days and edit plans any time from the itinerary.</p>
+      <p className={s.reviewHint}>You can rename days and edit plans any time from the itinerary.</p>
     </div>
   );
 }

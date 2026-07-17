@@ -1,7 +1,12 @@
 import { useState } from "react";
 import { COLORS } from "../lib/session.js";
 import { saveProfile } from "../lib/profile.js";
-import { APP_NAME, ACCENT, INK, MUTED } from "../theme.js";
+import { APP_NAME } from "../theme.js";
+import Icon from "./ui/icons.jsx";
+import Button from "./ui/Button.jsx";
+import Field, { Input } from "./ui/Field.jsx";
+import SwatchPicker from "./ui/SwatchPicker.jsx";
+import s from "./Onboarding.module.css";
 
 export const ONBOARDED_KEY = "roundtrip:onboarded";
 export const hasOnboarded = () => {
@@ -9,9 +14,9 @@ export const hasOnboarded = () => {
 };
 
 const SLIDES = [
-  { icon: "🗺️", title: "Plan trips together", text: "Build the itinerary with your travel crew — everyone's ideas, live on every phone, each clearly labelled." },
-  { icon: "🧳", title: "Everything in one place", text: "Days, budget, packing, outfits, bookings and documents. No more scattered notes and screenshots." },
-  { icon: "✈️", title: "Works anywhere", text: "Offline-ready and shareable with a 6-letter code. Start planning in seconds — no sign-up required." },
+  { icon: "route", title: "Plan trips together", accent: "together", text: "Build the itinerary with your travel crew — everyone's ideas, live on every phone, each clearly labelled." },
+  { icon: "case", title: "Everything in one place", accent: "one place", text: "Days, budget, packing, outfits, bookings and documents. No more scattered notes and screenshots." },
+  { icon: "arrow", title: "Works anywhere", accent: "anywhere", text: "Offline-ready and shareable with a 6-letter code. Start planning in seconds — no sign-up required." },
 ];
 
 // First-run welcome: three value slides, then capture a display name + colour.
@@ -32,65 +37,53 @@ export default function Onboarding({ onDone }) {
     onDone();
   };
 
+  const slide = SLIDES[step];
+
   return (
-    <div className="min-h-screen flex flex-col px-6 py-8" style={{ backgroundColor: "var(--bg)", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
-      <div className="flex items-center justify-between max-w-sm w-full mx-auto">
-        <span className="text-sm font-bold" style={{ color: INK }}>✈️ {APP_NAME}</span>
-        {!nameStep && (
-          <button onClick={() => setStep(SLIDES.length)} className="text-xs font-semibold" style={{ color: MUTED }}>Skip</button>
-        )}
+    <div className={s.page}>
+      <div className={s.top}>
+        <span className={s.brand}>{APP_NAME}</span>
+        {!nameStep && <button onClick={() => setStep(SLIDES.length)} className={s.skip}>Skip</button>}
       </div>
 
-      <div className="flex-1 flex items-center justify-center">
-        <div className="max-w-sm w-full text-center">
+      <div className={s.center}>
+        <div className={s.panel}>
           {!nameStep ? (
             <>
-              <div className="text-6xl mb-5">{SLIDES[step].icon}</div>
-              <h1 className="text-2xl font-bold mb-3" style={{ color: INK }}>{SLIDES[step].title}</h1>
-              <p className="text-sm leading-relaxed" style={{ color: MUTED }}>{SLIDES[step].text}</p>
+              <div className={s.mark}><Icon name={slide.icon} size={26} strokeWidth={1.6} /></div>
+              <h1 className={s.title}>{slide.title}</h1>
+              <p className={s.text}>{slide.text}</p>
             </>
           ) : (
             <>
-              <div className="text-5xl mb-4">👋</div>
-              <h1 className="text-2xl font-bold mb-2" style={{ color: INK }}>What should we call you?</h1>
-              <p className="text-sm mb-6" style={{ color: MUTED }}>Your name and colour label everything you add, on every trip.</p>
-              <input
-                value={name} onChange={(e) => setName(e.target.value)} maxLength={24} placeholder="Your name"
-                autoFocus onKeyDown={(e) => e.key === "Enter" && name.trim() && finish(true)}
-                className="w-full text-center text-base font-semibold rounded-xl border px-4 py-3 mb-4"
-                style={{ borderColor: "var(--border)", backgroundColor: "var(--card)", color: INK }}
-              />
-              <div className="flex gap-2 justify-center mb-2">
-                {COLORS.map((c) => (
-                  <button key={c} onClick={() => setColor(c)} className="w-9 h-9 rounded-full flex items-center justify-center"
-                    style={{ backgroundColor: c, outline: color === c ? "3px solid var(--ink)" : "none", outlineOffset: 2 }} aria-label={c}>
-                    {color === c && <span className="text-white text-sm font-bold">✓</span>}
-                  </button>
-                ))}
+              <h1 className={s.title}>What should we <em className={s.em}>call you?</em></h1>
+              <p className={s.text}>Your name and colour label everything you add, on every trip.</p>
+              <div className={s.nameForm}>
+                <Field>
+                  <Input value={name} onChange={(e) => setName(e.target.value)} maxLength={24} placeholder="Your name" autoFocus
+                    onKeyDown={(e) => e.key === "Enter" && name.trim() && finish(true)} style={{ textAlign: "center" }} />
+                </Field>
+                <div className={s.swatches}>
+                  <SwatchPicker colors={COLORS} value={color} onChange={setColor} />
+                </div>
               </div>
             </>
           )}
         </div>
       </div>
 
-      <div className="max-w-sm w-full mx-auto">
-        <div className="flex gap-1.5 justify-center mb-5">
+      <div className={s.foot}>
+        <div className={s.dots}>
           {[...SLIDES, {}].map((_, i) => (
-            <span key={i} className="rounded-full transition-all" style={{ width: i === step ? 20 : 6, height: 6, backgroundColor: i === step ? ACCENT : "var(--chip)" }} />
+            <span key={i} className={[s.dot, i === step && s.dotActive].filter(Boolean).join(" ")} />
           ))}
         </div>
         {!nameStep ? (
-          <button onClick={() => setStep(step + 1)} className="w-full text-sm font-bold text-white py-3 rounded-full" style={{ backgroundColor: ACCENT }}>
-            {step === SLIDES.length - 1 ? "Get started" : "Next"}
-          </button>
+          <Button full onClick={() => setStep(step + 1)}>{step === SLIDES.length - 1 ? "Get started" : "Next"}</Button>
         ) : (
           <>
-            <button onClick={() => finish(true)} disabled={busy || !name.trim()} className="w-full text-sm font-bold text-white py-3 rounded-full" style={{ backgroundColor: ACCENT, opacity: name.trim() ? 1 : 0.5 }}>
-              {busy ? "…" : "Let's go"}
-            </button>
-            <button onClick={() => finish(false)} disabled={busy} className="w-full text-xs font-semibold py-2.5 mt-1" style={{ color: MUTED }}>
-              I'll do this later
-            </button>
+            <Button full onClick={() => finish(true)} disabled={busy || !name.trim()}>{busy ? "…" : "Let's go"}</Button>
+            <Button full variant="ghost" onClick={() => finish(false)} disabled={busy} className={s.later}>I'll do this later</Button>
           </>
         )}
       </div>

@@ -4,7 +4,12 @@ import { COLORS, joinTrip } from "../lib/session.js";
 import { getLocalProfile } from "../lib/profile.js";
 import TripWizard from "./TripWizard.jsx";
 import AccountSheet from "./AccountSheet.jsx";
-import { APP_NAME, APP_TAGLINE, ACCENT, INK, MUTED } from "../theme.js";
+import { APP_NAME, APP_TAGLINE } from "../theme.js";
+import Button from "./ui/Button.jsx";
+import Field, { Input } from "./ui/Field.jsx";
+import SwatchPicker from "./ui/SwatchPicker.jsx";
+import EmptyState from "./ui/EmptyState.jsx";
+import s from "./TripGate.module.css";
 
 // Landing for a device with no trips yet. The display name/colour were
 // captured during onboarding (editable in the wizard/join); this screen only
@@ -21,27 +26,19 @@ export default function TripGate({ onReady }) {
   const [signin, setSignin] = useState(false);
   const askName = !profile?.name; // onboarding skipped → capture here instead
 
-  const wrap = { minHeight: "100vh", backgroundColor: "var(--bg)", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" };
-
   if (!isConfigured) {
     // Real users should never see setup internals — those go to the console
     // (and the full walkthrough is shown in dev builds only).
     console.error(`${APP_NAME} setup: Supabase isn't configured. Follow supabase/SETUP.md and add the keys to .env.local, then reload.`);
     return (
-      <div className="flex items-center justify-center px-6" style={wrap}>
-        <div className="max-w-sm text-center">
-          <div className="text-4xl mb-3">🔌</div>
-          <h1 className="text-lg font-bold mb-2" style={{ color: INK }}>{APP_NAME} can't connect right now</h1>
-          <p className="text-sm leading-relaxed" style={{ color: MUTED }}>
-            {import.meta.env.DEV ? (
-              <>Cross-device sync needs a free Supabase project. Follow the steps in{" "}
-              <span className="font-semibold" style={{ color: INK }}>supabase/SETUP.md</span>{" "}
-              and add your keys to <span className="font-semibold" style={{ color: INK }}>.env.local</span>, then reload.</>
-            ) : (
-              <>Something's wrong on our side — please try again a bit later.</>
-            )}
-          </p>
-        </div>
+      <div className={s.centerPage}>
+        <EmptyState
+          icon="cloudoff"
+          title={`${APP_NAME} can't connect right now`}
+          body={import.meta.env.DEV
+            ? "Cross-device sync needs a free Supabase project. Follow supabase/SETUP.md and add your keys to .env.local, then reload."
+            : "Something's wrong on our side — please try again a bit later."}
+        />
       </div>
     );
   }
@@ -62,84 +59,51 @@ export default function TripGate({ onReady }) {
   };
 
   return (
-    <div className="flex items-center justify-center px-6 py-10" style={wrap}>
-      <div className="max-w-sm w-full">
-        <div className="text-center mb-6">
-          <div className="text-3xl mb-1">✈️</div>
-          <h1 className="text-2xl font-bold" style={{ color: INK }}>
-            {profile?.name ? `Hi ${profile.name} 👋` : APP_NAME}
+    <div className={s.page}>
+      <div className={s.wrap}>
+        <div className={s.hero}>
+          <div className={s.kicker}>{APP_NAME}</div>
+          <h1 className={s.title}>
+            {profile?.name ? <>Hi <em className={s.em}>{profile.name}</em></> : APP_NAME}
           </h1>
-          <p className="text-sm mt-2" style={{ color: MUTED }}>
-            {profile?.name ? "Where to next?" : APP_TAGLINE}
-          </p>
+          <p className={s.tagline}>{profile?.name ? "Where to next?" : APP_TAGLINE}</p>
         </div>
 
         {askName && (
-          <>
-            <label className="text-xs font-bold uppercase tracking-wide" style={{ color: MUTED }}>Your name</label>
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Sam"
-              maxLength={24}
-              className="mt-1 mb-4 w-full text-sm rounded-xl border px-4 py-3"
-              style={{ borderColor: "var(--border)", backgroundColor: "var(--card)", color: INK }}
-            />
-            <div className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: MUTED }}>Your colour</div>
-            <div className="flex gap-2 mb-6">
-              {COLORS.map((c) => (
-                <button
-                  key={c}
-                  onClick={() => setColor(c)}
-                  className="w-9 h-9 rounded-full flex items-center justify-center"
-                  style={{ backgroundColor: c, outline: color === c ? "3px solid var(--ink)" : "none", outlineOffset: 2 }}
-                  aria-label={c}
-                >
-                  {color === c && <span className="text-white text-sm font-bold">✓</span>}
-                </button>
-              ))}
-            </div>
-          </>
+          <div className={s.nameBlock}>
+            <Field label="Your name">
+              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Sam" maxLength={24} />
+            </Field>
+            <Field label="Your colour">
+              <SwatchPicker colors={COLORS} value={color} onChange={setColor} />
+            </Field>
+          </div>
         )}
 
-        <button onClick={() => { setError(""); setWizard(true); }} disabled={busy} className="w-full text-sm font-bold text-white py-3 rounded-full mb-4" style={{ backgroundColor: ACCENT }}>
+        <Button full onClick={() => { setError(""); setWizard(true); }} disabled={busy} className={s.plan}>
           Plan a new trip
-        </button>
+        </Button>
 
-        <div className="flex items-center gap-3 mb-4">
-          <div className="flex-1 h-px" style={{ backgroundColor: "var(--border)" }} />
-          <span className="text-[11px] font-semibold" style={{ color: "var(--faint)" }}>or join with a code</span>
-          <div className="flex-1 h-px" style={{ backgroundColor: "var(--border)" }} />
+        <div className={s.divider}>
+          <span className={s.rule} />
+          <span className={s.or}>or join with a code</span>
+          <span className={s.rule} />
         </div>
 
-        <div className="flex gap-2">
-          <input
-            value={code}
-            onChange={(e) => setCode(e.target.value.toUpperCase())}
-            onKeyDown={(e) => e.key === "Enter" && doJoin()}
-            placeholder="Enter code"
-            maxLength={6}
-            className="flex-1 text-sm rounded-full border px-4 py-2.5 tracking-[0.2em]"
-            style={{ borderColor: "var(--border)", backgroundColor: "var(--card)", color: INK, fontFamily: "ui-monospace, monospace" }}
-          />
-          <button onClick={doJoin} disabled={busy} className="text-sm font-bold text-white px-5 rounded-full" style={{ backgroundColor: "var(--solid)" }}>
-            {busy ? "…" : "Join"}
-          </button>
+        <div className={s.joinRow}>
+          <Input code value={code} onChange={(e) => setCode(e.target.value.toUpperCase())}
+            onKeyDown={(e) => e.key === "Enter" && doJoin()} placeholder="ABC123" maxLength={6} className={s.joinInput} />
+          <Button onClick={doJoin} disabled={busy}>{busy ? "…" : "Join"}</Button>
         </div>
 
-        <button onClick={() => setSignin(true)} className="w-full text-xs font-semibold mt-6" style={{ color: MUTED }}>
-          Used {APP_NAME} before? <span style={{ color: ACCENT }}>Sign in</span>
+        <button onClick={() => setSignin(true)} className={s.signin}>
+          Used {APP_NAME} before? <span className={s.signinLink}>Sign in</span>
         </button>
 
-        {error && <p className="text-xs mt-3 text-center" style={{ color: ACCENT }}>{error}</p>}
+        {error && <p className={s.error}>{error}</p>}
 
         {signin && (
-          <AccountSheet
-            user={null}
-            mode="signin"
-            onClose={() => setSignin(false)}
-            onChanged={onReady}
-          />
+          <AccountSheet user={null} mode="signin" onClose={() => setSignin(false)} onChanged={onReady} />
         )}
       </div>
     </div>

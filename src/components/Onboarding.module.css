@@ -1,0 +1,109 @@
+.page {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  padding: 32px 24px;
+  background-color: var(--bg);
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 24rem;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.brand {
+  composes: label from "../styles/type.module.css";
+  color: var(--accent);
+  letter-spacing: 0.2em;
+}
+
+.skip {
+  font: 600 12px/1 var(--font-text);
+  color: var(--ink-muted);
+}
+
+.center {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.panel {
+  max-width: 24rem;
+  width: 100%;
+  text-align: center;
+}
+
+.mark {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+  color: var(--accent);
+}
+
+.title {
+  font: 400 30px/1.15 var(--font-display);
+  color: var(--ink);
+  margin-bottom: 12px;
+}
+
+.em {
+  font-style: italic;
+  color: var(--accent);
+}
+
+.text {
+  font: 400 14px/1.6 var(--font-text);
+  color: var(--ink-muted);
+}
+
+.nameForm {
+  margin-top: 24px;
+  text-align: left;
+}
+
+.swatches {
+  display: flex;
+  justify-content: center;
+  margin-top: 16px;
+}
+
+.foot {
+  max-width: 24rem;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.dots {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--r-pill);
+  background-color: var(--chip);
+  transition: width 200ms ease;
+}
+
+.dotActive {
+  width: 20px;
+  background-color: var(--accent);
+}
+
+.later {
+  margin-top: 4px;
+}
