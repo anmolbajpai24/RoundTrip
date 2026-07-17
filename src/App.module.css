@@ -1,0 +1,237 @@
+.app {
+  min-height: 100dvh;
+  background-color: var(--bg);
+}
+
+/* ---------- header ---------- */
+.header {
+  padding: 20px 16px 12px;
+  background-color: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.headTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.backLink {
+  composes: label from "./styles/type.module.css";
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--accent);
+}
+
+.backDate {
+  color: var(--ink-faint);
+  letter-spacing: 0.04em;
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-top: 4px;
+}
+
+.title {
+  composes: display from "./styles/type.module.css";
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.iconBtn {
+  width: 40px;
+  height: 40px;
+  margin: -8px -6px;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-faint);
+}
+
+.headRight {
+  text-align: right;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.countdown {
+  composes: accentVoice from "./styles/type.module.css";
+}
+
+.profileBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0;
+}
+
+.code {
+  font: 500 11px/1 var(--font-text);
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.members {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.membersLabel {
+  composes: label from "./styles/type.module.css";
+  font-size: 9px;
+}
+
+.routeWrap {
+  margin-top: 12px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-bottom: 2px;
+}
+
+.routeWrap::-webkit-scrollbar {
+  display: none;
+}
+
+/* ---------- content ---------- */
+.content {
+  padding: 16px 16px 96px;
+  max-width: 32rem;
+  margin: 0 auto;
+}
+
+/* ---------- bottom nav ---------- */
+.nav {
+  position: fixed;
+  inset: auto 0 0 0;
+  background-color: var(--surface);
+  border-top: 1px solid var(--divider);
+  padding-bottom: env(safe-area-inset-bottom);
+  z-index: 20;
+}
+
+.navInner {
+  display: flex;
+  max-width: 32rem;
+  margin: 0 auto;
+}
+
+.navItem {
+  flex: 1;
+  padding: 9px 0 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  color: var(--ink-faint);
+}
+
+.navActive {
+  color: var(--accent);
+}
+
+.navLabel {
+  font: 600 9px/1 var(--font-text);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* ---------- splash / setup-pending ---------- */
+.splash {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--bg);
+}
+
+.splashInner {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  color: var(--ink-faint);
+}
+
+.splashMark {
+  color: var(--accent);
+}
+
+.splashText {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font: 500 13px/1 var(--font-text);
+  color: var(--ink-muted);
+}
+
+.pending {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 24px;
+  background-color: var(--bg);
+}
+
+.pendingCard {
+  max-width: 22rem;
+  width: 100%;
+  text-align: center;
+}
+
+.pendingMark {
+  color: var(--ink-faint);
+  margin: 0 auto 14px;
+  width: 46px;
+  height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+}
+
+.pendingTitle {
+  composes: title from "./styles/type.module.css";
+  margin-bottom: 8px;
+}
+
+.pendingBody {
+  composes: run from "./styles/type.module.css";
+  margin-bottom: 18px;
+}
+
+.pendingLegacy {
+  margin-top: 12px;
+  font: 600 11.5px/1.4 var(--font-text);
+  color: var(--ink-muted);
+}
+
+/* ---------- profile editor sheet ---------- */
+.sheetTitle {
+  composes: titleSm from "./styles/type.module.css";
+  margin-bottom: 14px;
+}
+
+.sheetActions {
+  display: flex;
+  gap: 8px;
+  margin-top: 20px;
+}
