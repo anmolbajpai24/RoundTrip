@@ -1,0 +1,23 @@
+.row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 10px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font: 600 11.5px/1 var(--font-text);
+  color: var(--ink-muted);
+}
+
+.status {
+  font: 500 11px/1.3 var(--font-text);
+  color: var(--danger);
+}
+
+.hiddenFile {
+  display: none;
+}

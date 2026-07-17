@@ -1,6 +1,8 @@
 import { useRef, useState } from "react";
 import { exportAll, importAll } from "../lib/storage.js";
 import { APP_SLUG } from "../theme.js";
+import Icon from "./ui/icons.jsx";
+import s from "./BackupControls.module.css";
 
 // Trip data syncs across devices via Supabase; this is an extra manual safety
 // net — download the current trip's data as JSON, or restore it from a file.
@@ -35,15 +37,15 @@ export default function BackupControls() {
   };
 
   return (
-    <div className="flex items-center gap-3 mt-2">
-      <button onClick={doExport} className="text-[11px] font-semibold" style={{ color: "var(--muted)" }}>
-        ↓ Backup data
+    <div className={s.row}>
+      <button onClick={doExport} className={s.btn}>
+        <Icon name="export" size={13} strokeWidth={1.7} /> Backup data
       </button>
-      <button onClick={() => fileRef.current?.click()} className="text-[11px] font-semibold" style={{ color: "var(--muted)" }}>
-        ↑ Restore
+      <button onClick={() => fileRef.current?.click()} className={s.btn}>
+        <Icon name="restore" size={13} strokeWidth={1.7} /> Restore
       </button>
-      <input ref={fileRef} type="file" accept="application/json" className="hidden" onChange={doImport} />
-      {status && <span className="text-[11px]" style={{ color: "#C8102E" }}>{status}</span>}
+      <input ref={fileRef} type="file" accept="application/json" className={s.hiddenFile} onChange={doImport} />
+      {status && <span className={s.status}>{status}</span>}
     </div>
   );
 }
