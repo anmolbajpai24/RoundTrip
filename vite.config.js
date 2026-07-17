@@ -2,7 +2,6 @@ import { defineConfig, loadEnv } from "vite";
 import { pathToFileURL } from "node:url";
 import { resolve } from "node:path";
 import react from "@vitejs/plugin-react";
-import tailwindcss from "@tailwindcss/vite";
 import { VitePWA } from "vite-plugin-pwa";
 
 // Serve the api/ functions on the dev server so they work under `npm run dev`
@@ -47,7 +46,6 @@ function apiDevEndpoints(env) {
 export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
-    tailwindcss(),
     apiDevEndpoints(loadEnv(mode, process.cwd(), "")),
     VitePWA({
       registerType: "autoUpdate",
