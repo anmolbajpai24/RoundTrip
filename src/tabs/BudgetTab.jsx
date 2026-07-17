@@ -1,8 +1,14 @@
 import { useState } from "react";
 import { useTripConfig, fmtMoney, fmtHome, currencySymbol } from "../lib/tripConfig.js";
 import { saveKey } from "../lib/storage.js";
+import { onColor } from "../theme.js";
 import SectionTitle from "../components/SectionTitle.jsx";
 import PersonBadge from "../components/PersonBadge.jsx";
+import Icon from "../components/ui/icons.jsx";
+import Button from "../components/ui/Button.jsx";
+import { Input } from "../components/ui/Field.jsx";
+import ProgressBar from "../components/ui/ProgressBar.jsx";
+import s from "./BudgetTab.module.css";
 
 const CATS = ["Food", "Transport", "Stay", "Sights", "Shows", "Shopping", "Other"];
 
@@ -16,10 +22,11 @@ export default function BudgetTab({ expenses, setExpenses, members, membersById,
   const [paidBy, setPaidBy] = useState(myId);
 
   const money = (n, frac = 0) => fmtMoney(n, cur, frac);
-  const spent = expenses.reduce((s, e) => s + e.amount, 0);
+  const spent = expenses.reduce((sum, e) => sum + e.amount, 0);
   const remaining = (budget ?? 0) - spent;
   const pct = budget ? Math.min(100, (spent / budget) * 100) : 0;
   const homeSpent = fmtHome(config, spent);
+  const barColor = pct > 90 ? "var(--danger)" : pct > 70 ? "var(--warning)" : "var(--success)";
 
   const persist = (next) => { setExpenses(next); saveKey("trip-expenses", next); };
   const add = () => {
@@ -30,13 +37,13 @@ export default function BudgetTab({ expenses, setExpenses, members, membersById,
   };
   const remove = (id) => persist(expenses.filter((e) => e.id !== id));
 
-  const byCat = CATS.map((c) => ({ c, total: expenses.filter((e) => e.cat === c).reduce((s, e) => s + e.amount, 0) })).filter((x) => x.total > 0);
+  const byCat = CATS.map((c) => ({ c, total: expenses.filter((e) => e.cat === c).reduce((sum, e) => sum + e.amount, 0) })).filter((x) => x.total > 0);
 
   // Settle-up: each member's fair share is an equal split of everything spent.
   const n = Math.max(members.length, 1);
   const share = spent / n;
   const balances = members.map((m) => {
-    const paid = expenses.filter((e) => e.paidBy === m.user_id).reduce((s, e) => s + e.amount, 0);
+    const paid = expenses.filter((e) => e.paidBy === m.user_id).reduce((sum, e) => sum + e.amount, 0);
     return { member: m, paid, net: paid - share };
   });
 
@@ -48,29 +55,25 @@ export default function BudgetTab({ expenses, setExpenses, members, membersById,
     <div>
       <SectionTitle sub={sub}>Budget</SectionTitle>
 
-      <div className="rounded-2xl border p-4 mb-4" style={{ borderColor: "var(--border)", backgroundColor: "var(--card)" }}>
-        <div className="flex items-end justify-between">
+      <div className={s.summary}>
+        <div className={s.summaryTop}>
           <div>
-            <div className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--muted)" }}>Spent</div>
-            <div className="text-2xl font-bold" style={{ color: "var(--ink)", fontFamily: "ui-monospace, monospace" }}>{money(spent)}</div>
-            {homeSpent && <div className="text-xs" style={{ color: "var(--muted)" }}>≈ {homeSpent}</div>}
+            <div className={s.statLabel}>Spent</div>
+            <div className={s.statNum}>{money(spent)}</div>
+            {homeSpent && <div className={s.statSub}>≈ {homeSpent}</div>}
           </div>
           {budget != null && (
-            <div className="text-right">
-              <div className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--muted)" }}>{remaining >= 0 ? "Left" : "Over"}</div>
-              <div className="text-2xl font-bold" style={{ color: remaining >= 0 ? "#2E7D4F" : "#C8102E", fontFamily: "ui-monospace, monospace" }}>{money(Math.abs(remaining))}</div>
+            <div className={s.statRight}>
+              <div className={s.statLabel}>{remaining >= 0 ? "Left" : "Over"}</div>
+              <div className={[s.statNum, remaining >= 0 ? s.good : s.bad].join(" ")}>{money(Math.abs(remaining))}</div>
             </div>
           )}
         </div>
-        {budget != null && (
-          <div className="h-2.5 rounded-full mt-3" style={{ backgroundColor: "var(--chip)" }}>
-            <div className="h-2.5 rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: pct > 90 ? "#C8102E" : pct > 70 ? "#C77E1F" : "#2E7D4F" }} />
-          </div>
-        )}
+        {budget != null && <ProgressBar value={pct} max={100} color={barColor} route className={s.bar} />}
         {byCat.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mt-3">
+          <div className={s.catTotals}>
             {byCat.map((x) => (
-              <span key={x.c} className="text-[11px] font-semibold px-2 py-1 rounded-full" style={{ backgroundColor: "var(--chip)", color: "var(--ink)" }}>{x.c} {money(x.total)}</span>
+              <span key={x.c} className={s.catTotal}>{x.c} {money(x.total)}</span>
             ))}
           </div>
         )}
@@ -78,58 +81,68 @@ export default function BudgetTab({ expenses, setExpenses, members, membersById,
 
       {/* Settle-up */}
       {members.length > 1 && spent > 0 && (
-        <div className="rounded-2xl border p-4 mb-4" style={{ borderColor: "var(--border)", backgroundColor: "var(--card)" }}>
-          <div className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: "var(--muted)" }}>Who paid · settle up</div>
-          <div className="space-y-2">
-            {balances.map(({ member, paid, net }) => (
-              <div key={member.user_id} className="flex items-center justify-between">
-                <span className="inline-flex items-center gap-2">
-                  <PersonBadge member={member} size="xs" />
-                  <span className="text-[11px]" style={{ color: "var(--muted)" }}>paid {money(paid)}</span>
-                </span>
-                <span className="text-xs font-bold" style={{ color: Math.abs(net) < 0.5 ? "#2E7D4F" : net > 0 ? "#2E7D4F" : "#C8102E" }}>
-                  {Math.abs(net) < 0.5 ? "settled" : net > 0 ? `owed ${money(net)}` : `owes ${money(-net)}`}
-                </span>
-              </div>
-            ))}
+        <div className={s.card}>
+          <div className={s.cardLabel}>Who paid · settle up</div>
+          <div className={s.settleList}>
+            {balances.map(({ member, paid, net }) => {
+              const settled = Math.abs(net) < 0.5;
+              return (
+                <div key={member.user_id} className={s.settleRow}>
+                  <span className={s.settleWho}>
+                    <PersonBadge member={member} size="xs" />
+                    <span className={s.settlePaid}>paid {money(paid)}</span>
+                  </span>
+                  <span className={[s.settleNet, settled || net > 0 ? s.good : s.bad].join(" ")}>
+                    {settled ? "settled" : net > 0 ? `owed ${money(net)}` : `owes ${money(-net)}`}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
 
-      <div className="rounded-2xl border p-4 mb-4" style={{ borderColor: "var(--border)", backgroundColor: "var(--card)" }}>
-        <div className="flex gap-2 mb-2">
-          <input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="What was it?" className="flex-1 text-sm rounded-xl border px-3 py-2.5" style={{ borderColor: "var(--border)", backgroundColor: "var(--field)", color: "var(--ink)" }} />
-          <input value={amount} onChange={(e) => setAmount(e.target.value)} placeholder={currencySymbol(cur)} inputMode="decimal" className="w-20 text-sm rounded-xl border px-3 py-2.5" style={{ borderColor: "var(--border)", backgroundColor: "var(--field)", color: "var(--ink)" }} />
+      <div className={s.card}>
+        <div className={s.addRow}>
+          <Input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="What was it?" className={s.descInput} />
+          <Input value={amount} onChange={(e) => setAmount(e.target.value)} placeholder={currencySymbol(cur)} inputMode="decimal" className={s.amtInput} />
         </div>
-        <div className="flex gap-1.5 flex-wrap mb-3">
+        <div className={s.chipRow}>
           {CATS.map((c) => (
-            <button key={c} onClick={() => setCat(c)} className="text-[11px] font-semibold px-2.5 py-1.5 rounded-full border" style={{ borderColor: cat === c ? "var(--solid)" : "var(--border)", backgroundColor: cat === c ? "var(--solid)" : "var(--card)", color: cat === c ? "#FFF" : "var(--muted)" }}>{c}</button>
+            <button key={c} onClick={() => setCat(c)} className={[s.catChip, cat === c && s.catChipActive].filter(Boolean).join(" ")}>{c}</button>
           ))}
         </div>
-        <div className="flex items-center gap-2 mb-3 flex-wrap">
-          <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: "var(--muted)" }}>Paid by</span>
-          {members.map((m) => (
-            <button key={m.user_id} onClick={() => setPaidBy(m.user_id)} className="text-[11px] font-semibold px-3 py-1.5 rounded-full border" style={{ borderColor: paidBy === m.user_id ? m.color : "var(--border)", backgroundColor: paidBy === m.user_id ? m.color : "var(--card)", color: paidBy === m.user_id ? "#FFF" : "var(--muted)" }}>{m.name}</button>
-          ))}
+        <div className={s.paidRow}>
+          <span className={s.paidLabel}>Paid by</span>
+          {members.map((m) => {
+            const active = paidBy === m.user_id;
+            return (
+              <button key={m.user_id} onClick={() => setPaidBy(m.user_id)}
+                className={[s.payer, active && s.payerActive].filter(Boolean).join(" ")}
+                style={active ? { backgroundColor: m.color, borderColor: m.color, color: onColor(m.color) } : undefined}>
+                {m.name}
+              </button>
+            );
+          })}
         </div>
-        <button onClick={add} className="w-full text-sm font-bold text-white py-2.5 rounded-full" style={{ backgroundColor: "#C8102E" }}>Add expense</button>
+        <Button full onClick={add}>Add expense</Button>
       </div>
 
       {expenses.length === 0 ? (
-        <p className="text-sm text-center py-6" style={{ color: "var(--faint)" }}>No expenses yet — log your first coffee.</p>
+        <p className={s.emptyNote}>No expenses yet — log your first coffee.</p>
       ) : (
-        <div className="rounded-2xl border overflow-hidden" style={{ borderColor: "var(--border)", backgroundColor: "var(--card)" }}>
-          {expenses.map((e, i) => (
-            <div key={e.id} className="flex items-center gap-3 px-4 py-3" style={{ borderBottom: i < expenses.length - 1 ? "1px solid var(--divider)" : "none" }}>
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium truncate" style={{ color: "var(--ink)" }}>{e.desc}</div>
-                <div className="text-[11px] flex items-center gap-1.5" style={{ color: "var(--muted)" }}>
+        <div className={s.list}>
+          {expenses.map((e) => (
+            <div key={e.id} className={s.expRow}>
+              <div className={s.expMain}>
+                <div className={s.expDesc}>{e.desc}</div>
+                <div className={s.expMeta}>
                   {e.cat} · {new Date(e.ts).toLocaleDateString(undefined, { day: "numeric", month: "short" })}
                   {e.paidBy && <PersonBadge member={membersById[e.paidBy]} size="xs" />}
                 </div>
               </div>
-              <div className="text-sm font-bold" style={{ color: "var(--ink)", fontFamily: "ui-monospace, monospace" }}>{money(e.amount, 2)}</div>
-              <button onClick={() => remove(e.id)} className="text-xs px-1" style={{ color: "var(--faint)" }}>✕</button>
+              <div className={s.expAmt}>{money(e.amount, 2)}</div>
+              <button onClick={() => remove(e.id)} aria-label="Remove" className={s.expRemove}><Icon name="x" size={13} strokeWidth={2} /></button>
             </div>
           ))}
         </div>

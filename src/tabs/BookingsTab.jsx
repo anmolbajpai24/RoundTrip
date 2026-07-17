@@ -1,10 +1,17 @@
 import { useState, useRef } from "react";
 import { saveKey } from "../lib/storage.js";
-import { DOCS_KEY, uploadDocument, docUrl, removeDocument, docIcon, docSize } from "../lib/documents.js";
+import { DOCS_KEY, uploadDocument, docUrl, removeDocument, docSize } from "../lib/documents.js";
 import { confirmDialog } from "../components/dialogs.jsx";
 import useBackClose from "../lib/useBackClose.js";
 import SectionTitle from "../components/SectionTitle.jsx";
 import PersonBadge from "../components/PersonBadge.jsx";
+import Icon from "../components/ui/icons.jsx";
+import Button from "../components/ui/Button.jsx";
+import { Input } from "../components/ui/Field.jsx";
+import s from "./BookingsTab.module.css";
+
+// Icon for a document by MIME type (was an emoji from lib/documents.js).
+const docGlyph = (type) => (type?.startsWith("image/") ? "image" : type === "application/pdf" ? "ticket" : "clip");
 
 export default function BookingsTab({ bookings, setBookings, documents, setDocuments, membersById, myId }) {
   const [newItem, setNewItem] = useState("");
@@ -27,35 +34,35 @@ export default function BookingsTab({ bookings, setBookings, documents, setDocum
   return (
     <div>
       <SectionTitle sub={`${done} of ${bookings.length} booked · shared`}>Booking checklist</SectionTitle>
-      <div className="rounded-2xl border overflow-hidden mb-4" style={{ borderColor: "var(--border)", backgroundColor: "var(--card)" }}>
-        {sorted.map((b, i) => (
-          <div key={b.id} style={{ borderBottom: i < sorted.length - 1 ? "1px solid var(--divider)" : "none", backgroundColor: b.urgent && !b.done ? "var(--danger-soft)" : "transparent" }}>
-            <div className="flex items-center gap-3 px-4 py-3">
+      <div className={s.list}>
+        {sorted.map((b) => (
+          <div key={b.id} className={[s.bookingWrap, b.urgent && !b.done && s.urgentWrap].filter(Boolean).join(" ")}>
+            <div className={s.booking}>
               <button
                 onClick={() => toggle(b.id)}
-                className="w-6 h-6 rounded-full border-2 flex-shrink-0 flex items-center justify-center text-xs font-bold text-white"
-                style={{ borderColor: b.done ? "#2E7D4F" : b.urgent ? "#C8102E" : "var(--faint)", backgroundColor: b.done ? "#2E7D4F" : "transparent" }}
+                aria-label={b.text}
+                className={[s.check, b.done && s.checkDone, b.urgent && !b.done && s.checkUrgent].filter(Boolean).join(" ")}
               >
-                {b.done ? "✓" : ""}
+                {b.done && <Icon name="check" size={12} strokeWidth={2} />}
               </button>
-              <div className="flex-1">
-                <span className="text-sm" style={{ color: b.done ? "var(--faint)" : "var(--ink)", textDecoration: b.done ? "line-through" : "none" }}>{b.text}</span>
-                {b.urgent && !b.done && <span className="ml-2 text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ backgroundColor: "#C8102E", color: "#FFF" }}>URGENT</span>}
-                {b.addedBy && <span className="ml-2 align-middle"><PersonBadge member={membersById[b.addedBy]} size="xs" /></span>}
+              <div className={s.bookingBody}>
+                <span className={[s.bookingText, b.done && s.bookingDone].filter(Boolean).join(" ")}>{b.text}</span>
+                {b.urgent && !b.done && <span className={s.urgentTag}>Urgent</span>}
+                {b.addedBy && <span className={s.badgeInline}><PersonBadge member={membersById[b.addedBy]} size="xs" /></span>}
                 {b.docId && docsById[b.docId] && (
                   <DocChip doc={docsById[b.docId]} onUnlink={() => setDocFor(b.id, undefined)} />
                 )}
               </div>
               {(documents?.length || 0) > 0 && !b.docId && (
-                <button onClick={() => setAttachFor(attachFor === b.id ? null : b.id)} title="Attach a document" className="text-xs px-1" style={{ color: "var(--faint)" }}>📎</button>
+                <button onClick={() => setAttachFor(attachFor === b.id ? null : b.id)} title="Attach a document" aria-label="Attach a document" className={s.iconBtn}><Icon name="clip" size={15} /></button>
               )}
-              <button onClick={() => remove(b.id)} className="text-xs px-1" style={{ color: "var(--faint)" }}>✕</button>
+              <button onClick={() => remove(b.id)} aria-label="Remove" className={s.iconBtn}><Icon name="x" size={14} strokeWidth={2} /></button>
             </div>
             {attachFor === b.id && (
-              <div className="px-4 pb-3 flex flex-wrap gap-1.5">
+              <div className={s.attachPicker}>
                 {(documents || []).map((d) => (
-                  <button key={d.id} onClick={() => setDocFor(b.id, d.id)} className="text-[11px] font-semibold px-2.5 py-1 rounded-full border" style={{ borderColor: "var(--border)", color: "var(--ink)" }}>
-                    {docIcon(d.type)} {d.name}
+                  <button key={d.id} onClick={() => setDocFor(b.id, d.id)} className={s.attachChip}>
+                    <Icon name={docGlyph(d.type)} size={13} /> {d.name}
                   </button>
                 ))}
               </div>
@@ -63,16 +70,9 @@ export default function BookingsTab({ bookings, setBookings, documents, setDocum
           </div>
         ))}
       </div>
-      <div className="flex gap-2 mb-6">
-        <input
-          value={newItem}
-          onChange={(e) => setNewItem(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && add()}
-          placeholder="Add a booking…"
-          className="flex-1 text-sm rounded-full border px-4 py-2.5"
-          style={{ borderColor: "var(--border)", backgroundColor: "var(--card)", color: "var(--ink)" }}
-        />
-        <button onClick={add} className="text-sm font-bold text-white px-5 rounded-full" style={{ backgroundColor: "var(--solid)" }}>Add</button>
+      <div className={s.addRow}>
+        <Input value={newItem} onChange={(e) => setNewItem(e.target.value)} onKeyDown={(e) => e.key === "Enter" && add()} placeholder="Add a booking…" />
+        <Button onClick={add}>Add</Button>
       </div>
 
       <DocumentsSection documents={documents} setDocuments={setDocuments} bookings={bookings} persistBookings={persist} membersById={membersById} />
@@ -86,9 +86,9 @@ function DocChip({ doc, onUnlink }) {
     try { window.open(await docUrl(doc.path), "_blank"); } catch { /* surfaced in docs section */ }
   };
   return (
-    <span className="inline-flex items-center gap-1 ml-2 text-[11px] font-semibold px-2 py-0.5 rounded-full align-middle" style={{ backgroundColor: "var(--chip)", color: "var(--chip-ink)" }}>
-      <button onClick={open}>{docIcon(doc.type)} {doc.name.length > 18 ? doc.name.slice(0, 16) + "…" : doc.name}</button>
-      <button onClick={onUnlink} title="Unlink" style={{ color: "var(--faint)" }}>✕</button>
+    <span className={s.docChip}>
+      <button onClick={open} className={s.docChipOpen}><Icon name={docGlyph(doc.type)} size={12} /> {doc.name.length > 18 ? doc.name.slice(0, 16) + "…" : doc.name}</button>
+      <button onClick={onUnlink} title="Unlink" aria-label="Unlink" className={s.docChipX}><Icon name="x" size={11} strokeWidth={2} /></button>
     </span>
   );
 }
@@ -143,35 +143,30 @@ function DocumentsSection({ documents, setDocuments, bookings, persistBookings, 
   const docs = documents || [];
 
   return (
-    <div>
+    <div className={s.docs}>
       <SectionTitle sub="tickets, PDFs, screenshots · shared · max 10 MB">Documents</SectionTitle>
       {docs.length > 0 && (
-        <div className="rounded-2xl border overflow-hidden mb-3" style={{ borderColor: "var(--border)", backgroundColor: "var(--card)" }}>
-          {docs.map((d, i) => (
-            <div key={d.id} className="flex items-center gap-3 px-4 py-3" style={{ borderBottom: i < docs.length - 1 ? "1px solid var(--divider)" : "none" }}>
-              <span className="text-lg flex-shrink-0">{docIcon(d.type)}</span>
-              <button onClick={() => open(d)} className="flex-1 min-w-0 text-left">
-                <div className="text-sm font-semibold truncate" style={{ color: "var(--ink)" }}>
-                  {openingId === d.id ? "Opening…" : d.name}
-                </div>
-                <div className="text-[11px] flex items-center gap-2" style={{ color: "var(--muted)" }}>
-                  {docSize(d.size)} <PersonBadge member={membersById[d.addedBy]} size="xs" />
-                </div>
+        <div className={s.list}>
+          {docs.map((d) => (
+            <div key={d.id} className={s.docRow}>
+              <span className={s.docGlyph}><Icon name={docGlyph(d.type)} size={18} /></span>
+              <button onClick={() => open(d)} className={s.docOpen}>
+                <div className={s.docName}>{openingId === d.id ? "Opening…" : d.name}</div>
+                <div className={s.docMeta}>{docSize(d.size)} <PersonBadge member={membersById[d.addedBy]} size="xs" /></div>
               </button>
-              <button onClick={() => del(d)} className="text-xs px-1" style={{ color: "var(--faint)" }}>✕</button>
+              <button onClick={() => del(d)} aria-label="Delete" className={s.iconBtn}><Icon name="x" size={14} strokeWidth={2} /></button>
             </div>
           ))}
         </div>
       )}
-      <button onClick={() => fileRef.current?.click()} disabled={busy}
-        className="w-full text-sm font-bold py-2.5 rounded-full border" style={{ borderColor: "var(--border)", color: "var(--ink)", backgroundColor: "var(--card)" }}>
-        {busy ? "Uploading…" : "＋ Add a document"}
-      </button>
-      <input ref={fileRef} type="file" accept="image/*,application/pdf" className="hidden" onChange={onPick} />
-      <p className="text-[11px] mt-2 text-center" style={{ color: "var(--faint)" }}>
+      <Button full variant="tonal" icon="plus" onClick={() => fileRef.current?.click()} disabled={busy} className={s.addDoc}>
+        {busy ? "Uploading…" : "Add a document"}
+      </Button>
+      <input ref={fileRef} type="file" accept="image/*,application/pdf" className={s.hiddenFile} onChange={onPick} />
+      <p className={s.docsHint}>
         Shared with everyone on the trip. Avoid uploading sensitive scans like passport photo pages unless you need to.
       </p>
-      {error && <p className="text-xs mt-2" style={{ color: "#C8102E" }}>{error}</p>}
+      {error && <p className={s.error}>{error}</p>}
 
       {viewer && <ImageViewer viewer={viewer} onClose={() => setViewer(null)} />}
     </div>
@@ -179,14 +174,14 @@ function DocumentsSection({ documents, setDocuments, bookings, persistBookings, 
 }
 
 // Full-screen document image preview (own component so it can register with
-// the Back-button stack).
+// the Back-button stack). Dark viewer surface is a deliberate photo affordance.
 function ImageViewer({ viewer, onClose }) {
   const requestClose = useBackClose(onClose);
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: "rgba(0,0,0,0.85)" }} onClick={requestClose}>
-      <div className="max-w-lg w-full">
-        <img src={viewer.url} alt={viewer.name} className="w-full rounded-xl" style={{ maxHeight: "80vh", objectFit: "contain" }} />
-        <p className="text-center text-xs text-white mt-2 opacity-80">{viewer.name} · tap to close</p>
+    <div className={s.viewer} onClick={requestClose}>
+      <div className={s.viewerInner}>
+        <img src={viewer.url} alt={viewer.name} className={s.viewerImg} />
+        <p className={s.viewerCaption}>{viewer.name} · tap to close</p>
       </div>
     </div>
   );

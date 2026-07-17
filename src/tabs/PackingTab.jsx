@@ -2,6 +2,12 @@ import { useState } from "react";
 import { saveKey } from "../lib/storage.js";
 import SectionTitle from "../components/SectionTitle.jsx";
 import PersonBadge from "../components/PersonBadge.jsx";
+import Icon from "../components/ui/icons.jsx";
+import Button from "../components/ui/Button.jsx";
+import { Input } from "../components/ui/Field.jsx";
+import ProgressBar from "../components/ui/ProgressBar.jsx";
+import EmptyState from "../components/ui/EmptyState.jsx";
+import s from "./PackingTab.module.css";
 
 // Categories offered before the list has any of its own.
 const SUGGESTED_CATS = ["Documents", "Clothes", "Toiletries", "Tech", "Other"];
@@ -62,16 +68,12 @@ export default function PackingTab({ packingAll, setPackingAll, membersById, myI
     <div>
       <SectionTitle sub={isEmpty ? "Nothing packed yet" : `${doneAll} of ${allItems.length} packed · everyone`}>Packing list</SectionTitle>
 
-      {!isEmpty && (
-        <div className="h-2 rounded-full mb-3" style={{ backgroundColor: "var(--chip)" }}>
-          <div className="h-2 rounded-full transition-all" style={{ width: `${(doneAll / allItems.length) * 100}%`, backgroundColor: "#2E7D4F" }} />
-        </div>
-      )}
+      {!isEmpty && <ProgressBar value={doneAll} max={allItems.length} color="var(--success)" className={s.progress} />}
 
       {perPerson.length > 1 && (
-        <div className="flex flex-wrap gap-1.5 mb-4">
+        <div className={s.people}>
           {perPerson.map((p) => (
-            <span key={p.owner} className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2 py-1 rounded-full" style={{ backgroundColor: "var(--chip)", color: "var(--ink)" }}>
+            <span key={p.owner} className={s.personChip}>
               <PersonBadge member={p.member} size="xs" /> {p.done}/{p.total}
             </span>
           ))}
@@ -79,33 +81,27 @@ export default function PackingTab({ packingAll, setPackingAll, membersById, myI
       )}
 
       {isEmpty ? (
-        <div className="rounded-2xl border border-dashed px-5 py-7 mb-4 text-center" style={{ borderColor: "var(--border)", backgroundColor: "var(--card)" }}>
-          <div className="text-3xl mb-2">🧳</div>
-          <div className="text-sm font-semibold mb-1" style={{ color: "var(--ink)" }}>Start your packing list</div>
-          <div className="text-xs" style={{ color: "var(--muted)" }}>
-            Pick a category below, then add what you want to bring.
-          </div>
-        </div>
+        <EmptyState icon="case" title="Start your packing list" body="Pick a category below, then add what you want to bring." className={s.empty} />
       ) : (
         cats.map((cat) => (
-          <div key={cat} className="mb-4">
-            <div className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: "var(--muted)" }}>{cat}</div>
-            <div className="rounded-2xl border overflow-hidden" style={{ borderColor: "var(--border)", backgroundColor: "var(--card)" }}>
-              {allItems.filter((p) => p.cat === cat).map((p, i, arr) => {
+          <div key={cat} className={s.catBlock}>
+            <div className={s.catHead}>{cat}</div>
+            <div className={s.list}>
+              {allItems.filter((p) => p.cat === cat).map((p) => {
                 const isMine = p.owner === myId;
                 return (
-                  <div key={`${p.owner}-${p.id}`} className="flex items-center gap-3 px-4 py-3" style={{ borderBottom: i < arr.length - 1 ? "1px solid var(--divider)" : "none" }}>
+                  <div key={`${p.owner}-${p.id}`} className={[s.row, p.done && s.rowDone].filter(Boolean).join(" ")}>
                     <button
                       onClick={() => isMine && toggle(p.id)}
                       disabled={!isMine}
-                      className="w-6 h-6 rounded-full border-2 flex-shrink-0 flex items-center justify-center text-xs font-bold text-white"
-                      style={{ borderColor: p.done ? "#2E7D4F" : "var(--faint)", backgroundColor: p.done ? "#2E7D4F" : "transparent", opacity: isMine ? 1 : 0.7 }}
+                      aria-label={p.text}
+                      className={[s.check, p.done && s.checkDone].filter(Boolean).join(" ")}
                     >
-                      {p.done ? "✓" : ""}
+                      {p.done && <Icon name="check" size={12} strokeWidth={2} />}
                     </button>
-                    <span className="text-sm flex-1" style={{ color: p.done ? "var(--faint)" : "var(--ink)", textDecoration: p.done ? "line-through" : "none" }}>{p.text}</span>
+                    <span className={s.itemText}>{p.text}</span>
                     <PersonBadge member={membersById[p.owner]} size="xs" />
-                    {isMine && <button onClick={() => remove(p.id)} className="text-xs px-1" style={{ color: "var(--faint)" }}>✕</button>}
+                    {isMine && <button onClick={() => remove(p.id)} aria-label="Remove" className={s.rowRemove}><Icon name="x" size={13} strokeWidth={2} /></button>}
                   </div>
                 );
               })}
@@ -114,21 +110,13 @@ export default function PackingTab({ packingAll, setPackingAll, membersById, myI
         ))
       )}
 
-      <div className="rounded-2xl border p-3" style={{ borderColor: "var(--border)", backgroundColor: "var(--card)" }}>
-        <div className="flex flex-wrap items-center gap-1.5 mb-2.5">
+      <div className={s.addCard}>
+        <div className={s.catPicker}>
           {catOptions.map((c) => {
             const active = !addingCat && c === selectedCat;
             return (
-              <button
-                key={c}
-                onClick={() => { setSelectedCat(c); setAddingCat(false); }}
-                className="text-[11px] font-semibold px-2.5 py-1 rounded-full border transition-colors"
-                style={{
-                  borderColor: active ? "#2E7D4F" : "var(--border)",
-                  backgroundColor: active ? "#2E7D4F" : "transparent",
-                  color: active ? "#fff" : "var(--muted)",
-                }}
-              >
+              <button key={c} onClick={() => { setSelectedCat(c); setAddingCat(false); }}
+                className={[s.catChip, active && s.catChipActive].filter(Boolean).join(" ")}>
                 {c}
               </button>
             );
@@ -144,29 +132,20 @@ export default function PackingTab({ packingAll, setPackingAll, membersById, myI
               }}
               onBlur={commitCat}
               placeholder="New category…"
-              className="text-[11px] font-semibold rounded-full border px-2.5 py-1 w-28"
-              style={{ borderColor: "#2E7D4F", backgroundColor: "transparent", color: "var(--ink)" }}
+              className={s.catInput}
             />
           ) : (
-            <button
-              onClick={() => setAddingCat(true)}
-              className="text-[11px] font-semibold px-2.5 py-1 rounded-full border border-dashed"
-              style={{ borderColor: "var(--faint)", color: "var(--muted)" }}
-            >
-              + Category
-            </button>
+            <button onClick={() => setAddingCat(true)} className={s.catChipAdd}>+ Category</button>
           )}
         </div>
-        <div className="flex gap-2">
-          <input
+        <div className={s.addRow}>
+          <Input
             value={newItem}
             onChange={(e) => setNewItem(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && add()}
             placeholder={`Add to ${addingCat && customCat.trim() ? customCat.trim() : selectedCat}…`}
-            className="flex-1 text-sm rounded-full border px-4 py-2.5"
-            style={{ borderColor: "var(--border)", backgroundColor: "var(--field)", color: "var(--ink)" }}
           />
-          <button onClick={add} className="text-sm font-bold text-white px-5 rounded-full" style={{ backgroundColor: "var(--solid)" }}>Add</button>
+          <Button onClick={add}>Add</Button>
         </div>
       </div>
     </div>
