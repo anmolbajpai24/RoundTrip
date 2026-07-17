@@ -72,16 +72,4 @@
   --type-run: 400 13px/1.55 var(--font-text);
   --type-numeric: 500 14px/1 var(--font-text);
   --type-label: 600 10px/1 var(--font-text);
-
-  /* COMPAT ALIASES — pre-redesign token names still referenced by unmigrated
-     screens. Every wave migrates its screens off these; delete the whole block
-     in Wave 10 once `grep -r "var(--card)\|var(--muted)\|var(--faint)\|var(--solid)\|--warn-" src`
-     is clean. */
-  --card: var(--surface);
-  --muted: var(--ink-muted);
-  --faint: var(--ink-faint);
-  --solid: var(--ink);
-  --warn-bg: color-mix(in srgb, var(--warning) 12%, var(--surface));
-  --warn-border: color-mix(in srgb, var(--warning) 32%, var(--surface));
-  --warn-ink: var(--warning);
 }

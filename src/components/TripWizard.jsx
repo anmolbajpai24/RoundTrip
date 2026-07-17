@@ -379,11 +379,11 @@ function AiItineraryStep({ desc, setDesc, days, legs, busy, error, accepted, onG
       {days && (
         <div className={s.aiPreview}>
           <div className={s.planList}>
-            {days.map((d, i) => {
+            {days.map((d) => {
               const leg = legs?.[slugify(d.city || "")] || {};
               const cityColor = leg.color || "var(--ink-faint)";
               return (
-                <div key={d.date} className={s.planRow} style={{ borderBottom: i < days.length - 1 ? "1px solid var(--divider)" : "none" }}>
+                <div key={d.date} className={s.planRow}>
                   <div className={s.planRowHead}>
                     <span className={s.planDate}>{weekday(d.date)} {dateLabel(d.date)}</span>
                     {d.city && <span className={s.destChip} style={{ "--c": cityColor, backgroundColor: softBg(cityColor), borderColor: softBorder(cityColor) }}>{d.city}</span>}
@@ -417,10 +417,10 @@ function ReviewStep({ config }) {
         {config.days.some((d) => d.plan) ? " · AI itinerary added" : ""}
       </p>
       <div className={s.planList}>
-        {config.days.map((d, i) => {
+        {config.days.map((d) => {
           const L = config.legs[d.leg];
           return (
-            <div key={d.date} className={s.reviewRow} style={{ borderBottom: i < config.days.length - 1 ? "1px solid var(--divider)" : "none" }}>
+            <div key={d.date} className={s.reviewRow}>
               <span className={s.planDate}>{weekday(d.date)} {dateLabel(d.date)}</span>
               <span className={s.destChip} style={{ "--c": L.color, backgroundColor: softBg(L.color), borderColor: softBorder(L.color) }}>{L.name}</span>
             </div>

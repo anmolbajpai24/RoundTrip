@@ -61,7 +61,7 @@ export default function Onboarding({ onDone }) {
               <div className={s.nameForm}>
                 <Field>
                   <Input value={name} onChange={(e) => setName(e.target.value)} maxLength={24} placeholder="Your name" autoFocus
-                    onKeyDown={(e) => e.key === "Enter" && name.trim() && finish(true)} style={{ textAlign: "center" }} />
+                    onKeyDown={(e) => e.key === "Enter" && name.trim() && finish(true)} />
                 </Field>
                 <div className={s.swatches}>
                   <SwatchPicker colors={COLORS} value={color} onChange={setColor} />

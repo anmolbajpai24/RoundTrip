@@ -242,7 +242,7 @@ export default function App() {
       {/* Header */}
       <div className={s.header}>
         <div className={s.headTop}>
-          <div style={{ minWidth: 0 }}>
+          <div className={s.headMain}>
             <button onClick={goHome} className={s.backLink}>
               <Icon name="back" size={12} strokeWidth={1.8} /> Trips <span className={s.backDate}>· {dateRangeLabel(config)}</span>
             </button>

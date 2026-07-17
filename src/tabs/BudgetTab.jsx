@@ -117,8 +117,7 @@ export default function BudgetTab({ expenses, setExpenses, members, membersById,
           {members.map((m) => {
             const active = paidBy === m.user_id;
             return (
-              <button key={m.user_id} onClick={() => setPaidBy(m.user_id)}
-                className={[s.payer, active && s.payerActive].filter(Boolean).join(" ")}
+              <button key={m.user_id} onClick={() => setPaidBy(m.user_id)} className={s.payer}
                 style={active ? { backgroundColor: m.color, borderColor: m.color, color: onColor(m.color) } : undefined}>
                 {m.name}
               </button>

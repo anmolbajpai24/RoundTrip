@@ -17,6 +17,10 @@
   gap: 12px;
 }
 
+.headMain {
+  min-width: 0;
+}
+
 .backLink {
   composes: label from "./styles/type.module.css";
   display: inline-flex;

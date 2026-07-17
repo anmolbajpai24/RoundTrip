@@ -98,7 +98,7 @@ export default function TripsHome({ user, onOpen, onNew, onAuthChanged }) {
       <div className={s.wrap}>
         {/* Greeting header */}
         <div className={s.greeting}>
-          <div style={{ minWidth: 0 }}>
+          <div className={s.greetingMain}>
             <div className={s.kicker}>{APP_NAME}</div>
             <h1 className={s.hello}>
               {profile?.name ? `${greeting()}, ${profile.name.split(" ")[0]}` : greeting()}
@@ -147,8 +147,8 @@ export default function TripsHome({ user, onOpen, onNew, onAuthChanged }) {
                 </div>
                 {hero.members.length > 0 && (
                   <div className={s.heroMembers}>
-                    {hero.members.map((m, i) => (
-                      <span key={m.user_id} style={{ marginLeft: i ? -6 : 0 }}>
+                    {hero.members.map((m) => (
+                      <span key={m.user_id} className={s.stackAv}>
                         <Avatar name={m.name} color={m.color} size="xs" />
                       </span>
                     ))}

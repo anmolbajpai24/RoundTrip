@@ -5,13 +5,6 @@ export const APP_NAME = "Roundtrip";
 export const APP_SLUG = "roundtrip";
 export const APP_TAGLINE = "Plan it together, carry it with you.";
 
-// Chrome accent + neutrals. All three resolve through the CSS theme tokens
-// in src/styles/tokens.css so every usage follows light/dark automatically
-// (the dark accent is a softened rosé, not the light wine).
-export const ACCENT = "var(--accent)";
-export const INK = "var(--ink)";
-export const MUTED = "var(--muted)";
-
 // Backup files written by older builds carried this app id; imports must keep
 // accepting it (see storage.js).
 export const LEGACY_APP_SLUG = "uk-trip-companion";

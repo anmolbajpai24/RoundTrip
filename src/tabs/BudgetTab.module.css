@@ -166,10 +166,6 @@
   color: var(--ink-muted);
 }
 
-.payerActive {
-  color: #fff;
-}
-
 .emptyNote {
   text-align: center;
   padding: 24px 0;
