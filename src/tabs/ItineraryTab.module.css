@@ -1,0 +1,174 @@
+.head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.dayCard {
+  margin-top: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  overflow: hidden;
+  background-color: var(--surface);
+}
+
+.dayHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--divider);
+}
+
+.dayHeadMain {
+  min-width: 0;
+}
+
+.dayTitle {
+  composes: title from "../styles/type.module.css";
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dayMeta {
+  margin-top: 2px;
+  font: 500 12px/1 var(--font-text);
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.dayHeadRight {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+}
+
+.editBtn {
+  color: var(--ink-faint);
+  padding: 2px;
+}
+
+.dayBody {
+  padding: 16px;
+}
+
+.plan {
+  font: var(--type-run);
+  color: var(--ink);
+  white-space: pre-wrap;
+}
+
+.planEmpty {
+  composes: plan;
+  color: var(--ink-faint);
+}
+
+.editor {
+  margin-bottom: 4px;
+}
+
+.editActions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.legPick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.legOption {
+  padding: 6px 11px;
+  border-radius: var(--r-pill);
+  font: 600 11px/1 var(--font-text);
+  background-color: color-mix(in srgb, var(--c) 12%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--c) 32%, var(--surface));
+  color: color-mix(in srgb, var(--c) 72%, var(--ink));
+}
+
+.legOn {
+  background-color: var(--c);
+  border-color: var(--c);
+  color: var(--on);
+}
+
+.outfitRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.outfitBtn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+}
+
+.outfitThumb {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--r-thumb);
+  object-fit: cover;
+}
+
+.notes {
+  margin-top: 18px;
+}
+
+.noteCard {
+  padding: 12px;
+  margin-bottom: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+}
+
+.noteMine {
+  border-color: var(--c);
+}
+
+.noteOther {
+  background-color: var(--field);
+}
+
+.noteHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.kicker {
+  composes: label from "../styles/type.module.css";
+  letter-spacing: 0.12em;
+}
+
+.noteAction {
+  font: 600 12px/1 var(--font-text);
+  color: var(--accent);
+}
+
+.noteEditor {
+  margin-top: 4px;
+}
+
+.noteText {
+  font: var(--type-run);
+  color: var(--ink);
+  white-space: pre-wrap;
+}
+
+.noteEmpty {
+  composes: noteText;
+  color: var(--ink-faint);
+}

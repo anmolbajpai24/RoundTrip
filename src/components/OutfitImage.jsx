@@ -22,5 +22,5 @@ export default function OutfitImage({ item, src, alt = "", className, style }) {
   }, [path, direct]);
 
   if (!url) return <div className={className} style={{ backgroundColor: "var(--field)", ...style }} aria-hidden="true" />;
-  return <img src={url} alt={alt} loading="lazy" className={className} style={style} />;
+  return <img src={url} alt={alt} loading="lazy" className={className} style={{ objectFit: "cover", ...style }} />;
 }

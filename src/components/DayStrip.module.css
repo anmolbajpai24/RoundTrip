@@ -1,0 +1,66 @@
+.strip {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin: 0 -16px;
+  padding: 4px 16px 8px;
+}
+
+.strip::-webkit-scrollbar {
+  display: none;
+}
+
+.cell {
+  flex: none;
+  width: 44px;
+  padding: 7px 0 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  border-radius: var(--r-cell);
+  /* destination colour mixed toward the surface (the 88% rule) */
+  background-color: color-mix(in srgb, var(--c) 12%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--c) 32%, var(--surface));
+  transition: transform 120ms ease;
+}
+
+.active {
+  background-color: var(--c);
+  border-color: var(--c);
+  transform: scale(1.05);
+}
+
+.weekday {
+  font: 600 8.5px/1 var(--font-text);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--c) 60%, var(--ink));
+}
+
+.date {
+  font: 400 17px/1 var(--font-display);
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.dot {
+  width: 5px;
+  height: 5px;
+  border-radius: var(--r-pill);
+  background-color: var(--c);
+}
+
+.active .weekday {
+  color: var(--on);
+  opacity: 0.75;
+}
+
+.active .date {
+  color: var(--on);
+}
+
+.active .dot {
+  background-color: var(--on);
+}

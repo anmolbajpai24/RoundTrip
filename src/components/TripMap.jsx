@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { useTripConfig, findDay } from "../lib/tripConfig.js";
+import EmptyState from "./ui/EmptyState.jsx";
+import s from "./TripMap.module.css";
 
 // Trip map (Leaflet + OpenStreetMap, no API key): one pin per destination in
 // leg colours, a route line following legOrder, plus a small pin for the
@@ -46,11 +48,13 @@ export default function TripMap({ selected, onSelectDay }) {
     // Leg names/colors come from member-editable trip config and Leaflet
     // renders tooltip/divIcon content as raw HTML — escape/validate both.
     const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-    const safeColor = (c) => (/^#[0-9a-fA-F]{3,8}$/.test(String(c)) ? c : "#1D2433");
+    const safeColor = (c) => (/^#[0-9a-fA-F]{3,8}$/.test(String(c)) ? c : "#6E604F");
 
-    const pin = (color, px = 18) => L.divIcon({
+    // White border + soft shadow are a deliberate on-map affordance (reads on
+    // both light and dark-inverted tiles), not app chrome.
+    const pin = (color, px = 16) => L.divIcon({
       className: "",
-      html: `<div style="width:${px}px;height:${px}px;border-radius:50%;background:${safeColor(color)};border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.4)"></div>`,
+      html: `<div style="width:${px}px;height:${px}px;border-radius:50%;background:${safeColor(color)};border:2.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.35)"></div>`,
       iconSize: [px, px],
       iconAnchor: [px / 2, px / 2],
     });
@@ -66,8 +70,9 @@ export default function TripMap({ selected, onSelectDay }) {
     }
 
     if (stops.length > 1) {
-      L.polyline(stops.map((s) => [s.leg.lat, s.leg.lon]), {
-        color: "#1D2433", weight: 2, opacity: 0.5, dashArray: "6 6",
+      // The route line, in the brand wine — reads on OSM tiles in both themes.
+      L.polyline(stops.map((st) => [st.leg.lat, st.leg.lon]), {
+        color: "#722F37", weight: 2.5, opacity: 0.75, dashArray: "2 7", lineCap: "round",
       }).addTo(layer);
     }
 
@@ -93,19 +98,17 @@ export default function TripMap({ selected, onSelectDay }) {
 
     if (!fittedRef.current && stops.length) {
       if (stops.length === 1) map.setView([stops[0].leg.lat, stops[0].leg.lon], 10);
-      else map.fitBounds(L.latLngBounds(stops.map((s) => [s.leg.lat, s.leg.lon])).pad(0.25));
+      else map.fitBounds(L.latLngBounds(stops.map((st) => [st.leg.lat, st.leg.lon])).pad(0.25));
       fittedRef.current = true;
     }
   }, [config, selected, onSelectDay]);
 
   return (
-    <div className="mt-3 rounded-2xl overflow-hidden border relative" style={{ borderColor: "var(--border)", height: 340 }}>
-      <div ref={ref} className="absolute inset-0" style={{ zIndex: 0 }} />
+    <div className={s.map}>
+      <div ref={ref} className={s.canvas} />
       {offline && (
-        <div className="absolute inset-0 flex items-center justify-center" style={{ backgroundColor: "color-mix(in srgb, var(--bg) 85%, transparent)", zIndex: 500 }}>
-          <span className="text-xs font-semibold px-3 py-1.5 rounded-full" style={{ backgroundColor: "var(--card)", color: "var(--muted)" }}>
-            🌐 The map needs a connection
-          </span>
+        <div className={s.offline}>
+          <EmptyState icon="cloudoff" title="You're offline" body="The map needs a connection — everything else keeps working." />
         </div>
       )}
     </div>
