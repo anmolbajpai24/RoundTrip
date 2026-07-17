@@ -16,6 +16,34 @@ export const MUTED = "var(--muted)";
 // accepting it (see storage.js).
 export const LEGACY_APP_SLUG = "uk-trip-companion";
 
+// ---------- people & places palettes (Grand Tour brief §4) ----------
+// Member colours identify PEOPLE (badges, notes, packing rows, payers).
+// Destination colours identify PLACES (legs, day cards, route line) — a
+// separate muted, earthy family so people and places never read as the same
+// system. Legacy hexes already stored in trips keep rendering as-is; these
+// only drive pickers and auto-assignment.
+export const MEMBER_COLORS = ["#3D5A77", "#7E4F79", "#47795A", "#A6444B", "#B98524", "#2E7B76"];
+export const DEST_COLORS = ["#1F6E73", "#B26F1C", "#6F4162", "#B25A41", "#56707F", "#7A7038"];
+
+// Legible ink for text sitting on a member/destination colour. Exact
+// on-colours from the locked spec first; relative-luminance fallback keeps
+// legacy stored colours (old palette, imports) readable.
+const ON_COLOR = {
+  "#B98524": "#2B1D04", // amber is the one light member colour
+  "#1F6E73": "#F2FAF9",
+  "#B26F1C": "#251604",
+  "#6F4162": "#FAF3F8",
+};
+export function onColor(hex) {
+  const exact = ON_COLOR[String(hex || "").toUpperCase()];
+  if (exact) return exact;
+  const n = parseInt(String(hex || "").replace("#", ""), 16);
+  if (Number.isNaN(n)) return "#FFFFFF";
+  const lin = (c) => { c /= 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; };
+  const L = 0.2126 * lin((n >> 16) & 255) + 0.7152 * lin((n >> 8) & 255) + 0.0722 * lin(n & 255);
+  return L > 0.35 ? "#2B1D04" : "#FFFFFF";
+}
+
 // ---------- appearance (system | light | dark) ----------
 const THEME_KEY = "roundtrip:theme";
 
