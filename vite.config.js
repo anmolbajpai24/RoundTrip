@@ -52,12 +52,17 @@ export default defineConfig(({ mode }) => ({
     VitePWA({
       registerType: "autoUpdate",
       includeAssets: ["apple-touch-icon.png"],
+      workbox: {
+        // Workbox's default glob skips fonts; without woff2 here an offline
+        // launch after cache eviction falls back to Georgia/system forever.
+        globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
+      },
       manifest: {
         name: "Roundtrip",
         short_name: "Roundtrip",
         description: "Shared trip companion — itinerary, outfits, packing, budget, bookings",
-        theme_color: "#1D2433",
-        background_color: "#F7F5F0",
+        theme_color: "#F5EFE4",
+        background_color: "#F5EFE4",
         display: "standalone",
         icons: [
           { src: "icon-192.png", sizes: "192x192", type: "image/png" },

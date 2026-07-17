@@ -5,9 +5,10 @@ export const APP_NAME = "Roundtrip";
 export const APP_SLUG = "roundtrip";
 export const APP_TAGLINE = "Plan it together, carry it with you.";
 
-// Chrome accent + neutrals. INK/MUTED resolve through the CSS theme tokens
-// in index.css so every inline style follows light/dark automatically.
-export const ACCENT = "#C8102E";
+// Chrome accent + neutrals. All three resolve through the CSS theme tokens
+// in src/styles/tokens.css so every usage follows light/dark automatically
+// (the dark accent is a softened rosé, not the light wine).
+export const ACCENT = "var(--accent)";
 export const INK = "var(--ink)";
 export const MUTED = "var(--muted)";
 
@@ -31,7 +32,9 @@ export function applyTheme(pref = getThemePref()) {
   const dark = pref === "dark" ||
     (pref === "system" && window.matchMedia?.("(prefers-color-scheme: dark)").matches);
   document.documentElement.dataset.theme = dark ? "dark" : "light";
-  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", dark ? "#12161F" : "#1D2433");
+  // Must match --bg in src/styles/tokens.css (and the manifest colours in
+  // vite.config.js + index.html for the light value).
+  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", dark ? "#1A140D" : "#F5EFE4");
 }
 
 // Apply the saved theme at boot and follow the OS while pref is "system".
