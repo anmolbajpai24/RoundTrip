@@ -1,0 +1,28 @@
+.track {
+  --c: var(--accent);
+  height: 4px;
+  border-radius: var(--r-pill);
+  background-color: var(--divider);
+}
+
+.fill {
+  position: relative;
+  height: 100%;
+  border-radius: var(--r-pill);
+  background-color: var(--c);
+  transition: width 240ms ease;
+}
+
+/* route-line variant: the fill ends in a destination dot riding the rule */
+.route::after {
+  content: "";
+  position: absolute;
+  right: -1px;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  transform: translateY(-50%);
+  border-radius: var(--r-pill);
+  background-color: var(--c);
+  border: 1.5px solid var(--surface);
+}

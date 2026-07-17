@@ -1,0 +1,49 @@
+.line {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.stop {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.stop + .stop {
+  flex: 1;
+}
+
+.rule {
+  flex: 1;
+  min-width: 14px;
+  height: 1px;
+  background-color: var(--border);
+}
+
+.dot {
+  width: 7px;
+  height: 7px;
+  flex: none;
+  border-radius: var(--r-pill);
+  background-color: var(--c);
+}
+
+/* tracked caps in a darker tint of the stop colour so it holds AA on paper */
+.label {
+  font: 600 9px/1 var(--font-text);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--c) 72%, var(--ink));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tail {
+  flex: 1;
+  min-width: 10px;
+  height: 1px;
+  background-color: var(--border);
+}

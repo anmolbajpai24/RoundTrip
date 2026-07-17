@@ -1,0 +1,24 @@
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: var(--r-pill);
+  background-color: var(--chip);
+  color: var(--chip-ink);
+  font: 600 11px/1 var(--font-text);
+  white-space: nowrap;
+}
+
+.active {
+  background-color: var(--accent);
+  color: var(--accent-ink);
+}
+
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: var(--r-pill);
+  background-color: var(--c);
+  flex: none;
+}

@@ -1,0 +1,25 @@
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.swatch {
+  width: 30px;
+  height: 30px;
+  border-radius: var(--r-pill);
+  background-color: var(--c);
+  border: 2px solid transparent;
+  transition: transform 120ms ease;
+}
+
+.swatch:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.selected {
+  border-color: var(--surface);
+  outline: 2px solid var(--c);
+  transform: scale(1.08);
+}

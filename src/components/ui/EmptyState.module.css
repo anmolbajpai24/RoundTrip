@@ -1,0 +1,33 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 34px 24px;
+}
+
+.icon {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+  color: var(--ink-faint);
+  margin-bottom: 12px;
+}
+
+.title {
+  composes: titleSm from "../../styles/type.module.css";
+}
+
+.body {
+  composes: run from "../../styles/type.module.css";
+  max-width: 30ch;
+  margin-top: 6px;
+}
+
+.action {
+  margin-top: 16px;
+}
