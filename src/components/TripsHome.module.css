@@ -1,0 +1,313 @@
+.page {
+  min-height: 100dvh;
+  background-color: var(--bg);
+  padding: 24px 16px;
+}
+
+.wrap {
+  max-width: 32rem;
+  margin: 0 auto;
+}
+
+.greeting {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.kicker {
+  composes: label from "../styles/type.module.css";
+  color: var(--accent);
+  letter-spacing: 0.2em;
+}
+
+.hello {
+  composes: display from "../styles/type.module.css";
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-top: 2px;
+}
+
+.guestWarn {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 12px;
+  margin-bottom: 16px;
+  border-radius: var(--r-card);
+  border: 1px solid color-mix(in srgb, var(--warning) 34%, var(--surface));
+  background-color: color-mix(in srgb, var(--warning) 12%, var(--surface));
+  font: 500 12px/1.4 var(--font-text);
+  color: var(--warning);
+}
+
+.guestWarnStrong {
+  font-weight: 700;
+}
+
+.skeletons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* ---------- hero ---------- */
+.hero {
+  position: relative;
+  width: 100%;
+  min-height: 176px;
+  border-radius: var(--r-card);
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.heroArt {
+  position: absolute;
+  inset: 0;
+}
+
+.heroBody {
+  position: relative;
+  min-height: 176px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.heroTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.heroCountdown {
+  font: 600 11px/1 var(--font-text);
+  padding: 6px 10px;
+  border-radius: var(--r-pill);
+  background-color: var(--surface);
+  color: var(--ink);
+}
+
+.heroTitle {
+  font: 400 26px/1.1 var(--font-display);
+  color: #FBF6EC;
+}
+
+.heroMeta {
+  font: 500 12px/1 var(--font-text);
+  color: rgb(251 246 236 / 0.85);
+  margin-top: 3px;
+  font-variant-numeric: tabular-nums;
+}
+
+.heroMembers {
+  display: flex;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.heroNames {
+  font: 600 11px/1 var(--font-text);
+  color: rgb(251 246 236 / 0.85);
+  margin-left: 8px;
+}
+
+.heroCredit {
+  position: absolute;
+  bottom: 6px;
+  right: 12px;
+  font: 400 9px/1 var(--font-text);
+  color: rgb(251 246 236 / 0.65);
+}
+
+/* ---------- stats ---------- */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.stat {
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  background-color: var(--surface);
+  padding: 12px 0 10px;
+  text-align: center;
+}
+
+.statNum {
+  font: 400 22px/1 var(--font-display);
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.statLabel {
+  composes: label from "../styles/type.module.css";
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  margin-top: 3px;
+}
+
+/* ---------- sections ---------- */
+.section {
+  composes: label from "../styles/type.module.css";
+  letter-spacing: 0.2em;
+  margin: 20px 0 10px;
+}
+
+/* ---------- upcoming card ---------- */
+.card {
+  width: 100%;
+  text-align: left;
+  margin-bottom: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  background-color: var(--surface);
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.cardBody {
+  padding: 14px 16px;
+}
+
+.cardRoute {
+  margin-bottom: 10px;
+}
+
+.cardHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.cardTitle {
+  composes: titleSm from "../styles/type.module.css";
+}
+
+.cardHeadRight {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+}
+
+.chip {
+  font: 600 10px/1 var(--font-text);
+  letter-spacing: 0.02em;
+  padding: 4px 8px;
+  border-radius: var(--r-pill);
+  background-color: var(--chip);
+  color: var(--chip-ink);
+  white-space: nowrap;
+}
+
+.cardMeta {
+  font: 500 12px/1 var(--font-text);
+  color: var(--ink-muted);
+  margin-top: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.cardMembers {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.withLabel {
+  composes: label from "../styles/type.module.css";
+  font-size: 9px;
+}
+
+/* ---------- past row ---------- */
+.pastRow {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  background-color: var(--surface);
+  opacity: 0.72;
+  cursor: pointer;
+}
+
+.pastDot {
+  width: 10px;
+  height: 10px;
+  border-radius: var(--r-pill);
+  flex: none;
+}
+
+.pastTitle {
+  flex: 1;
+  font: 600 13.5px/1.1 var(--font-text);
+  color: var(--ink-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pastMeta {
+  flex: none;
+  font: 500 11px/1 var(--font-text);
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- remove button ---------- */
+.removeBtn {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--r-pill);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--chip);
+  color: var(--danger);
+}
+
+.removeBtnDark {
+  background-color: rgb(20 12 7 / 0.4);
+  color: #FBF6EC;
+}
+
+/* ---------- actions / join ---------- */
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.joinForm {
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  background-color: var(--surface);
+  padding: 16px;
+}
+
+.joinActions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.error {
+  font: 500 12px/1.4 var(--font-text);
+  color: var(--danger);
+  text-align: center;
+  margin: 8px 0;
+}

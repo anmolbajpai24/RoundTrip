@@ -1,0 +1,72 @@
+.title {
+  composes: titleSm from "../styles/type.module.css";
+  margin-bottom: 6px;
+}
+
+.body {
+  font: 400 12px/1.55 var(--font-text);
+  color: var(--ink-muted);
+  margin-bottom: 14px;
+}
+
+.strong {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.signOut {
+  margin-bottom: 8px;
+  color: var(--accent);
+}
+
+.google {
+  margin-bottom: 14px;
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.rule {
+  flex: 1;
+  height: 1px;
+  background-color: var(--border);
+}
+
+.or {
+  font: 600 11px/1 var(--font-text);
+  color: var(--ink-faint);
+}
+
+.act {
+  margin-top: 4px;
+}
+
+.textBtn {
+  display: block;
+  width: 100%;
+  text-align: center;
+  font: 600 12px/1 var(--font-text);
+  color: var(--ink-muted);
+  padding: 10px 0 2px;
+}
+
+.done {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font: 600 14px/1 var(--font-text);
+  color: var(--success);
+  margin-bottom: 14px;
+}
+
+.error {
+  font: 500 12px/1.4 var(--font-text);
+  color: var(--danger);
+  text-align: center;
+  margin: 8px 0;
+}
