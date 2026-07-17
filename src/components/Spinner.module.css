@@ -1,0 +1,19 @@
+.spinner {
+  display: inline-block;
+  vertical-align: middle;
+  border: 2px solid var(--ink-faint);
+  border-top-color: transparent;
+  border-radius: var(--r-pill);
+  animation: spin 0.7s linear infinite;
+}
+
+.onAccent {
+  border-color: var(--accent-ink);
+  border-top-color: transparent;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

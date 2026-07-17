@@ -1,0 +1,27 @@
+.wrap {
+  margin-top: 6px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--r-pill);
+  border: 1px solid transparent;
+  font: 600 11px/1 var(--font-text);
+}
+
+.pending {
+  background-color: color-mix(in srgb, var(--warning) 14%, var(--surface));
+  border-color: color-mix(in srgb, var(--warning) 34%, var(--surface));
+  color: var(--warning);
+}
+
+.failed {
+  background-color: var(--danger-soft);
+  border-color: color-mix(in srgb, var(--danger) 34%, var(--surface));
+  color: var(--danger);
+}

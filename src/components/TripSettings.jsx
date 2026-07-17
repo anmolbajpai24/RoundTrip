@@ -206,7 +206,7 @@ export default function TripSettings({ config, onSave, onClose, memberCount = 1,
         })}
         <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Add a destination…"
           className="w-full text-sm rounded-xl border px-4 py-2.5" style={inputStyle} />
-        {searching && <p className="text-xs mt-2 flex items-center gap-2" style={{ color: MUTED }}><Spinner className="w-3.5 h-3.5" /> Searching…</p>}
+        {searching && <p className="text-xs mt-2 flex items-center gap-2" style={{ color: MUTED }}><Spinner size={14} /> Searching…</p>}
         {results.map((r, i) => (
           <button key={i} onClick={() => addLeg(r)} className="w-full text-left rounded-xl border px-3 py-2 mt-1.5 text-sm" style={{ borderColor: "var(--border)", color: INK }}>
             <span className="font-semibold">{r.name}</span>

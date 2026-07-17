@@ -1,0 +1,98 @@
+.toasts {
+  position: fixed;
+  inset-inline: 0;
+  bottom: calc(76px + env(safe-area-inset-bottom));
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px;
+  pointer-events: none;
+}
+
+.toast {
+  max-width: 24rem;
+  width: fit-content;
+  padding: 10px 16px;
+  border-radius: var(--r-pill);
+  background-color: var(--raised);
+  border: 1px solid var(--border);
+  color: var(--ink);
+  font: 600 13px/1.3 var(--font-text);
+}
+
+.toastError {
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 34%, var(--surface));
+}
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background-color: rgb(15 10 5 / 0.45);
+}
+
+.shell {
+  width: 100%;
+  max-width: 24rem;
+  background-color: var(--raised);
+  border: 1px solid var(--border);
+  border-bottom: 0;
+  border-radius: var(--r-sheet) var(--r-sheet) 0 0;
+  padding: 20px 18px calc(20px + env(safe-area-inset-bottom));
+}
+
+.title {
+  composes: titleSm from "../styles/type.module.css";
+}
+
+.message {
+  composes: run from "../styles/type.module.css";
+  margin-top: 6px;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.cancel,
+.confirm {
+  flex: 1;
+  height: 46px;
+  border-radius: var(--r-control);
+  font: 600 13px/1 var(--font-text);
+}
+
+.cancel {
+  border: 1px solid var(--border);
+  color: var(--ink-muted);
+}
+
+.confirm {
+  background-color: var(--accent);
+  color: var(--accent-ink);
+}
+
+.danger {
+  background-color: var(--danger);
+}
+
+@media (min-width: 640px) {
+  .backdrop {
+    align-items: center;
+  }
+
+  .shell {
+    margin: 16px;
+    border-bottom: 1px solid var(--border);
+    border-radius: var(--r-sheet);
+    padding-bottom: 20px;
+  }
+}

@@ -350,7 +350,7 @@ function Splash({ text }) {
       <div className="text-center">
         <div className="text-3xl mb-2">✈️</div>
         <div className="text-sm font-semibold flex items-center justify-center gap-2" style={{ color: MUTED }}>
-          <Spinner className="w-3.5 h-3.5" /> {text}
+          <Spinner size={14} /> {text}
         </div>
       </div>
     </div>

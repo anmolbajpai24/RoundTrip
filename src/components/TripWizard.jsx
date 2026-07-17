@@ -293,7 +293,7 @@ export default function TripWizard({ profile, onDone, onCancel }) {
 
         <button onClick={step === reviewStep ? create : next} disabled={busy || aiBusy}
           className="mt-5 w-full text-sm font-bold text-white py-3 rounded-full inline-flex items-center justify-center gap-2" style={{ backgroundColor: ACCENT }}>
-          {busy && <Spinner className="w-4 h-4" light />}
+          {busy && <Spinner size={16} on="accent" />}
           {busy ? "Creating…" : step === reviewStep ? "Create trip" : aiOn && step === 4 && !aiAccepted ? "Skip for now" : "Continue"}
         </button>
       </div>
@@ -355,7 +355,7 @@ function DestinationsStep({ dests, setDests, startDate, endDate }) {
 
       <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={dests.length ? "Add another place…" : "Search a city, e.g. Kyoto"}
         className="w-full text-sm rounded-xl border px-4 py-3" style={inputStyle} />
-      {searching && <p className="text-xs mt-2 flex items-center gap-2" style={{ color: MUTED }}><Spinner className="w-3.5 h-3.5" /> Searching…</p>}
+      {searching && <p className="text-xs mt-2 flex items-center gap-2" style={{ color: MUTED }}><Spinner size={14} /> Searching…</p>}
       {results.map((r, i) => (
         <button key={i} onClick={() => addDest(r)} className="w-full text-left rounded-xl border px-3 py-2.5 mt-1.5 text-sm" style={{ borderColor: "var(--border)", backgroundColor: "var(--card)", color: INK }}>
           <span className="font-semibold">{r.name}</span>
@@ -383,7 +383,7 @@ function AiItineraryStep({ desc, setDesc, days, legs, busy, error, accepted, onG
         <button onClick={onGenerate} disabled={busy}
           className="w-full text-sm font-bold py-3 rounded-full border inline-flex items-center justify-center gap-2"
           style={{ color: ACCENT, borderColor: ACCENT, opacity: busy ? 0.6 : 1 }}>
-          {busy && <Spinner className="w-4 h-4" />}
+          {busy && <Spinner size={16} />}
           {busy ? "Asking the AI… (can take ~30s)" : days ? "Regenerate" : "Draft my itinerary"}
         </button>
       )}

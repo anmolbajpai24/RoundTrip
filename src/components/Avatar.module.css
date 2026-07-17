@@ -1,0 +1,11 @@
+.avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  border-radius: var(--r-pill);
+  font-family: var(--font-text);
+  font-weight: 600;
+  line-height: 1;
+  user-select: none;
+}

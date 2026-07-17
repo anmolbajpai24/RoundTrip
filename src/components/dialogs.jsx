@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import s from "./dialogs.module.css";
 
 // App-themed replacements for window.alert / window.confirm, driven by an
 // imperative module API so any code (components, libs, catch blocks) can call
@@ -46,33 +47,24 @@ export default function DialogHost() {
     <>
       {/* Toast stack — above the bottom tab bar, safe-area aware */}
       {toasts.length > 0 && (
-        <div className="fixed inset-x-0 z-50 flex flex-col items-center gap-2 px-4 pointer-events-none"
-          style={{ bottom: "calc(76px + env(safe-area-inset-bottom))" }}>
+        <div className={s.toasts}>
           {toasts.map((t) => (
-            <div key={t.id} role="status" className="max-w-sm w-fit text-sm font-semibold px-4 py-2.5 rounded-full shadow-lg border"
-              style={{
-                backgroundColor: "var(--card)", borderColor: "var(--border)",
-                color: t.kind === "error" ? "#E4707E" : "var(--ink)",
-              }}>
+            <div key={t.id} role="status" className={[s.toast, t.kind === "error" && s.toastError].filter(Boolean).join(" ")}>
               {t.message}
             </div>
           ))}
         </div>
       )}
 
-      {/* Confirm sheet — same backdrop/card pattern as the app's other sheets */}
+      {/* Confirm sheet — same shell language as the app's other sheets */}
       {confirm && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.4)" }} onClick={() => settle(false)}>
-          <div className="w-full max-w-sm m-0 sm:m-4 rounded-t-2xl sm:rounded-2xl p-5" style={{ backgroundColor: "var(--card)" }} onClick={(e) => e.stopPropagation()}>
-            <h2 className="text-base font-bold" style={{ color: "var(--ink)" }}>{confirm.title}</h2>
-            {confirm.message && <p className="text-sm mt-1.5 leading-relaxed" style={{ color: "var(--muted)" }}>{confirm.message}</p>}
-            <div className="flex gap-2 mt-4">
-              <button onClick={() => settle(false)} className="flex-1 text-sm font-semibold py-3 rounded-full border"
-                style={{ borderColor: "var(--border)", color: "var(--muted)" }}>
-                {confirm.cancelLabel}
-              </button>
-              <button onClick={() => settle(true)} autoFocus className="flex-1 text-sm font-bold py-3 rounded-full text-white"
-                style={{ backgroundColor: confirm.danger ? "#C0392B" : "var(--solid)" }}>
+        <div className={s.backdrop} onClick={() => settle(false)}>
+          <div role="dialog" aria-modal="true" className={s.shell} onClick={(e) => e.stopPropagation()}>
+            <h2 className={s.title}>{confirm.title}</h2>
+            {confirm.message && <p className={s.message}>{confirm.message}</p>}
+            <div className={s.actions}>
+              <button onClick={() => settle(false)} className={s.cancel}>{confirm.cancelLabel}</button>
+              <button onClick={() => settle(true)} autoFocus className={[s.confirm, confirm.danger && s.danger].filter(Boolean).join(" ")}>
                 {confirm.confirmLabel}
               </button>
             </div>

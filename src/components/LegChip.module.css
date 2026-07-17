@@ -1,0 +1,9 @@
+.chip {
+  display: inline-block;
+  padding: 3px 9px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-chip);
+  font: 600 11px/1.2 var(--font-text);
+  /* darker tint of the destination colour, legible on the soft fill */
+  color: color-mix(in srgb, var(--c) 72%, var(--ink));
+}
