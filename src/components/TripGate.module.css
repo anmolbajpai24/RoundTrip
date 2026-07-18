@@ -1,105 +1,83 @@
 .page {
   min-height: 100dvh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 40px 24px;
   background-color: var(--bg);
+  display: flex;
+  justify-content: center;
 }
 
 .centerPage {
   min-height: 100dvh;
+  background-color: var(--bg);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 24px;
-  background-color: var(--bg);
 }
 
 .wrap {
-  max-width: 24rem;
   width: 100%;
+  max-width: 24rem;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
 }
 
-.hero {
-  text-align: center;
-  margin-bottom: 26px;
-}
-
-.kicker {
-  composes: label from "../styles/type.module.css";
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 8px;
   color: var(--accent);
-  letter-spacing: 0.2em;
-  margin-bottom: 8px;
 }
 
-.title {
-  font: 400 34px/1.1 var(--font-display);
+.wordmark {
+  font: 400 21px/1 var(--font-display);
   color: var(--ink);
 }
 
-.em {
-  font-style: italic;
-  color: var(--accent);
+.title {
+  font: 400 30px/1.15 var(--font-display);
+  color: var(--ink);
+  margin-top: 44px;
 }
 
 .tagline {
-  font: 400 14px/1.5 var(--font-text);
+  font: 400 13px/1.55 var(--font-text);
   color: var(--ink-muted);
   margin-top: 8px;
-}
-
-.nameBlock {
-  margin-bottom: 22px;
+  max-width: 290px;
 }
 
 .plan {
-  margin-bottom: 16px;
-}
-
-.divider {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
+  margin-top: 24px;
 }
 
 .rule {
-  flex: 1;
   height: 1px;
-  background-color: var(--border);
+  background-color: var(--divider);
+  margin-top: 26px;
 }
 
-.or {
-  font: 600 11px/1 var(--font-text);
-  color: var(--ink-faint);
+.joinLabel {
+  composes: label from "../styles/type.module.css";
+  letter-spacing: 0.16em;
+  margin: 20px 0 9px;
 }
 
-.joinRow {
-  display: flex;
-  gap: 8px;
-}
-
-.joinInput {
+.spacer {
   flex: 1;
 }
 
 .signin {
-  display: block;
-  width: 100%;
-  text-align: center;
-  font: 600 12px/1 var(--font-text);
+  font: 500 12.5px/1 var(--font-text);
   color: var(--ink-muted);
-  margin-top: 24px;
+  text-align: left;
+  padding-bottom: 30px;
+  white-space: nowrap;
 }
 
 .signinLink {
   color: var(--accent);
-}
-
-.error {
-  font: 500 12px/1.4 var(--font-text);
-  color: var(--danger);
-  text-align: center;
-  margin-top: 12px;
+  font-weight: 600;
 }

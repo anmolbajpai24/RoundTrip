@@ -1,30 +1,23 @@
 import { useState } from "react";
 import { isConfigured } from "../lib/supabase.js";
-import { COLORS, joinTrip } from "../lib/session.js";
+import { COLORS } from "../lib/session.js";
 import { getLocalProfile } from "../lib/profile.js";
 import TripWizard from "./TripWizard.jsx";
 import AccountSheet from "./AccountSheet.jsx";
-import { APP_NAME, APP_TAGLINE } from "../theme.js";
+import JoinCode from "./JoinCode.jsx";
+import { APP_NAME } from "../theme.js";
+import Icon from "./ui/icons.jsx";
 import Button from "./ui/Button.jsx";
-import Field, { Input, FormStack } from "./ui/Field.jsx";
-import SwatchPicker from "./ui/SwatchPicker.jsx";
 import EmptyState from "./ui/EmptyState.jsx";
 import s from "./TripGate.module.css";
 
-// Landing for a device with no trips yet. The display name/colour were
-// captured during onboarding (editable in the wizard/join); this screen only
-// offers the three ways in: plan, join with a code, or sign in.
+// Landing for a device with no trips yet: three entries at three weights —
+// primary button (plan), serif code cells (join), quiet sign-in line.
 // On success it calls onReady().
 export default function TripGate({ onReady }) {
   const profile = getLocalProfile();
-  const [name, setName] = useState(profile?.name || "");
-  const [color, setColor] = useState(profile?.color || COLORS[0]);
-  const [code, setCode] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
   const [wizard, setWizard] = useState(false);
   const [signin, setSignin] = useState(false);
-  const askName = !profile?.name; // onboarding skipped → capture here instead
 
   if (!isConfigured) {
     // Real users should never see setup internals — those go to the console
@@ -44,63 +37,35 @@ export default function TripGate({ onReady }) {
   }
 
   if (wizard) {
-    return <TripWizard profile={{ name: name.trim(), color }} onDone={onReady} onCancel={() => setWizard(false)} />;
+    // The wizard collects name/colour itself when the profile is still empty.
+    return <TripWizard profile={profile?.name ? { name: profile.name, color: profile.color || COLORS[0] } : null}
+      onDone={onReady} onCancel={() => setWizard(false)} />;
   }
-
-  const doJoin = async () => {
-    if (!name.trim()) { setError("Enter your name first."); return; }
-    if (!code.trim()) { setError("Enter the trip code."); return; }
-    setBusy(true); setError("");
-    try {
-      await joinTrip(code, name.trim(), color);
-      onReady();
-    } catch (e) { setError(e.message || "Something went wrong."); }
-    setBusy(false);
-  };
 
   return (
     <div className={s.page}>
       <div className={s.wrap}>
-        <div className={s.hero}>
-          <div className={s.kicker}>{APP_NAME}</div>
-          <h1 className={s.title}>
-            {profile?.name ? <>Hi <em className={s.em}>{profile.name}</em></> : APP_NAME}
-          </h1>
-          <p className={s.tagline}>{profile?.name ? "Where to next?" : APP_TAGLINE}</p>
+        <div className={s.brand}>
+          <Icon name="route" size={22} strokeWidth={1.6} />
+          <span className={s.wordmark}>{APP_NAME}</span>
         </div>
 
-        {askName && (
-          <FormStack className={s.nameBlock}>
-            <Field label="Your name">
-              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Sam" maxLength={24} />
-            </Field>
-            <Field label="Your colour">
-              <SwatchPicker colors={COLORS} value={color} onChange={setColor} />
-            </Field>
-          </FormStack>
-        )}
+        <h1 className={s.title}>Where to next?</h1>
+        <p className={s.tagline}>Start a trip from scratch, or join one a friend has already started.</p>
 
-        <Button full onClick={() => { setError(""); setWizard(true); }} disabled={busy} className={s.plan}>
-          Plan a new trip
+        <Button full onClick={() => setWizard(true)} className={s.plan}>
+          Plan a new trip <Icon name="arrow" size={13} strokeWidth={2} />
         </Button>
 
-        <div className={s.divider}>
-          <span className={s.rule} />
-          <span className={s.or}>or join with a code</span>
-          <span className={s.rule} />
-        </div>
+        <div className={s.rule} />
+        <div className={s.joinLabel}>Join with a code</div>
+        <JoinCode defaultProfile={profile} onJoined={onReady} />
 
-        <div className={s.joinRow}>
-          <Input code value={code} onChange={(e) => setCode(e.target.value.toUpperCase())}
-            onKeyDown={(e) => e.key === "Enter" && doJoin()} placeholder="ABC123" maxLength={6} className={s.joinInput} />
-          <Button onClick={doJoin} disabled={busy}>{busy ? "…" : "Join"}</Button>
-        </div>
+        <span className={s.spacer} />
 
         <button onClick={() => setSignin(true)} className={s.signin}>
-          Used {APP_NAME} before? <span className={s.signinLink}>Sign in</span>
+          Already have an account? <span className={s.signinLink}>Sign in</span>
         </button>
-
-        {error && <p className={s.error}>{error}</p>}
 
         {signin && (
           <AccountSheet user={null} mode="signin" onClose={() => setSignin(false)} onChanged={onReady} />

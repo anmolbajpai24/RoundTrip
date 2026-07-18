@@ -1,25 +1,51 @@
 .row {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
 }
 
+/* ring target wrapping an inner colour dot; selected = ring in the colour + check */
 .swatch {
-  width: 30px;
-  height: 30px;
+  width: 34px;
+  height: 34px;
   border-radius: var(--r-pill);
-  background-color: var(--c);
-  border: 2px solid transparent;
-  transition: transform 120ms ease;
+  border: 1.5px solid transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
 }
 
 .swatch:disabled {
-  opacity: 0.5;
-  cursor: default;
+  opacity: 0.6;
+}
+
+.dot {
+  width: 24px;
+  height: 24px;
+  border-radius: var(--r-pill);
+  background-color: var(--c);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--on);
 }
 
 .selected {
-  border-color: var(--surface);
-  outline: 2px solid var(--c);
-  transform: scale(1.08);
+  border-color: var(--c);
+}
+
+/* onboarding-scale variant */
+.lg {
+  gap: 9px;
+}
+
+.lg .swatch {
+  width: 40px;
+  height: 40px;
+}
+
+.lg .dot {
+  width: 30px;
+  height: 30px;
 }

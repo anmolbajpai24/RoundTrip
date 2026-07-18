@@ -1,16 +1,14 @@
 import { useState, useEffect } from "react";
-import { listMyTrips, enterTrip, joinTrip, deleteTrip, leaveTrip, COLORS } from "../lib/session.js";
+import { listMyTrips, enterTrip, deleteTrip, leaveTrip } from "../lib/session.js";
 import { isGuest } from "../lib/auth.js";
 import { getProfile, greeting } from "../lib/profile.js";
 import { dateRangeLabel, todayISO, daysToGo, tripDayNumber, legGradient } from "../lib/tripConfig.js";
 import Avatar from "./Avatar.jsx";
 import ProfileSheet from "./ProfileSheet.jsx";
+import JoinCode from "./JoinCode.jsx";
 import { confirmDialog } from "./dialogs.jsx";
 import Icon from "./ui/icons.jsx";
 import Button from "./ui/Button.jsx";
-import Field, { Input, FormStack } from "./ui/Field.jsx";
-import SwatchPicker from "./ui/SwatchPicker.jsx";
-import CodeInput from "./ui/CodeInput.jsx";
 import RouteLine from "./ui/RouteLine.jsx";
 import Skeleton from "./ui/Skeleton.jsx";
 import Sheet from "./ui/Sheet.jsx";
@@ -154,7 +152,7 @@ export default function TripsHome({ user, onOpen, onNew, onAuthChanged }) {
             <Button icon="plus" onClick={() => onNew(lastProfile)} className={s.welcomeNew}>New trip</Button>
             <div className={s.welcomeRule} />
             <div className={s.section}>Join with a code</div>
-            <JoinInline defaultProfile={lastProfile} onJoined={onOpen} />
+            <JoinCode defaultProfile={lastProfile} onJoined={onOpen} />
           </div>
         )}
 
@@ -256,7 +254,7 @@ export default function TripsHome({ user, onOpen, onNew, onAuthChanged }) {
         {joining && (
           <Sheet onClose={() => setJoining(false)} label="Join with a code">
             <h2 className={s.joinTitle}>Join with a code</h2>
-            <JoinInline defaultProfile={lastProfile} onJoined={onOpen} autoFocus />
+            <JoinCode defaultProfile={lastProfile} onJoined={onOpen} autoFocus />
           </Sheet>
         )}
 
@@ -277,47 +275,3 @@ export default function TripsHome({ user, onOpen, onNew, onAuthChanged }) {
 const keyOpen = (t, onOpen) => (e) => {
   if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(t); }
 };
-
-// Six code cells + (only when we don't know who you are yet) name & colour.
-// Joins as soon as the sixth character lands and the identity is known.
-function JoinInline({ defaultProfile, onJoined, autoFocus = false }) {
-  const [code, setCode] = useState("");
-  const [name, setName] = useState(defaultProfile?.name || "");
-  const [color, setColor] = useState(defaultProfile?.color || COLORS[0]);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  const askIdentity = !defaultProfile?.name;
-
-  const join = async (c = code) => {
-    if (busy) return;
-    if (!name.trim()) { setError("Enter your name first."); return; }
-    if (c.length < 6) { setError("Enter the six-character code."); return; }
-    setBusy(true); setError("");
-    try { await joinTrip(c, name.trim(), color); onJoined(); }
-    catch (e) { setError(e.message || "Something went wrong."); }
-    setBusy(false);
-  };
-
-  return (
-    <div>
-      <CodeInput value={code} onChange={setCode} onComplete={(c) => { if (!askIdentity) join(c); }} autoFocus={autoFocus} />
-      <p className={s.joinHint}>{busy ? "Joining…" : "Ask anyone on the trip — the code is on their trip screen."}</p>
-      {askIdentity && (
-        <div className={s.joinIdentity}>
-          <FormStack>
-            <Field label="Your name on this trip">
-              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Priya" maxLength={24} />
-            </Field>
-            <Field label="Colour">
-              <SwatchPicker colors={COLORS} value={color} onChange={setColor} />
-            </Field>
-          </FormStack>
-          <div className={s.joinActions}>
-            <Button full onClick={() => join()} disabled={busy}>{busy ? "Joining…" : "Join"}</Button>
-          </div>
-        </div>
-      )}
-      {error && <p className={s.error}>{error}</p>}
-    </div>
-  );
-}

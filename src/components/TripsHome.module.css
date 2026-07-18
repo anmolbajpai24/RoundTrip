@@ -423,23 +423,6 @@
   margin-bottom: 14px;
 }
 
-.joinHint {
-  font: 400 11px/1.5 var(--font-text);
-  color: var(--ink-faint);
-  margin-top: 9px;
-}
-
-.joinIdentity {
-  margin-top: 14px;
-}
-
-.joinActions {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 16px;
-}
-
 .error {
   font: 500 12px/1.4 var(--font-text);
   color: var(--danger);
