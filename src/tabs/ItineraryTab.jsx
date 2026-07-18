@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { useTripConfig, dateLabel, weekday, dateRangeLabel, defaultDay, findDay } from "../lib/tripConfig.js";
+import { useTripConfig, dateLabel, weekday, todayISO, defaultDay, findDay } from "../lib/tripConfig.js";
 import { saveKey } from "../lib/storage.js";
 import { outfitForDay, visibleToOthers, hasPhoto } from "../lib/closet.js";
 import { onColor } from "../theme.js";
 import OutfitImage from "../components/OutfitImage.jsx";
-import SectionTitle from "../components/SectionTitle.jsx";
 import LegChip from "../components/LegChip.jsx";
+import RouteLine from "../components/ui/RouteLine.jsx";
 import DayStrip from "../components/DayStrip.jsx";
 import PersonBadge from "../components/PersonBadge.jsx";
 import DayWeather from "../components/DayWeather.jsx";
@@ -21,7 +21,6 @@ export default function ItineraryTab({ overrides, setOverrides, notesAll, setNot
   const [selected, setSelected] = useState(() => defaultDay(config));
   const [view, setView] = useState("list"); // list | map
   const day = findDay(config, selected);
-  const L = config.legs[day.leg] || {};
   const dk = day.date;
 
   const ov = overrides[dk] || {};
@@ -72,38 +71,44 @@ export default function ItineraryTab({ overrides, setOverrides, notesAll, setNot
     .filter((x) => hasPhoto(x.outfit) && (x.member.user_id === myId || visibleToOthers(x.outfit)));
 
   const myColor = membersById[myId]?.color;
+  const routeStops = config.legOrder.map((k) => ({ name: config.legs[k]?.name || k, color: config.legs[k]?.color }));
+  const activeLeg = Math.max(0, config.legOrder.indexOf(day.leg));
+  const isToday = dk === todayISO();
 
   return (
     <div>
-      <div className={s.head}>
-        <SectionTitle sub={`${dateRangeLabel(config)} · tap a day`}>Itinerary</SectionTitle>
+      <DayStrip selected={dk} onSelect={selectDay} />
+
+      {/* the route spine, coupled to the strip: solid behind, dashed ahead.
+          Labels only when they fit — long trips get the bare dotted spine. */}
+      <div className={s.routeWrap}>
+        <RouteLine stops={routeStops} active={activeLeg} labels={routeStops.length <= 4} />
+      </div>
+
+      <div className={s.viewRow}>
         <Segmented
           value={view}
           onChange={setView}
-          options={[{ id: "list", label: "List", icon: "grip" }, { id: "map", label: "Map", icon: "pin" }]}
+          options={[{ id: "list", label: "List" }, { id: "map", label: "Map" }]}
         />
       </div>
-      <DayStrip selected={dk} onSelect={selectDay} />
 
       {view === "map" && <TripMap selected={dk} onSelectDay={selectDay} />}
 
       {view !== "map" && (
+        <>
         <div className={s.dayCard}>
-          <div className={s.dayHead}>
-            <div className={s.dayHeadMain}>
-              <h3 className={s.dayTitle}>{day.title}</h3>
-              <div className={s.dayMeta}>{weekday(dk)} · {dateLabel(dk)}</div>
-            </div>
-            <div className={s.dayHeadRight}>
-              <LegChip leg={day.leg} />
-              {saveConfig && !dayEditing && (
-                <button onClick={startDayEdit} title="Edit this day" aria-label="Edit this day" className={s.editBtn}>
-                  <Icon name="pencil" size={15} />
-                </button>
-              )}
-            </div>
+          {saveConfig && !dayEditing && (
+            <button onClick={startDayEdit} title="Edit this day" aria-label="Edit this day" className={s.editBtn}>
+              <Icon name="pencil" size={15} />
+            </button>
+          )}
+          <div className={s.dayContext}>
+            <LegChip leg={day.leg} />
+            <span className={s.dayMeta}>{weekday(dk)} {dateLabel(dk)}{isToday ? " · today" : ""}</span>
           </div>
-          <div className={s.dayBody}>
+          <h3 className={s.dayTitle}>{day.title}</h3>
+          <div>
             {dayEditing ? (
               <div className={s.editor}>
                 <FormStack>
@@ -139,26 +144,47 @@ export default function ItineraryTab({ overrides, setOverrides, notesAll, setNot
               </p>
             )}
 
-            <DayWeather day={day} weather={weather} legColor={L.color} packingItems={packingItems} />
+            <DayWeather day={day} weather={weather} packingItems={packingItems} />
+          </div>
+        </div>
 
-            {outfitPeople.length > 0 && (
-              <div className={s.outfitRow}>
-                {outfitPeople.map(({ member, outfit }) => (
-                  <button key={member.user_id} onClick={() => goToOutfit(dk)} className={s.outfitBtn}>
-                    <OutfitImage item={outfit} alt="Outfit" className={s.outfitThumb} />
-                    <PersonBadge member={member} size="xs" />
-                  </button>
-                ))}
-              </div>
-            )}
+        {/* Outfits for the day — page-level, outside the card */}
+        <div className={s.sectionLabel}>Outfits for the day</div>
+        {outfitPeople.length > 0 ? (
+          <div className={s.outfitRow}>
+            {outfitPeople.map(({ member, outfit }) => (
+              <button key={member.user_id} onClick={() => goToOutfit(dk)} className={s.outfitTile}>
+                <div className={s.outfitPhoto}>
+                  <OutfitImage item={outfit} alt="" className={s.outfitImg} />
+                </div>
+                <div className={s.outfitBody}>
+                  <span className={s.outfitWho} style={{ "--c": member.color }}>
+                    <span className={s.outfitDot} />{member.user_id === myId ? "You" : member.name}
+                  </span>
+                  {outfit.desc && <span className={s.outfitDesc}>{outfit.desc}</span>}
+                </div>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <button onClick={() => goToOutfit(dk)} className={s.outfitEmpty}>
+            No outfits planned for this day yet — plan one <Icon name="arrow" size={11} strokeWidth={2} />
+          </button>
+        )}
 
-            <div className={s.notes}>
-              <SectionTitle>Notes</SectionTitle>
+        <div className={s.notes}>
+          <div className={s.notesHead}>
+            <span className={s.sectionLabelInline}>Notes</span>
+            <span className={s.notesSpacer} />
+            <button onClick={ov.notes ? startMine : startShared} className={s.notesAdd}>
+              <Icon name="plus" size={11} strokeWidth={2} /> Add
+            </button>
+          </div>
 
               {/* Shared note — everyone */}
               <div className={s.noteCard}>
                 <div className={s.noteHead}>
-                  <span className={s.kicker}>Shared · everyone</span>
+                  <span className={s.kicker}>Shared · anyone can edit</span>
                   {!editing && (
                     <button onClick={startShared} className={s.noteAction}>{ov.notes ? "Edit" : "Add"}</button>
                   )}
@@ -206,9 +232,8 @@ export default function ItineraryTab({ overrides, setOverrides, notesAll, setNot
                   <p className={s.noteText}>{notes}</p>
                 </div>
               ))}
-            </div>
-          </div>
         </div>
+        </>
       )}
     </div>
   );

@@ -1,17 +1,16 @@
 import { useState, useEffect, useMemo } from "react";
-import { TripConfigContext, CONFIG_KEY, dateRangeLabel, isDuringTrip, tripDayNumber, daysToGo, defaultDay } from "./lib/tripConfig.js";
+import { TripConfigContext, CONFIG_KEY, isDuringTrip, tripDayNumber, daysToGo, defaultDay } from "./lib/tripConfig.js";
 import { loadKey, saveKey, loadPersonalAll, loadClosetsAll, subscribe, subscribeMembers, flushOutbox } from "./lib/storage.js";
 import { refreshWeather } from "./lib/weather.js";
 import { loadSession, getSession, ensureAuth, loadMembers, setProfile, leaveToHome, deleteTrip, leaveTrip, COLORS } from "./lib/session.js";
 import { currentUser } from "./lib/auth.js";
-import BackupControls from "./components/BackupControls.jsx";
+import Avatar from "./components/Avatar.jsx";
 import TripGate from "./components/TripGate.jsx";
 import Onboarding, { hasOnboarded } from "./components/Onboarding.jsx";
 import TripsHome from "./components/TripsHome.jsx";
 import TripWizard from "./components/TripWizard.jsx";
 import TripSettings from "./components/TripSettings.jsx";
 import LegacyUpgrade from "./components/LegacyUpgrade.jsx";
-import PersonBadge from "./components/PersonBadge.jsx";
 import SyncChip from "./components/SyncChip.jsx";
 import Spinner from "./components/Spinner.jsx";
 import { toast } from "./components/dialogs.jsx";
@@ -26,7 +25,6 @@ import Sheet from "./components/ui/Sheet.jsx";
 import Button from "./components/ui/Button.jsx";
 import Field, { Input, FormStack } from "./components/ui/Field.jsx";
 import SwatchPicker from "./components/ui/SwatchPicker.jsx";
-import RouteLine from "./components/ui/RouteLine.jsx";
 import s from "./App.module.css";
 
 const SHARED = "__shared__";
@@ -221,11 +219,11 @@ export default function App() {
   if (!loaded) return <Splash text="Syncing your trip…" />;
   if (!config) return <TripSetupPending onDone={() => window.location.reload()} />;
 
-  const me = membersById[myId] || { name: session.name, color: session.color };
   const dtg = daysToGo(config);
-  const countdownText =
-    dtg > 0 ? `${dtg} days to go` :
-    isDuringTrip(config) ? `Day ${tripDayNumber(config)} of the trip` : "Trip complete";
+  const cd =
+    dtg > 0 ? { n: String(dtg), label: dtg === 1 ? "day to go" : "days to go" } :
+    isDuringTrip(config) ? { n: `Day ${tripDayNumber(config)}`, label: "of the trip" } :
+    { n: null, label: "Trip complete" };
 
   const TABS = [
     { id: "itinerary", label: "Trip", icon: "route" },
@@ -234,46 +232,37 @@ export default function App() {
     { id: "budget", label: "Budget", icon: "wallet" },
     { id: "bookings", label: "Book", icon: "ticket" },
   ];
-  const routeStops = config.legOrder.map((leg) => ({ name: config.legs[leg]?.name || leg, color: config.legs[leg]?.color }));
-
   return (
     <TripConfigContext.Provider value={config}>
     <div className={s.app}>
       {/* Header */}
       <div className={s.header}>
-        <div className={s.headTop}>
-          <div className={s.headMain}>
-            <button onClick={goHome} className={s.backLink}>
-              <Icon name="back" size={12} strokeWidth={1.8} /> Trips <span className={s.backDate}>· {dateRangeLabel(config)}</span>
-            </button>
-            <div className={s.titleRow}>
-              <h1 className={s.title}>{config.title}</h1>
-              <button onClick={() => setEditingTrip(true)} title="Trip settings" aria-label="Trip settings" className={s.iconBtn}>
-                <Icon name="gear" size={18} />
-              </button>
-            </div>
-          </div>
-          <div className={s.headRight}>
-            <div className={s.countdown}>{countdownText}</div>
-            <button onClick={() => setEditingProfile(true)} aria-label="Edit profile" className={s.profileBtn}>
-              <PersonBadge member={me} />
-              <span className={s.code}>· {session.code} <Icon name="pencil" size={11} /></span>
-            </button>
-          </div>
+        <div className={s.headRow}>
+          <button onClick={goHome} aria-label="Back to your trips" className={s.backBtn}>
+            <Icon name="back" size={18} strokeWidth={1.8} />
+          </button>
+          <h1 className={s.title}>{config.title}</h1>
+          <SyncChip />
+          <button onClick={() => setEditingTrip(true)} title="Trip settings" aria-label="Trip settings" className={s.iconBtn}>
+            <Icon name="gear" size={18} strokeWidth={1.6} />
+          </button>
         </div>
-        <SyncChip />
-        {/* Who's on this trip */}
-        {members.length > 1 && (
-          <div className={s.members}>
-            <span className={s.membersLabel}>On this trip</span>
-            {members.map((m) => <PersonBadge key={m.user_id} member={m} size="xs" />)}
-          </div>
-        )}
-        {/* Route line — the motif */}
-        <div className={s.routeWrap}>
-          <RouteLine stops={routeStops} />
+        <div className={s.headMeta}>
+          <span className={s.countdown}>
+            {cd.n && <span className={s.countdownNum}>{cd.n}</span>}
+            <span className={s.countdownLabel}>{cd.label}</span>
+          </span>
+          <span className={s.headRight}>
+            <button onClick={() => setEditingProfile(true)} aria-label="Edit profile" className={s.avStack}>
+              {members.map((m) => (
+                <span key={m.user_id} className={s.avWrap}>
+                  <Avatar name={m.name} color={m.color} size="xs" />
+                </span>
+              ))}
+            </button>
+            <span className={s.codeChip}>{session.code}</span>
+          </span>
         </div>
-        <BackupControls />
       </div>
 
       {editingProfile && (

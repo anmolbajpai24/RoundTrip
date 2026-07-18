@@ -2,12 +2,13 @@
   display: flex;
   align-items: center;
   min-width: 0;
+  height: 14px;
 }
 
 .stop {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   min-width: 0;
 }
 
@@ -15,16 +16,26 @@
   flex: 1;
 }
 
-.rule {
+.rule,
+.ruleAhead {
   flex: 1;
   min-width: 14px;
   height: 1px;
-  background-color: var(--border);
+  margin: 0 2px;
+}
+
+/* travelled = solid, slightly darker than a plain hairline */
+.rule {
+  background-color: color-mix(in srgb, var(--border) 60%, var(--ink-faint));
+}
+
+.ruleAhead {
+  background: repeating-linear-gradient(90deg, var(--border) 0 4px, transparent 4px 9px);
 }
 
 .dot {
-  width: 7px;
-  height: 7px;
+  width: 6px;
+  height: 6px;
   flex: none;
   border-radius: var(--r-pill);
   background-color: var(--c);
@@ -32,8 +43,8 @@
 
 /* tracked caps in a darker tint of the stop colour so it holds AA on paper */
 .label {
-  font: 600 9px/1 var(--font-text);
-  letter-spacing: 0.1em;
+  font: 600 7.5px/1 var(--font-text);
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   color: color-mix(in srgb, var(--c) 72%, var(--ink));
   overflow: hidden;
@@ -41,9 +52,18 @@
   white-space: nowrap;
 }
 
-.tail {
+.tail,
+.tailAhead {
   flex: 1;
   min-width: 10px;
   height: 1px;
-  background-color: var(--border);
+  margin-left: 2px;
+}
+
+.tail {
+  background-color: color-mix(in srgb, var(--border) 60%, var(--ink-faint));
+}
+
+.tailAhead {
+  background: repeating-linear-gradient(90deg, var(--border) 0 4px, transparent 4px 9px);
 }

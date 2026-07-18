@@ -1,24 +1,27 @@
-import { useTripConfig, softBg } from "../lib/tripConfig.js";
+import { useTripConfig } from "../lib/tripConfig.js";
 import { getDayWeather, WMO } from "../lib/weather.js";
 import { suggestOutfit } from "../lib/outfitAdvisor.js";
 import WeatherIcon from "./WeatherIcon.jsx";
 import Icon from "./ui/icons.jsx";
 import s from "./DayWeather.module.css";
 
-// Inline per-day weather + outfit widget for the Itinerary day card.
-// `packingItems` (optional) = the viewer's own packing-list texts, used to tick
-// suggested items they've already packed.
-export default function DayWeather({ day, weather, legColor = "var(--ink-faint)", packingItems }) {
+// Compact per-day forecast line inside the itinerary day card: a hairline,
+// one line of weather, and (when the advisor has something worth saying) a
+// packing nudge. `packingItems` = the viewer's own packing-list texts.
+export default function DayWeather({ day, weather, packingItems }) {
   const config = useTripConfig();
   const w = getDayWeather(weather, day, config);
 
   // No live forecast yet and no climate normals for this place → quiet placeholder.
   if (!w) {
     return (
-      <div className={s.placeholder}>
-        <Icon name="cloudrain" size={14} />
-        Forecast opens ~16 days before this date.
-      </div>
+      <>
+        <div className={s.rule} />
+        <div className={s.placeholder}>
+          <Icon name="cloudrain" size={14} />
+          Forecast opens ~16 days before this date.
+        </div>
+      </>
     );
   }
 
@@ -26,58 +29,27 @@ export default function DayWeather({ day, weather, legColor = "var(--ink-faint)"
   const outfit = suggestOutfit(w, packingItems);
   const typical = w.source === "typical";
 
-  const chip = (item, i) => (
-    <span key={i} className={s.chip}>
-      {item.text}
-      {item.packed && <Icon name="check" size={11} strokeWidth={2} title="On your packing list" className={s.packed} />}
-    </span>
-  );
+  // The nudge: an already-packed advisor item ("it's on your list — pack it")
+  // beats the generic headline.
+  const packed = [...(outfit.layers || []), ...(outfit.accessories || [])].find((i) => i.packed);
+  const nudge = packed ? `${packed.text} is on your packing list — pack it` : outfit.headline;
 
   return (
-    <div className={s.card}>
-      {/* Forecast row */}
-      <div className={s.forecast}>
-        <div className={s.glyph}>
-          <WeatherIcon code={w.code} size={40} />
-        </div>
-        <div className={s.place}>
-          <div className={s.placeRow}>
-            <span className={s.placeName}>{w.place}</span>
-            {typical && <span className={s.seasonal}>Seasonal average</span>}
-          </div>
-          <div className={s.meta}>
-            {label}
-            <span className={s.sep}>·</span>
-            <Icon name="cloudrain" size={12} /> {w.precipProb ?? "–"}%
-            {w.windMax != null && (
-              <>
-                <span className={s.sep}>·</span>
-                {w.windMax} km/h wind
-              </>
-            )}
-          </div>
-        </div>
-        <div className={s.temp} style={{ "--c": legColor }}>
-          <div className={s.tempMax}>{w.tempMax}°</div>
-          <div className={s.tempMin}>{w.tempMin}°</div>
-        </div>
+    <>
+      <div className={s.rule} />
+      <div className={s.line}>
+        <WeatherIcon code={w.code} size={17} />
+        <span className={s.lineText}>
+          {w.tempMax}° {label.toLowerCase()} · {w.precipProb ?? "–"}% rain
+        </span>
+        {typical && <span className={s.seasonal}>Seasonal average</span>}
       </div>
-
-      {/* Outfit suggestion */}
-      <div className={s.outfit} style={{ "--c": legColor, backgroundColor: softBg(legColor) }}>
-        <div className={s.outfitHead}>
-          <Icon name="hanger" size={14} />
-          <span>{outfit.headline}</span>
+      {nudge && (
+        <div className={s.nudge}>
+          <Icon name="case" size={14} />
+          <span className={s.nudgeText}>{nudge}</span>
         </div>
-        <div className={s.chips}>
-          {outfit.layers.map(chip)}
-          {outfit.accessories.map((a, i) => chip(a, `a${i}`))}
-        </div>
-        <div className={s.feet}>
-          <span className={s.feetLabel}>Feet:</span> {outfit.footwear}
-        </div>
-        {outfit.note && <div className={s.note}>{outfit.note}</div>}
-      </div>
-    </div>
+      )}
+    </>
   );
 }

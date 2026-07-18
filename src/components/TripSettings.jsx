@@ -12,6 +12,7 @@ import Field, { Input, Select, FormStack, FieldRow } from "./ui/Field.jsx";
 import Toggle from "./ui/Toggle.jsx";
 import SwatchPicker from "./ui/SwatchPicker.jsx";
 import Icon from "./ui/icons.jsx";
+import BackupControls from "./BackupControls.jsx";
 import s from "./TripSettings.module.css";
 
 const MAX_TRIP_DAYS = 60;
@@ -222,6 +223,9 @@ export default function TripSettings({ config, onSave, onClose, memberCount = 1,
             <Button full onClick={() => save(requestClose)}>Save</Button>
             <Button variant="ghost" onClick={requestClose}>Cancel</Button>
           </div>
+
+          <div className={s.sectionLabel}>Backup</div>
+          <BackupControls />
 
           <div className={s.dangerLabel}>Danger</div>
           {memberCount > 1 ? (
