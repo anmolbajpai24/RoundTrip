@@ -1,151 +1,208 @@
 .page {
   min-height: 100dvh;
   background-color: var(--bg);
-  padding: 24px 16px;
+  display: flex;
+  justify-content: center;
 }
 
 .wrap {
-  max-width: 32rem;
-  margin: 0 auto;
+  width: 100%;
+  max-width: 28rem;
+  padding: 24px 16px 30px;
+  display: flex;
+  flex-direction: column;
 }
 
+/* ---------- greeting ---------- */
 .greeting {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 20px;
 }
 
 .greetingMain {
   min-width: 0;
 }
 
-.kicker {
-  composes: label from "../styles/type.module.css";
-  color: var(--accent);
-  letter-spacing: 0.2em;
-}
-
 .hello {
-  composes: display from "../styles/type.module.css";
+  font: 400 30px/1 var(--font-display);
+  color: var(--ink);
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
-  margin-top: 2px;
 }
 
+/* ---------- guest banner ---------- */
 .guestWarn {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 10px;
   width: 100%;
   text-align: left;
-  padding: 12px;
-  margin-bottom: 16px;
+  margin-top: 12px;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
   border-radius: var(--r-card);
-  border: 1px solid color-mix(in srgb, var(--warning) 34%, var(--surface));
-  background-color: color-mix(in srgb, var(--warning) 12%, var(--surface));
-  font: 500 12px/1.4 var(--font-text);
+  padding: 10px 13px;
+}
+
+.guestIcon {
+  flex: none;
   color: var(--warning);
 }
 
-.guestWarnStrong {
-  font-weight: 700;
+.guestBody {
+  flex: 1;
+  min-width: 0;
 }
 
-.skeletons {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+.guestTitle {
+  display: block;
+  font: 600 12px/1.3 var(--font-text);
+  color: var(--ink);
 }
 
-/* ---------- hero ---------- */
+.guestSub {
+  display: block;
+  font: 400 11px/1.4 var(--font-text);
+  color: var(--ink-muted);
+  margin-top: 1px;
+}
+
+.guestArrow {
+  flex: none;
+  color: var(--accent);
+}
+
+/* ---------- hero card ---------- */
 .hero {
-  position: relative;
-  width: 100%;
-  min-height: 176px;
+  margin-top: 12px;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
   border-radius: var(--r-card);
   overflow: hidden;
   cursor: pointer;
 }
 
-.heroArt {
-  position: absolute;
-  inset: 0;
-}
-
-.heroBody {
+.heroCover {
   position: relative;
-  min-height: 176px;
-  padding: 14px 16px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
+  height: 146px;
+  background-size: cover;
+  background-position: center;
 }
 
-.heroTop {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-}
-
-.heroCountdown {
-  font: 600 11px/1 var(--font-text);
-  padding: 6px 10px;
-  border-radius: var(--r-pill);
-  background-color: var(--surface);
-  color: var(--ink);
-}
-
-.heroTitle {
-  font: 400 26px/1.1 var(--font-display);
-  color: #FBF6EC;
-}
-
-.heroMeta {
-  font: 500 12px/1 var(--font-text);
-  color: rgb(251 246 236 / 0.85);
-  margin-top: 3px;
-  font-variant-numeric: tabular-nums;
-}
-
-.heroMembers {
-  display: flex;
-  align-items: center;
-  margin-top: 10px;
-}
-
-.stackAv + .stackAv {
-  margin-left: -6px;
-}
-
-.heroNames {
-  font: 600 11px/1 var(--font-text);
-  color: rgb(251 246 236 / 0.85);
-  margin-left: 8px;
+.heroCover::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 56px;
+  background: linear-gradient(180deg, rgb(30 18 10 / 0), rgb(30 18 10 / 0.35));
 }
 
 .heroCredit {
   position: absolute;
-  bottom: 6px;
-  right: 12px;
-  font: 400 9px/1 var(--font-text);
-  color: rgb(251 246 236 / 0.65);
+  left: 10px;
+  bottom: 8px;
+  z-index: 1;
+  font: 400 8px/1 var(--font-text);
+  color: #F5EDE0;
+  background-color: rgb(24 15 9 / 0.55);
+  padding: 3px 6px;
+  border-radius: 4px;
 }
 
-/* ---------- stats ---------- */
-.stats {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
+.heroMenu {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 1;
+  width: 28px;
+  height: 22px;
+  border-radius: var(--r-control);
+  background-color: rgb(24 15 9 / 0.45);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #F5EDE0;
+}
+
+.heroPanel {
+  padding: 12px 16px 14px;
+}
+
+.heroTitle {
+  font: 400 30px/1.05 var(--font-display);
+  color: var(--ink);
+  margin-top: 8px;
+}
+
+.heroMeta {
+  font: 500 12px/1 var(--font-text);
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+  margin-top: 6px;
+}
+
+.heroRule {
+  height: 1px;
+  background-color: var(--divider);
+  margin: 12px 0 10px;
+}
+
+.heroFoot {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.heroCount {
+  display: flex;
+  align-items: baseline;
   gap: 8px;
+  min-width: 0;
+}
+
+.heroNum {
+  font: 400 62px/0.85 var(--font-display);
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.heroCountLabel {
+  font: italic 400 16px/1 var(--font-display);
+  color: var(--accent);
+}
+
+.heroAvatars {
+  display: flex;
+  padding-bottom: 2px;
+}
+
+.stackAv + .stackAv {
+  margin-left: -7px;
+}
+
+.stackAv > * {
+  border: 1.5px solid var(--surface);
+}
+
+/* ---------- inline travel stats ---------- */
+.stats {
+  display: flex;
+  align-items: center;
+  gap: 14px;
   margin-top: 12px;
+  padding: 0 2px;
 }
 
 .stat {
-  border: 1px solid var(--border);
-  border-radius: var(--r-card);
-  background-color: var(--surface);
-  padding: 12px 0 10px;
-  text-align: center;
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
 }
 
 .statNum {
@@ -155,160 +212,230 @@
 }
 
 .statLabel {
-  composes: label from "../styles/type.module.css";
-  font-size: 9px;
-  letter-spacing: 0.1em;
-  margin-top: 3px;
+  font: 600 9px/1 var(--font-text);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.statRule {
+  width: 1px;
+  height: 16px;
+  background-color: var(--border);
 }
 
 /* ---------- sections ---------- */
 .section {
   composes: label from "../styles/type.module.css";
-  letter-spacing: 0.2em;
-  margin: 20px 0 10px;
+  letter-spacing: 0.16em;
+  margin: 14px 0 7px;
 }
 
 /* ---------- upcoming card ---------- */
 .card {
-  width: 100%;
-  text-align: left;
-  margin-bottom: 12px;
+  background-color: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r-card);
-  background-color: var(--surface);
-  overflow: hidden;
-  cursor: pointer;
-}
-
-.cardBody {
-  padding: 14px 16px;
-}
-
-.cardRoute {
-  margin-bottom: 10px;
-}
-
-.cardHead {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.cardTitle {
-  composes: titleSm from "../styles/type.module.css";
-}
-
-.cardHeadRight {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex: none;
-}
-
-.chip {
-  font: 600 10px/1 var(--font-text);
-  letter-spacing: 0.02em;
-  padding: 4px 8px;
-  border-radius: var(--r-pill);
-  background-color: var(--chip);
-  color: var(--chip-ink);
-  white-space: nowrap;
-}
-
-.cardMeta {
-  font: 500 12px/1 var(--font-text);
-  color: var(--ink-muted);
-  margin-top: 4px;
-  font-variant-numeric: tabular-nums;
-}
-
-.cardMembers {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-  margin-top: 10px;
-}
-
-.withLabel {
-  composes: label from "../styles/type.module.css";
-  font-size: 9px;
-}
-
-/* ---------- past row ---------- */
-.pastRow {
-  width: 100%;
+  padding: 10px;
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 8px;
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-radius: var(--r-card);
-  background-color: var(--surface);
-  opacity: 0.72;
   cursor: pointer;
 }
 
-.pastDot {
-  width: 10px;
-  height: 10px;
-  border-radius: var(--r-pill);
+.card + .card {
+  margin-top: 6px;
+}
+
+.cardThumb {
+  width: 56px;
+  height: 56px;
   flex: none;
+  border-radius: var(--r-thumb);
+  background-size: cover;
+  background-position: center;
+}
+
+.cardMain {
+  flex: 1;
+  min-width: 0;
+}
+
+.cardTitle {
+  display: block;
+  font: 400 18px/1.15 var(--font-display);
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cardMeta {
+  display: block;
+  font: 500 11.5px/1 var(--font-text);
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+  margin-top: 4px;
+}
+
+.cardMenu {
+  flex: none;
+  color: var(--ink-faint);
+  padding: 4px;
+}
+
+/* ---------- past rows ---------- */
+.pastRow {
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.pastRow + .pastRow {
+  margin-top: 6px;
 }
 
 .pastTitle {
-  flex: 1;
-  font: 600 13.5px/1.1 var(--font-text);
-  color: var(--ink-muted);
+  font: 500 13px/1 var(--font-text);
+  color: var(--ink);
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+}
+
+.pastSpacer {
+  flex: 1;
 }
 
 .pastMeta {
   flex: none;
-  font: 500 11px/1 var(--font-text);
+  font: 500 11.5px/1 var(--font-text);
   color: var(--ink-faint);
   font-variant-numeric: tabular-nums;
 }
 
-/* ---------- remove button ---------- */
-.removeBtn {
+.pastArrow {
   flex: none;
-  width: 28px;
-  height: 28px;
-  border-radius: var(--r-pill);
-  display: inline-flex;
+  color: var(--ink-faint);
+}
+
+/* ---------- zero-trips welcome ---------- */
+.welcome {
+  margin-top: 40px;
+}
+
+.welcomeRoute {
+  display: flex;
   align-items: center;
-  justify-content: center;
-  background-color: var(--chip);
-  color: var(--danger);
+  width: 130px;
 }
 
-.removeBtnDark {
-  background-color: rgb(20 12 7 / 0.4);
-  color: #FBF6EC;
+.welcomeDot {
+  width: 7px;
+  height: 7px;
+  flex: none;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--ink-faint);
 }
 
-/* ---------- actions / join ---------- */
+.welcomeSeg {
+  flex: 1;
+  height: 1px;
+  margin: 0 5px;
+  background: repeating-linear-gradient(90deg, var(--border) 0 4px, transparent 4px 9px);
+}
+
+.welcomeTitle {
+  font: italic 400 34px/1.1 var(--font-display);
+  color: var(--accent);
+  margin-top: 14px;
+}
+
+.welcomeBody {
+  font: 400 13px/1.55 var(--font-text);
+  color: var(--ink-muted);
+  margin-top: 8px;
+  max-width: 300px;
+}
+
+.welcomeNew {
+  margin-top: 18px;
+}
+
+.welcomeRule {
+  height: 1px;
+  background-color: var(--divider);
+  margin: 22px 0 16px;
+}
+
+.welcomeHint {
+  font: 400 11px/1.5 var(--font-text);
+  color: var(--ink-faint);
+  margin-top: 9px;
+}
+
+/* ---------- skeleton (mirrors the loaded layout) ---------- */
+.skeletons {
+  margin-top: 12px;
+}
+
+.skelPanel {
+  margin-top: 0;
+}
+
+.skelRow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 12px;
+}
+
+.skelActions {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.skelActions > * {
+  flex: 1;
+}
+
+/* ---------- actions ---------- */
 .actions {
   display: flex;
-  flex-direction: column;
   gap: 10px;
-  margin-top: 20px;
+  margin-top: 16px;
 }
 
-.joinForm {
-  border: 1px solid var(--border);
-  border-radius: var(--r-card);
-  background-color: var(--surface);
-  padding: 16px;
+.actions > * {
+  flex: 1;
+}
+
+/* ---------- join sheet ---------- */
+.joinTitle {
+  font: 400 21px/1.1 var(--font-display);
+  color: var(--ink);
+  margin-bottom: 14px;
+}
+
+.joinHint {
+  font: 400 11px/1.5 var(--font-text);
+  color: var(--ink-faint);
+  margin-top: 9px;
+}
+
+.joinIdentity {
+  margin-top: 14px;
 }
 
 .joinActions {
   display: flex;
+  flex-direction: column;
   gap: 8px;
   margin-top: 16px;
 }
@@ -316,6 +443,5 @@
 .error {
   font: 500 12px/1.4 var(--font-text);
   color: var(--danger);
-  text-align: center;
-  margin: 8px 0;
+  margin-top: 10px;
 }

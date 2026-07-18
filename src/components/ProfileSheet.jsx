@@ -19,29 +19,27 @@ const THEMES = [
   { id: "dark", label: "Dark" },
 ];
 
-// Full profile bottom-sheet: identity, account, travel stats, appearance.
-// `stats` = { trips, days, places } derived by the caller from listMyTrips().
+// Full profile bottom-sheet: identity (saves as you go), account, travel
+// stats, appearance. `stats` = { trips, days, places } from listMyTrips().
 export default function ProfileSheet({ user, stats, onClose, onChanged }) {
   const profile = getProfile(user) || {};
   const guest = isGuest(user);
   const [name, setName] = useState(profile.name || "");
   const [color, setColor] = useState(profile.color || COLORS[0]);
-  const [editing, setEditing] = useState(!profile.name);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [account, setAccount] = useState(false);
   const [theme, setTheme] = useState(getThemePref());
 
-  const saveName = async () => {
-    if (!name.trim()) { setError("Enter a name."); return; }
+  // Identity saves as you go: name on blur, colour on pick.
+  const persist = async (nextName, nextColor) => {
+    if (!nextName.trim()) return;
     setBusy(true); setError("");
-    try {
-      await saveProfile({ name: name.trim(), color });
-      setEditing(false);
-      onChanged?.();
-    } catch (e) { setError(e.message || "Couldn't save."); }
+    try { await saveProfile({ name: nextName.trim(), color: nextColor }); onChanged?.(); }
+    catch (e) { setError(e.message || "Couldn't save."); }
     setBusy(false);
   };
+  const pickColor = (c) => { setColor(c); persist(name, c); };
 
   const doSignOut = async (requestClose) => {
     setBusy(true); setError("");
@@ -56,75 +54,64 @@ export default function ProfileSheet({ user, stats, onClose, onChanged }) {
     <Sheet onClose={onClose} label="Your profile">
       {(requestClose) => (
         <>
-          {/* Identity */}
+          <div className={s.head}>
+            <h2 className={s.headTitle}>Your profile</h2>
+            <span className={s.headCaption}>Trip-mates see this</span>
+          </div>
+
+          {/* Identity — always editable, saves as you go */}
           <div className={s.identity}>
             <Avatar name={name || profile.name} color={color} size="lg" />
             <div className={s.identityMain}>
-              {!editing ? (
-                <>
-                  <div className={s.name}>{profile.name || "Traveller"}</div>
-                  <div className={s.sub}>{guest ? "Guest — account not saved yet" : user?.email || "Signed in"}</div>
-                </>
-              ) : (
-                <Input value={name} onChange={(e) => setName(e.target.value)} maxLength={24} placeholder="Your name" autoFocus
-                  onKeyDown={(e) => e.key === "Enter" && saveName()} />
-              )}
+              <Input value={name} onChange={(e) => setName(e.target.value)} onBlur={() => persist(name, color)}
+                maxLength={24} placeholder="Your name" aria-label="Your name" />
             </div>
-            {!editing && <Button size="sm" variant="tonal" onClick={() => setEditing(true)}>Edit</Button>}
           </div>
-          {editing && (
-            <div className={s.editBlock}>
-              <SwatchPicker colors={COLORS} value={color} onChange={setColor} />
-              <div className={s.editActions}>
-                <Button full onClick={saveName} disabled={busy}>{busy ? "Saving…" : "Save"}</Button>
-                {profile.name && (
-                  <Button variant="ghost" onClick={() => { setEditing(false); setName(profile.name); setColor(profile.color || COLORS[0]); }}>Cancel</Button>
-                )}
-              </div>
-            </div>
-          )}
+          <div className={s.swatches}>
+            <SwatchPicker colors={COLORS} value={color} onChange={pickColor} disabled={busy} />
+          </div>
 
           {/* Travel stats */}
           {stats && (
-            <>
-              <div className={s.section}>Your travels</div>
-              <div className={s.stats}>
-                {[[stats.trips, stats.trips === 1 ? "trip" : "trips"], [stats.days, "days"], [stats.places, stats.places === 1 ? "place" : "places"]].map(([n, l]) => (
-                  <div key={l} className={s.stat}>
-                    <div className={s.statNum}>{n}</div>
-                    <div className={s.statLabel}>{l}</div>
-                  </div>
-                ))}
-              </div>
-            </>
+            <div className={s.stats}>
+              {[[stats.trips, stats.trips === 1 ? "trip" : "trips"], [stats.days, "days"], [stats.places, stats.places === 1 ? "place" : "places"]].map(([n, l], i) => (
+                <span key={l} className={s.stat}>
+                  {i > 0 && <span className={s.statRule} />}
+                  <span className={s.statNum}>{n}</span>
+                  <span className={s.statLabel}>{l}</span>
+                </span>
+              ))}
+            </div>
           )}
 
           {/* Account */}
           <div className={s.section}>Account</div>
           {guest ? (
-            <button onClick={() => setAccount(true)} className={s.guestCard}>
-              <div className={s.guestTitle}>Save your account</div>
-              <div className={s.guestBody}>Your trips live only in this browser. Link an email or Google to open them on any device.</div>
-            </button>
+            <>
+              <p className={s.guestBody}>You're a guest. Your trips live only in this browser.</p>
+              <Button full onClick={() => setAccount(true)} className={s.guestCta}>Save your account</Button>
+              <p className={s.subCopy}>Free — keeps your trips if you lose this phone.</p>
+            </>
           ) : (
-            <div className={s.accountCard}>
-              <div className={s.accountLine}>Signed in as <span className={s.accountEmail}>{user?.email}</span></div>
-              <button onClick={() => doSignOut(requestClose)} disabled={busy} className={s.signOut}>Sign out</button>
-            </div>
+            <>
+              <div className={s.accountRow}>
+                <span className={s.accountEmail}>{user?.email}</span>
+                <button onClick={() => doSignOut(requestClose)} disabled={busy} className={s.signOut}>Sign out</button>
+              </div>
+              <p className={s.subCopy}>Synced — your trips are safe on any phone.</p>
+            </>
           )}
 
           {/* Appearance */}
           <div className={s.section}>Appearance</div>
           <Segmented value={theme} onChange={pickTheme} options={THEMES} className={s.themePicker} />
 
-          <p className={s.hint}>Backups live inside each trip — open a trip and use “Backup data” in its header.</p>
-
           {error && <p className={s.error}>{error}</p>}
 
-          <Button full variant="ghost" onClick={requestClose} className={s.close}>Close</Button>
-          <p className={s.version}>
-            {APP_NAME} v{pkg.version} · <a href="/privacy.html" target="_blank" rel="noreferrer" className={s.link}>Privacy</a>
-          </p>
+          <div className={s.footer}>
+            <span className={s.version}>{APP_NAME} v{pkg.version}</span>
+            <a href="/privacy.html" target="_blank" rel="noreferrer" className={s.link}>Privacy policy</a>
+          </div>
 
           {account && (
             <AccountSheet user={user} onClose={() => setAccount(false)} onChanged={() => { setAccount(false); onChanged?.(); }} />

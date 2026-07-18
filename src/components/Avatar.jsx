@@ -2,7 +2,7 @@ import { onColor } from "../theme.js";
 import s from "./Avatar.module.css";
 
 // Initials-in-a-circle avatar, same colour language as PersonBadge.
-const SIZES = { xs: 24, sm: 30, md: 38, lg: 64 };
+const SIZES = { xs: 26, sm: 34, md: 38, lg: 46 };
 
 export default function Avatar({ name, color, size = "md", onClick, title }) {
   const px = SIZES[size] || SIZES.md;
