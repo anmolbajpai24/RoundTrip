@@ -1,3 +1,23 @@
+/* serif hero count: "14 of 22 packed" */
+.hero {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  margin-bottom: 10px;
+}
+
+.heroNum {
+  font: 400 26px/1 var(--font-display);
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.heroText {
+  font: 400 13px/1 var(--font-text);
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+}
+
 .progress {
   margin-bottom: 14px;
 }
@@ -23,9 +43,6 @@
 
 .empty {
   margin-bottom: 16px;
-  border: 1px dashed var(--border);
-  border-radius: var(--r-card);
-  background-color: var(--surface);
 }
 
 .catBlock {
@@ -56,14 +73,14 @@
 }
 
 .check {
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   flex: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border: 1.5px solid var(--ink-faint);
-  border-radius: var(--r-pill);
+  border-radius: var(--r-control);
   color: var(--accent-ink);
 }
 

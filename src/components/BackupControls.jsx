@@ -37,13 +37,15 @@ export default function BackupControls() {
   };
 
   return (
-    <div className={s.row}>
-      <button onClick={doExport} className={s.btn}>
-        <Icon name="export" size={13} strokeWidth={1.7} /> Backup data
-      </button>
-      <button onClick={() => fileRef.current?.click()} className={s.btn}>
-        <Icon name="restore" size={13} strokeWidth={1.7} /> Restore
-      </button>
+    <div>
+      <div className={s.card}>
+        <button onClick={doExport} className={s.rowBtn}>
+          <Icon name="export" size={13} strokeWidth={1.7} /> Export trip backup
+        </button>
+        <button onClick={() => fileRef.current?.click()} className={s.rowBtn}>
+          <Icon name="restore" size={13} strokeWidth={1.7} /> Restore from backup
+        </button>
+      </div>
       <input ref={fileRef} type="file" accept="application/json" className={s.hiddenFile} onChange={doImport} />
       {status && <span className={s.status}>{status}</span>}
     </div>

@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { saveKey } from "../lib/storage.js";
-import SectionTitle from "../components/SectionTitle.jsx";
 import PersonBadge from "../components/PersonBadge.jsx";
 import Icon from "../components/ui/icons.jsx";
 import Button from "../components/ui/Button.jsx";
@@ -66,9 +65,15 @@ export default function PackingTab({ packingAll, setPackingAll, membersById, myI
 
   return (
     <div>
-      <SectionTitle sub={isEmpty ? "Nothing packed yet" : `${doneAll} of ${allItems.length} packed · everyone`}>Packing list</SectionTitle>
-
-      {!isEmpty && <ProgressBar value={doneAll} max={allItems.length} color="var(--success)" className={s.progress} />}
+      {!isEmpty && (
+        <>
+          <div className={s.hero}>
+            <span className={s.heroNum}>{doneAll}</span>
+            <span className={s.heroText}>of {allItems.length} packed · everyone</span>
+          </div>
+          <ProgressBar value={doneAll} max={allItems.length} color="var(--success)" route className={s.progress} />
+        </>
+      )}
 
       {perPerson.length > 1 && (
         <div className={s.people}>
@@ -81,7 +86,7 @@ export default function PackingTab({ packingAll, setPackingAll, membersById, myI
       )}
 
       {isEmpty ? (
-        <EmptyState icon="case" title="Start your packing list" body="Pick a category below, then add what you want to bring." className={s.empty} />
+        <EmptyState hero title="Pack together, forget nothing." body="Pick a category below, then add what you want to bring — everyone sees everyone's list." className={s.empty} />
       ) : (
         cats.map((cat) => (
           <div key={cat} className={s.catBlock}>
@@ -100,7 +105,7 @@ export default function PackingTab({ packingAll, setPackingAll, membersById, myI
                       {p.done && <Icon name="check" size={12} strokeWidth={2} />}
                     </button>
                     <span className={s.itemText}>{p.text}</span>
-                    <PersonBadge member={membersById[p.owner]} size="xs" />
+                    <PersonBadge member={membersById[p.owner]} size="disc" />
                     {isMine && <button onClick={() => remove(p.id)} aria-label="Remove" className={s.rowRemove}><Icon name="x" size={13} strokeWidth={2} /></button>}
                   </div>
                 );

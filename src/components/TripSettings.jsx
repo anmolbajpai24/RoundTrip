@@ -5,6 +5,7 @@ import Spinner from "./Spinner.jsx";
 import { searchCoverPhotos, trackDownload, asCover, unsplashEnabled } from "../lib/unsplash.js";
 import { CURRENCIES } from "../data/currencies.js";
 import { DEST_COLORS } from "../theme.js";
+import { getSession } from "../lib/session.js";
 import { confirmDialog } from "./dialogs.jsx";
 import Sheet from "./ui/Sheet.jsx";
 import Button from "./ui/Button.jsx";
@@ -39,6 +40,7 @@ export default function TripSettings({ config, onSave, onClose, memberCount = 1,
 
   // destination search
   const [query, setQuery] = useState("");
+  const [addingDest, setAddingDest] = useState(false);
   const { results, searching } = usePlaceSearch(query);
 
   const uniqueLegKeys = [...new Set(legOrder)];
@@ -59,6 +61,7 @@ export default function TripSettings({ config, onSave, onClose, memberCount = 1,
     }));
     setLegOrder((o) => [...o, key]);
     setQuery("");
+    setAddingDest(false);
   };
 
   const save = (requestClose) => {
@@ -125,47 +128,56 @@ export default function TripSettings({ config, onSave, onClose, memberCount = 1,
               )}
             </div>
 
-            <Field label="Trip currency">
-              <Select value={currency} onChange={(e) => setCurrency(e.target.value)}>
-                {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code} · {c.name}</option>)}
-              </Select>
-            </Field>
-
-            <div className={s.toggleRow}>
-              <span className={s.toggleLabel}>Second currency</span>
-              <Toggle checked={homeOn} onChange={setHomeOn} />
+            {/* Money — one grouped hairline card with keyed rows */}
+            <div>
+              <div className={s.sectionLabelTight}>Money</div>
+              <div className={s.groupCard}>
+                <div className={s.groupRow}>
+                  <span className={s.rowKey}>Currency</span>
+                  <Select value={currency} onChange={(e) => setCurrency(e.target.value)} className={s.rowControl}>
+                    {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code} · {c.name}</option>)}
+                  </Select>
+                </div>
+                <div className={s.groupRow}>
+                  <span className={s.rowKey}>Second</span>
+                  <span className={s.rowSpacer} />
+                  <Toggle checked={homeOn} onChange={setHomeOn} />
+                </div>
+                {homeOn && (
+                  <div className={s.groupRow}>
+                    <span className={s.rowKey}>Home</span>
+                    <Select value={homeCurrency} onChange={(e) => setHomeCurrency(e.target.value)} className={s.rowControl}>
+                      {CURRENCIES.filter((c) => c.code !== currency).map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
+                    </Select>
+                    <Input value={homeRate} onChange={(e) => setHomeRate(e.target.value)} inputMode="decimal"
+                      placeholder={`1 ${currency} = ?`} aria-label="Conversion rate" className={s.rowRate} />
+                  </div>
+                )}
+                <div className={s.groupRow}>
+                  <span className={s.rowKey}>Budget</span>
+                  <Input value={budget} onChange={(e) => setBudget(e.target.value)} inputMode="decimal"
+                    placeholder="Optional — no bar when empty" aria-label={`Budget in ${currency}`} className={s.rowControl} />
+                </div>
+              </div>
             </div>
-            {homeOn && (
-              <FieldRow>
-                <Select value={homeCurrency} onChange={(e) => setHomeCurrency(e.target.value)}>
-                  {CURRENCIES.filter((c) => c.code !== currency).map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
-                </Select>
-                <Input value={homeRate} onChange={(e) => setHomeRate(e.target.value)} inputMode="decimal" placeholder={`1 ${currency} = ?`} />
-              </FieldRow>
-            )}
-
-            <Field label={`Budget in ${currency} (optional)`}>
-              <Input value={budget} onChange={(e) => setBudget(e.target.value)} inputMode="decimal" placeholder="No budget bar when empty" />
-            </Field>
           </FormStack>
 
-          <div className={s.sectionLabel}>Cover photo</div>
-          <div className={s.coverPreview}>
-            <div className={s.coverArt} style={cover?.url
+          <div className={s.sectionLabel}>Cover</div>
+          <div className={s.coverRow}>
+            <span className={s.coverThumb} style={cover?.url
               ? { backgroundImage: `url("${cover.url}")`, backgroundSize: "cover", backgroundPosition: "center" }
               : { background: legGradient({ legs, legOrder }) }} />
-            {cover?.author && <span className={s.coverCredit}>Photo: {cover.author} / Unsplash</span>}
-          </div>
-          <div className={s.coverActions}>
+            <span className={s.coverBody}>
+              <span className={s.coverTitle}>{cover?.author ? `Photo · ${cover.author}` : "Destination colours"}</span>
+              <span className={s.coverSub}>Shows on the trips list and the trip header.</span>
+            </span>
             {unsplashEnabled && (
-              <Button size="sm" variant="tonal" onClick={pickCovers} disabled={coverBusy}>
-                {coverBusy ? "Searching…" : "Choose a photo"}
-              </Button>
+              <button onClick={pickCovers} disabled={coverBusy} className={s.linkAccent}>
+                {coverBusy ? "Searching…" : "Change"}
+              </button>
             )}
             {cover && (
-              <Button size="sm" variant="ghost" onClick={() => { setCover(null); setCoverChoices(null); }}>
-                Use colours instead
-              </Button>
+              <button onClick={() => { setCover(null); setCoverChoices(null); }} className={s.linkMuted}>Reset</button>
             )}
           </div>
           {coverChoices !== null && (
@@ -206,8 +218,21 @@ export default function TripSettings({ config, onSave, onClose, memberCount = 1,
                 </div>
               );
             })}
+            {/* add lives INSIDE the destinations card, as its last row */}
+            <div className={s.addLegRow}>
+              {addingDest ? (
+                <label className={s.addSearch}>
+                  <Icon name="search" size={14} strokeWidth={1.8} />
+                  <input value={query} onChange={(e) => setQuery(e.target.value)} autoFocus
+                    placeholder="Search a city…" className={s.addInput} />
+                </label>
+              ) : (
+                <button onClick={() => setAddingDest(true)} className={s.addLegBtn}>
+                  <Icon name="plus" size={12} strokeWidth={2} /> Add a destination
+                </button>
+              )}
+            </div>
           </div>
-          <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Add a destination…" />
           {searching && <p className={s.searching}><Spinner size={14} /> Searching…</p>}
           {results.map((r, i) => (
             <button key={i} onClick={() => addLeg(r)} className={s.result}>
@@ -240,7 +265,15 @@ export default function TripSettings({ config, onSave, onClose, memberCount = 1,
             </button>
           ) : (
             <button
-              onClick={async () => { if (await confirmDialog({ title: "Delete this trip?", message: "This permanently removes its itinerary, outfits, packing, budget, bookings and documents. This can't be undone.", confirmLabel: "Delete forever", danger: true })) onDelete?.(); }}
+              onClick={async () => {
+                const ok = await confirmDialog({
+                  title: "Delete this trip?",
+                  message: "This permanently removes its itinerary, outfits, packing, budget, bookings and documents. This can't be undone.",
+                  confirmLabel: "Delete forever", danger: true,
+                  typeToConfirm: getSession()?.code || null,
+                });
+                if (ok) onDelete?.();
+              }}
               className={s.dangerCard}>
               <span className={s.dangerBody}>
                 <span className={s.dangerTitle}>Delete this trip</span>

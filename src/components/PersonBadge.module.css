@@ -19,3 +19,15 @@
   background-color: var(--ink-on);
   opacity: 0.85;
 }
+
+/* compact single-initial disc for list rows */
+.disc {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-pill);
+  font: 600 8px/1 var(--font-text);
+}

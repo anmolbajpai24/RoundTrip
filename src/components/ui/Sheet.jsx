@@ -29,6 +29,7 @@ export default function Sheet({ onClose, label, children }) {
   return (
     <div className={s.backdrop} onClick={() => closeRef.current()}>
       <div role="dialog" aria-modal="true" aria-label={label} className={s.shell} onClick={(e) => e.stopPropagation()}>
+        <div className={s.grabber} aria-hidden="true" />
         {typeof children === "function" ? children(requestClose) : children}
       </div>
     </div>

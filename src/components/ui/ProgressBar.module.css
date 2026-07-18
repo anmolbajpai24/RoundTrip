@@ -13,16 +13,31 @@
   transition: width 240ms ease;
 }
 
-/* route-line variant: the fill ends in a destination dot riding the rule */
+/* route-line variant: a 1.5px travelled rule ending in a dot, with the
+   remainder dashed ahead — progress as the motif, not a filled bar */
+.routeTrack {
+  height: 7px;
+  border-radius: 0;
+  background:
+    repeating-linear-gradient(90deg, var(--border) 0 4px, transparent 4px 9px)
+    0 50% / 100% 1px no-repeat;
+}
+
+.routeTrack .fill {
+  border-radius: 0;
+  background:
+    linear-gradient(var(--c), var(--c))
+    0 50% / 100% 1.5px no-repeat;
+}
+
 .route::after {
   content: "";
   position: absolute;
   right: -1px;
   top: 50%;
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   transform: translateY(-50%);
   border-radius: var(--r-pill);
   background-color: var(--c);
-  border: 1.5px solid var(--surface);
 }

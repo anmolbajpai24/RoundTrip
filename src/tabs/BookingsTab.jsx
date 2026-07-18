@@ -3,15 +3,18 @@ import { saveKey } from "../lib/storage.js";
 import { DOCS_KEY, uploadDocument, docUrl, removeDocument, docSize } from "../lib/documents.js";
 import { confirmDialog } from "../components/dialogs.jsx";
 import useBackClose from "../lib/useBackClose.js";
-import SectionTitle from "../components/SectionTitle.jsx";
 import PersonBadge from "../components/PersonBadge.jsx";
 import Icon from "../components/ui/icons.jsx";
 import Button from "../components/ui/Button.jsx";
 import { Input } from "../components/ui/Field.jsx";
 import s from "./BookingsTab.module.css";
 
-// Icon for a document by MIME type (was an emoji from lib/documents.js).
+// Icon for a document by MIME type (attach chips) + short filetype badge text.
 const docGlyph = (type) => (type?.startsWith("image/") ? "image" : type === "application/pdf" ? "ticket" : "clip");
+const docExt = (type) =>
+  type === "application/pdf" ? "PDF"
+  : type?.startsWith("image/") ? (type.split("/")[1] || "IMG").replace("jpeg", "jpg").slice(0, 4).toUpperCase()
+  : "FILE";
 
 export default function BookingsTab({ bookings, setBookings, documents, setDocuments, membersById, myId }) {
   const [newItem, setNewItem] = useState("");
@@ -31,10 +34,15 @@ export default function BookingsTab({ bookings, setBookings, documents, setDocum
   const docsById = Object.fromEntries((documents || []).map((d) => [d.id, d]));
   const sorted = [...bookings].sort((a, b) => (a.done - b.done) || (b.urgent - a.urgent));
 
+  const urgentLeft = bookings.filter((b) => b.urgent && !b.done).length;
+
   return (
     <div>
-      <SectionTitle sub={`${done} of ${bookings.length} booked · shared`}>Booking checklist</SectionTitle>
-      <div className={s.list}>
+      <div className={s.hero}>
+        <span className={s.heroNum}>{done}</span>
+        <span className={s.heroText}>of {bookings.length} booked{urgentLeft ? ` · ${urgentLeft} urgent` : ""} · shared</span>
+      </div>
+      <div className={s.bookingStack}>
         {sorted.map((b) => (
           <div key={b.id} className={[s.bookingWrap, b.urgent && !b.done && s.urgentWrap].filter(Boolean).join(" ")}>
             <div className={s.booking}>
@@ -48,7 +56,7 @@ export default function BookingsTab({ bookings, setBookings, documents, setDocum
               <div className={s.bookingBody}>
                 <span className={[s.bookingText, b.done && s.bookingDone].filter(Boolean).join(" ")}>{b.text}</span>
                 {b.urgent && !b.done && <span className={s.urgentTag}>Urgent</span>}
-                {b.addedBy && <span className={s.badgeInline}><PersonBadge member={membersById[b.addedBy]} size="xs" /></span>}
+                {b.addedBy && <span className={s.badgeInline}><PersonBadge member={membersById[b.addedBy]} size="disc" /></span>}
                 {b.docId && docsById[b.docId] && (
                   <DocChip doc={docsById[b.docId]} onUnlink={() => setDocFor(b.id, undefined)} />
                 )}
@@ -142,17 +150,25 @@ function DocumentsSection({ documents, setDocuments, bookings, persistBookings, 
 
   const docs = documents || [];
 
+  const totalSize = docs.reduce((n, d) => n + (d.size || 0), 0);
+
   return (
     <div className={s.docs}>
-      <SectionTitle sub="tickets, PDFs, screenshots · shared · max 10 MB">Documents</SectionTitle>
+      <div className={s.docsHead}>
+        <span className={s.sectionLabelInline}>Documents</span>
+        <span className={s.headSpacer} />
+        {docs.length > 0 && (
+          <span className={s.docsCount}>{docs.length} file{docs.length === 1 ? "" : "s"} · {docSize(totalSize)}</span>
+        )}
+      </div>
       {docs.length > 0 && (
         <div className={s.list}>
           {docs.map((d) => (
             <div key={d.id} className={s.docRow}>
-              <span className={s.docGlyph}><Icon name={docGlyph(d.type)} size={18} /></span>
+              <span className={s.docBadge}>{docExt(d.type)}</span>
               <button onClick={() => open(d)} className={s.docOpen}>
                 <div className={s.docName}>{openingId === d.id ? "Opening…" : d.name}</div>
-                <div className={s.docMeta}>{docSize(d.size)} <PersonBadge member={membersById[d.addedBy]} size="xs" /></div>
+                <div className={s.docMeta}>{docSize(d.size)} <PersonBadge member={membersById[d.addedBy]} size="disc" /></div>
               </button>
               <button onClick={() => del(d)} aria-label="Delete" className={s.iconBtn}><Icon name="x" size={14} strokeWidth={2} /></button>
             </div>

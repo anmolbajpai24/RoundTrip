@@ -15,9 +15,17 @@
   border: 1px solid var(--border);
   border-bottom: 0;
   border-radius: var(--r-sheet) var(--r-sheet) 0 0;
-  padding: 20px 18px calc(20px + env(safe-area-inset-bottom));
+  padding: 8px 18px calc(20px + env(safe-area-inset-bottom));
   max-height: calc(100dvh - 40px);
   overflow-y: auto;
+}
+
+.grabber {
+  width: 36px;
+  height: 4px;
+  border-radius: var(--r-pill);
+  background-color: var(--border);
+  margin: 0 auto 14px;
 }
 
 @media (min-width: 640px) {

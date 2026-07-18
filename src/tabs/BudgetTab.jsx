@@ -8,6 +8,8 @@ import Icon from "../components/ui/icons.jsx";
 import Button from "../components/ui/Button.jsx";
 import { Input } from "../components/ui/Field.jsx";
 import ProgressBar from "../components/ui/ProgressBar.jsx";
+import EmptyState from "../components/ui/EmptyState.jsx";
+import Sheet from "../components/ui/Sheet.jsx";
 import s from "./BudgetTab.module.css";
 
 const CATS = ["Food", "Transport", "Stay", "Sights", "Shows", "Shopping", "Other"];
@@ -20,6 +22,7 @@ export default function BudgetTab({ expenses, setExpenses, members, membersById,
   const [amount, setAmount] = useState("");
   const [cat, setCat] = useState("Food");
   const [paidBy, setPaidBy] = useState(myId);
+  const [adding, setAdding] = useState(false);
 
   const money = (n, frac = 0) => fmtMoney(n, cur, frac);
   const spent = expenses.reduce((sum, e) => sum + e.amount, 0);
@@ -31,9 +34,10 @@ export default function BudgetTab({ expenses, setExpenses, members, membersById,
   const persist = (next) => { setExpenses(next); saveKey("trip-expenses", next); };
   const add = () => {
     const a = parseFloat(amount);
-    if (!desc.trim() || isNaN(a) || a <= 0) return;
-    persist([{ id: Date.now(), desc: desc.trim(), amount: a, cat, paidBy: paidBy || myId, ts: new Date().toISOString() }, ...expenses]);
+    if (!desc.trim() || isNaN(a) || a <= 0) return false;
+    persist([{ id: crypto.randomUUID(), desc: desc.trim(), amount: a, cat, paidBy: paidBy || myId, ts: new Date().toISOString() }, ...expenses]);
     setDesc(""); setAmount("");
+    return true;
   };
   const remove = (id) => persist(expenses.filter((e) => e.id !== id));
 
@@ -59,7 +63,7 @@ export default function BudgetTab({ expenses, setExpenses, members, membersById,
         <div className={s.summaryTop}>
           <div>
             <div className={s.statLabel}>Spent</div>
-            <div className={s.statNum}>{money(spent)}</div>
+            <div className={s.statNumHero}>{money(spent)}</div>
             {homeSpent && <div className={s.statSub}>≈ {homeSpent}</div>}
           </div>
           {budget != null && (
@@ -81,15 +85,16 @@ export default function BudgetTab({ expenses, setExpenses, members, membersById,
 
       {/* Settle-up */}
       {members.length > 1 && spent > 0 && (
-        <div className={s.card}>
-          <div className={s.cardLabel}>Who paid · settle up</div>
-          <div className={s.settleList}>
+        <>
+          <div className={s.sectionLabel}>Who paid · settle up</div>
+          <div className={s.card}>
             {balances.map(({ member, paid, net }) => {
               const settled = Math.abs(net) < 0.5;
               return (
                 <div key={member.user_id} className={s.settleRow}>
                   <span className={s.settleWho}>
-                    <PersonBadge member={member} size="xs" />
+                    <PersonBadge member={member} size="disc" />
+                    <span className={s.settleName}>{member.name}</span>
                     <span className={s.settlePaid}>paid {money(paid)}</span>
                   </span>
                   <span className={[s.settleNet, settled || net > 0 ? s.good : s.bad].join(" ")}>
@@ -99,36 +104,19 @@ export default function BudgetTab({ expenses, setExpenses, members, membersById,
               );
             })}
           </div>
-        </div>
+        </>
       )}
 
-      <div className={s.card}>
-        <div className={s.addRow}>
-          <Input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="What was it?" className={s.descInput} />
-          <Input value={amount} onChange={(e) => setAmount(e.target.value)} placeholder={currencySymbol(cur)} inputMode="decimal" className={s.amtInput} />
-        </div>
-        <div className={s.chipRow}>
-          {CATS.map((c) => (
-            <button key={c} onClick={() => setCat(c)} className={[s.catChip, cat === c && s.catChipActive].filter(Boolean).join(" ")}>{c}</button>
-          ))}
-        </div>
-        <div className={s.paidRow}>
-          <span className={s.paidLabel}>Paid by</span>
-          {members.map((m) => {
-            const active = paidBy === m.user_id;
-            return (
-              <button key={m.user_id} onClick={() => setPaidBy(m.user_id)} className={s.payer}
-                style={active ? { backgroundColor: m.color, borderColor: m.color, color: onColor(m.color) } : undefined}>
-                {m.name}
-              </button>
-            );
-          })}
-        </div>
-        <Button full onClick={add}>Add expense</Button>
+      <div className={s.expensesHead}>
+        <span className={s.sectionLabelInline}>Expenses</span>
+        <span className={s.headSpacer} />
+        <button onClick={() => setAdding(true)} className={s.addLink}>
+          <Icon name="plus" size={11} strokeWidth={2} /> Add
+        </button>
       </div>
 
       {expenses.length === 0 ? (
-        <p className={s.emptyNote}>No expenses yet — log your first coffee.</p>
+        <EmptyState hero title="No expenses yet." body="Log the first coffee — every split updates for everyone, live." />
       ) : (
         <div className={s.list}>
           {expenses.map((e) => (
@@ -137,7 +125,7 @@ export default function BudgetTab({ expenses, setExpenses, members, membersById,
                 <div className={s.expDesc}>{e.desc}</div>
                 <div className={s.expMeta}>
                   {e.cat} · {new Date(e.ts).toLocaleDateString(undefined, { day: "numeric", month: "short" })}
-                  {e.paidBy && <PersonBadge member={membersById[e.paidBy]} size="xs" />}
+                  {e.paidBy && <PersonBadge member={membersById[e.paidBy]} size="disc" />}
                 </div>
               </div>
               <div className={s.expAmt}>{money(e.amount, 2)}</div>
@@ -145,6 +133,39 @@ export default function BudgetTab({ expenses, setExpenses, members, membersById,
             </div>
           ))}
         </div>
+      )}
+
+      {/* Add-expense sheet */}
+      {adding && (
+        <Sheet onClose={() => setAdding(false)} label="Add an expense">
+          {(requestClose) => (
+            <>
+              <h2 className={s.sheetTitle}>Add an expense</h2>
+              <div className={s.addRow}>
+                <Input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="What was it?" autoFocus className={s.descInput} />
+                <Input value={amount} onChange={(e) => setAmount(e.target.value)} placeholder={currencySymbol(cur)} inputMode="decimal" className={s.amtInput} />
+              </div>
+              <div className={s.chipRow}>
+                {CATS.map((c) => (
+                  <button key={c} onClick={() => setCat(c)} className={[s.catChip, cat === c && s.catChipActive].filter(Boolean).join(" ")}>{c}</button>
+                ))}
+              </div>
+              <div className={s.paidRow}>
+                <span className={s.paidLabel}>Paid by</span>
+                {members.map((m) => {
+                  const active = paidBy === m.user_id;
+                  return (
+                    <button key={m.user_id} onClick={() => setPaidBy(m.user_id)} className={s.payer}
+                      style={active ? { backgroundColor: m.color, borderColor: m.color, color: onColor(m.color) } : undefined}>
+                      {m.name}
+                    </button>
+                  );
+                })}
+              </div>
+              <Button full onClick={() => { if (add()) requestClose(); }}>Add expense</Button>
+            </>
+          )}
+        </Sheet>
       )}
     </div>
   );
