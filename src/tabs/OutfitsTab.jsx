@@ -1,27 +1,38 @@
 import { useEffect, useRef, useState } from "react";
-import { useTripConfig, dateLabel, weekday, defaultDay, findDay, softBg } from "../lib/tripConfig.js";
+import { useTripConfig, dateLabel, weekday, defaultDay, findDay, todayISO } from "../lib/tripConfig.js";
 import { saveKey } from "../lib/storage.js";
 import { compressImage, compressImageToBlob } from "../lib/image.js";
 import { outfitForDay, visibleToOthers, hasPhoto } from "../lib/closet.js";
 import { uploadOutfitPhoto, deleteOutfitPhoto } from "../lib/outfitPhotos.js";
 import { confirmDialog } from "../components/dialogs.jsx";
-import useBackClose from "../lib/useBackClose.js";
 import { loadBasePhoto, saveBasePhoto, generateTryOn } from "../lib/tryon.js";
 import { FEATURES } from "../appConfig.js";
-import SectionTitle from "../components/SectionTitle.jsx";
-import LegChip from "../components/LegChip.jsx";
 import DayStrip from "../components/DayStrip.jsx";
+import Avatar from "../components/Avatar.jsx";
 import PersonBadge from "../components/PersonBadge.jsx";
 import OutfitImage from "../components/OutfitImage.jsx";
 import OutfitGallery from "../components/OutfitGallery.jsx";
+import Icon from "../components/ui/icons.jsx";
+import Button from "../components/ui/Button.jsx";
+import { Input } from "../components/ui/Field.jsx";
+import Segmented from "../components/ui/Segmented.jsx";
+import Sheet from "../components/ui/Sheet.jsx";
+import s from "./OutfitsTab.module.css";
 
-// Outfit planner: upload outfits into your closet first, then assign each one
-// to one or more days (or work day-first — both write the same closet).
+const VIEWS = [
+  { id: "closet", label: "Closet" },
+  { id: "day", label: "Day" },
+  { id: "alldays", label: "All days" },
+];
+
+// Outfit planner: three views under one segmented control (Closet, Day,
+// All days) so photos stay big. Upload outfits into your closet, then assign
+// each one to days — or work day-first; both write the same closet.
 export default function OutfitsTab({ closetsAll, setClosetsAll, membersById, members, myId, initialDay }) {
   const config = useTripConfig();
+  const [view, setView] = useState(initialDay ? "day" : "closet");
   const [selected, setSelected] = useState(() => initialDay || defaultDay(config));
   const day = findDay(config, selected);
-  const L = config.legs[day.leg] || {};
   const dk = day.date;
 
   const myCloset = closetsAll[myId] || { items: {}, days: {} };
@@ -42,7 +53,7 @@ export default function OutfitsTab({ closetsAll, setClosetsAll, membersById, mem
   const [tryOnError, setTryOnError] = useState("");
   useEffect(() => { if (FEATURES.tryOn) loadBasePhoto().then((v) => setBasePhoto(v || null)); }, [myId]);
 
-  const selectDay = (d) => { setSelected(d); setChoosing(false); };
+  const openDay = (d) => { setSelected(d); setChoosing(false); setView("day"); };
 
   // ---- persistence: update state + queue the matching kv writes together ----
   const commit = (nextCloset, writes) => {
@@ -152,14 +163,16 @@ export default function OutfitsTab({ closetsAll, setClosetsAll, membersById, mem
     e.target.value = "";
   };
 
-  const plannedCount = config.days.filter((d) => outfitForDay(myCloset, d.date)).length;
   const mineTodayId = myCloset.days[dk];
   const mineToday = outfitForDay(myCloset, dk);
   const others = (members || []).filter((m) => m.user_id !== myId);
   const editingItem = editingId ? myCloset.items[editingId] : null;
+  const today = todayISO();
 
-  // Short day chips for a closet card, e.g. "Wed 15".
+  // Short day chips for a closet card, e.g. "Fri 16 Aug".
   const daysOfItem = (id) => config.days.filter((d) => myCloset.days[d.date] === id);
+  // First day an item is worn — the picker's "worn …" caption.
+  const firstWorn = (id) => daysOfItem(id)[0];
 
   // Anything to look at in the gallery? (mine, or a trip-mate's visible outfit)
   const anyViewable = myItems.length > 0 ||
@@ -167,194 +180,256 @@ export default function OutfitsTab({ closetsAll, setClosetsAll, membersById, mem
 
   return (
     <div>
-      <div className="flex items-start justify-between">
-        <SectionTitle sub={`You've planned ${plannedCount} of ${config.days.length} days`}>Outfit planner</SectionTitle>
+      <div className={s.topRow}>
+        <Segmented value={view} onChange={(v) => { setView(v); setChoosing(false); }} options={VIEWS} />
+        <span className={s.gallerySpacer} />
         {anyViewable && (
-          <button onClick={() => setGalleryOpen(true)} className="text-[11px] font-bold px-3 py-1.5 rounded-full border"
-            style={{ borderColor: "var(--border)", backgroundColor: "var(--card)", color: "var(--ink)" }}>
-            🖼 Gallery
+          <button onClick={() => setGalleryOpen(true)} className={s.galleryLink}>
+            <Icon name="image" size={13} /> Gallery
           </button>
         )}
       </div>
-      <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onFile} />
+      <input ref={fileRef} type="file" accept="image/*" className={s.hiddenFile} onChange={onFile} />
 
-      {/* ---- My closet ---- */}
-      <div className="mt-1">
-        <SectionTitle sub="Upload outfits, then pick which days they're for">My closet</SectionTitle>
-
-        {/* Base photo for "See it on me" — private to this member */}
-        {FEATURES.tryOn && (
-        <div className="mb-2 flex items-center gap-3 rounded-xl border p-2.5" style={{ borderColor: "var(--border)", backgroundColor: "var(--card)" }}>
-          {basePhoto?.photo ? (
-            <img src={basePhoto.photo} alt="My photo" className="w-12 h-12 rounded-lg object-cover" />
-          ) : (
-            <div className="w-12 h-12 rounded-lg flex items-center justify-center text-lg" style={{ backgroundColor: "var(--field)" }}>👤</div>
-          )}
-          <div className="flex-1 min-w-0">
-            <div className="text-xs font-bold" style={{ color: "var(--ink)" }}>My photo</div>
-            <div className="text-[11px]" style={{ color: "var(--faint)" }}>Used for "See it on me" — only you can ever see it.</div>
-          </div>
-          <div className="flex flex-col items-end gap-1">
-            <button onClick={() => pickFile((p) => setMyBasePhoto(p), { raw: true })} disabled={busy} className="text-xs font-semibold" style={{ color: L.color }}>{basePhoto ? "Replace" : "Add"}</button>
-            {basePhoto && <button onClick={() => setMyBasePhoto(null)} className="text-xs font-semibold" style={{ color: "var(--muted)" }}>Remove</button>}
-          </div>
-        </div>
-        )}
-
-        <div className="grid grid-cols-3 gap-2">
-          <button onClick={() => pickFile((photo) => addOutfit(photo))} disabled={busy}
-            className="rounded-xl border-2 border-dashed h-32 flex flex-col items-center justify-center gap-1"
-            style={{ borderColor: L.color, backgroundColor: softBg(L.color) }}>
-            <span className="text-2xl">📸</span>
-            <span className="text-[11px] font-bold px-1 text-center" style={{ color: L.color }}>{busy ? "Saving…" : "Add outfit"}</span>
-          </button>
-          {myItems.map(([id, item]) => {
-            const chips = daysOfItem(id);
-            return (
-              <button key={id} onClick={() => setEditingId(id)} className="rounded-xl overflow-hidden border text-left relative h-32 flex flex-col"
-                style={{ borderColor: "var(--border)", backgroundColor: "var(--card)" }}>
-                {hasPhoto(item) ? (
-                  <OutfitImage item={item} alt={item.desc || "Outfit"} className="w-full flex-1 object-cover min-h-0" />
-                ) : (
-                  <div className="w-full flex-1 flex items-center justify-center text-lg" style={{ backgroundColor: "var(--field)" }}>📝</div>
-                )}
-                {item.visibility === "private" && (
-                  <span className="absolute top-1 left-1 text-[10px] px-1.5 py-0.5 rounded-full text-white" style={{ backgroundColor: "rgba(29,36,51,0.75)" }}>🔒</span>
-                )}
-                <div className="px-1.5 py-1 text-[10px] font-semibold truncate" style={{ color: chips.length ? "var(--ink)" : "var(--faint)" }}>
-                  {chips.length ? chips.map((d) => dateLabel(d.date)).join(" · ") : "No day yet"}
-                </div>
-              </button>
-            );
-          })}
-        </div>
-        {myItems.length === 0 && (
-          <p className="text-xs mt-2" style={{ color: "var(--faint)" }}>Your closet is empty — add an outfit, then choose its days.</p>
-        )}
-        {photoError && (
-          <p className="text-xs mt-2 font-semibold" style={{ color: "#C0392B" }}>{photoError}</p>
-        )}
-      </div>
-
-      {/* ---- Day planner ---- */}
-      <div className="mt-5">
-        <SectionTitle>Day by day</SectionTitle>
-        <DayStrip selected={dk} onSelect={selectDay} />
-
-        <div className="mt-3 rounded-2xl border overflow-hidden" style={{ borderColor: "var(--border)", backgroundColor: "var(--card)" }}>
-          <div className="px-4 py-2.5 flex items-center justify-between border-b" style={{ borderColor: "var(--divider)" }}>
-            <span className="text-sm font-bold" style={{ color: "var(--ink)" }}>{weekday(dk)} {dateLabel(dk)} · {day.title}</span>
-            <LegChip leg={day.leg} />
-          </div>
-
-          {/* My outfit for this day */}
-          <div className="p-4">
-            <div className="mb-2"><PersonBadge member={membersById[myId]} size="xs" /></div>
-            {mineToday ? (
-              <div>
-                {hasPhoto(mineToday) && (
-                  <OutfitPhoto key={`${mineTodayId}:${dk}`} item={mineToday} alt={`Outfit for ${dateLabel(dk)}`} mine />
-                )}
-                {mineToday.desc && <p className="text-sm mt-2" style={{ color: "var(--ink)" }}>{mineToday.desc}</p>}
-                <div className="flex gap-3 mt-2">
-                  <button onClick={() => setChoosing(true)} className="text-xs font-semibold" style={{ color: L.color }}>Change</button>
-                  <button onClick={() => setEditingId(mineTodayId)} className="text-xs font-semibold" style={{ color: L.color }}>Edit outfit</button>
-                  <button onClick={() => unassignDay(dk)} className="text-xs font-semibold" style={{ color: "var(--muted)" }}>Remove from this day</button>
-                </div>
-              </div>
-            ) : (
-              <div>
-                <button onClick={() => pickFile((photo) => addOutfit(photo, dk))} disabled={busy}
-                  className="w-full rounded-xl border-2 border-dashed py-8 flex flex-col items-center gap-2"
-                  style={{ borderColor: L.color, backgroundColor: softBg(L.color) }}>
-                  <span className="text-3xl">📸</span>
-                  <span className="text-sm font-bold" style={{ color: L.color }}>{busy ? "Saving photo…" : "Upload a new outfit for this day"}</span>
-                  <span className="text-xs" style={{ color: "var(--muted)" }}>Lay it out on the bed &amp; snap it</span>
+      {/* ---- CLOSET ---- */}
+      {view === "closet" && (
+        <>
+          <div className={s.closetGrid}>
+            {myItems.map(([id, item]) => {
+              const chips = daysOfItem(id);
+              return (
+                <button key={id} onClick={() => setEditingId(id)} className={s.card}>
+                  <div className={s.cardPhoto}>
+                    {hasPhoto(item) ? (
+                      <OutfitImage item={item} alt={item.desc || "Outfit"} className={s.fillImg} />
+                    ) : (
+                      <div className={s.cardPh}><Icon name="image" size={18} /></div>
+                    )}
+                    {item.visibility === "private" && (
+                      <span className={s.onlyMe}><Icon name="lock" size={9} strokeWidth={2} /> Only me</span>
+                    )}
+                  </div>
+                  <div className={s.cardBody}>
+                    <div className={s.cardName}>{item.desc || (item.visibility === "private" ? "Not shared with the trip" : "Untitled outfit")}</div>
+                    {chips.length ? (
+                      <div className={s.cardChips}>
+                        {chips.map((d) => <span key={d.date} className={s.dayChip}>{weekday(d.date)} {dateLabel(d.date)}</span>)}
+                      </div>
+                    ) : (
+                      <span className={s.noDay}>No day yet</span>
+                    )}
+                  </div>
                 </button>
+              );
+            })}
+            <button onClick={() => !busy && pickFile((photo) => addOutfit(photo))} disabled={busy}
+              className={[s.addTile, photoError && s.addTileError].filter(Boolean).join(" ")}>
+              {photoError ? (
+                <>
+                  <span className={s.addTitleError}>Upload didn't finish</span>
+                  <span className={s.addSub}>The photo is still on your phone — tap to retry.</span>
+                </>
+              ) : busy ? (
+                <>
+                  <span className={s.addTitle}>Uploading…</span>
+                  <span className={s.addSub}>a few seconds</span>
+                  <span className={s.addProgress}><span /></span>
+                </>
+              ) : (
+                <>
+                  <Icon name="camera" size={20} />
+                  <span className={s.addTitle}>Add an outfit</span>
+                  <span className={s.addSub}>Photograph it laid out on the bed — whole outfit in frame.</span>
+                </>
+              )}
+            </button>
+          </div>
+          {myItems.length === 0 && (
+            <p className={s.emptyNote}>Your closet is empty — add an outfit, then choose its days.</p>
+          )}
+
+          {/* Base photo for "See it on me" — private to this member */}
+          {FEATURES.tryOn && (
+            <>
+              <div className={s.sectionLabelRow}><span className={s.sectionLabel}>Seeing outfits on you</span></div>
+              <div className={s.tryonCard}>
+                {basePhoto?.photo ? (
+                  <img src={basePhoto.photo} alt="My photo" className={s.tryonThumb} />
+                ) : (
+                  <span className={s.tryonThumbPh}><Icon name="camera" size={17} /></span>
+                )}
+                <span className={s.tryonBody}>
+                  <span className={s.tryonTitle}>{basePhoto ? "My photo" : "Add a photo of you"}</span>
+                  <span className={s.tryonSub}>For trying outfits on. Only you can ever see it.</span>
+                </span>
+                <button onClick={() => pickFile((p) => setMyBasePhoto(p), { raw: true })} disabled={busy} className={s.linkAccent}>
+                  {basePhoto ? "Replace" : "Add"}
+                </button>
+                {basePhoto && <button onClick={() => setMyBasePhoto(null)} className={s.linkMuted}>Remove</button>}
+              </div>
+            </>
+          )}
+        </>
+      )}
+
+      {/* ---- DAY ---- */}
+      {view === "day" && (
+        <>
+          <DayStrip selected={dk} onSelect={openDay} />
+
+          <div className={s.sectionLabelRow}>
+            <span className={s.sectionLabel}>Your outfit</span>
+            <span className={s.sectionMeta}>{weekday(dk)} {dateLabel(dk)} · {day.title}</span>
+          </div>
+
+          {mineToday ? (
+            <div className={s.dayCard}>
+              <div className={s.dayThumb}>
+                <OutfitPhoto key={`${mineTodayId}:${dk}`} item={mineToday} alt={`Outfit for ${dateLabel(dk)}`} mine />
+              </div>
+              <div className={s.dayDetails}>
+                <PersonBadge member={membersById[myId]} size="xs" />
+                {mineToday.desc && <p className={s.dayDesc}>{mineToday.desc}</p>}
+                <span className={s.daySpacer} />
+                <div className={s.actionRow}>
+                  <button onClick={() => setChoosing(true)} className={s.linkAccent}>Change</button>
+                  <button onClick={() => setEditingId(mineTodayId)} className={s.linkAccent}>Edit</button>
+                  <button onClick={() => unassignDay(dk)} className={s.linkMuted}>Remove from day</button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className={s.emptyCard}>
+              <div className={s.emptyTitle}>Nothing to wear yet.</div>
+              <div className={s.emptyBody}>Plan it now — a laid-out outfit photo keeps the morning simple.</div>
+              <div className={s.emptyActions}>
+                <Button icon="camera" onClick={() => pickFile((photo) => addOutfit(photo, dk))} disabled={busy}>
+                  {busy ? "Saving…" : "Upload new"}
+                </Button>
                 {myItems.length > 0 && (
-                  <button onClick={() => setChoosing(true)} className="mt-2 w-full text-sm font-bold py-2.5 rounded-xl border"
-                    style={{ borderColor: L.color, color: L.color }}>
-                    👕 Choose from closet
-                  </button>
+                  <Button variant="tonal" onClick={() => setChoosing(true)}>From closet</Button>
                 )}
               </div>
-            )}
+            </div>
+          )}
+          {photoError && <p className={s.error}>{photoError}</p>}
 
-            {/* Closet picker for this day */}
-            {choosing && (
-              <div className="mt-3 rounded-xl border p-2" style={{ borderColor: "var(--divider)", backgroundColor: "var(--field)" }}>
-                <div className="flex items-center justify-between px-1 mb-1.5">
-                  <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color: "var(--muted)" }}>Pick an outfit for {dateLabel(dk)}</span>
-                  <button onClick={() => setChoosing(false)} className="text-xs font-semibold" style={{ color: "var(--muted)" }}>✕</button>
-                </div>
-                <div className="flex gap-2 overflow-x-auto pb-1">
-                  {myItems.map(([id, item]) => (
-                    <button key={id} onClick={() => { assignDay(dk, id); setChoosing(false); }}
-                      className="flex-shrink-0 rounded-lg overflow-hidden border" style={{ borderColor: id === mineTodayId ? L.color : "var(--border)", borderWidth: id === mineTodayId ? 2 : 1 }}>
-                      {hasPhoto(item) ? (
-                        <OutfitImage item={item} alt={item.desc || "Outfit"} className="w-20 h-20 object-cover" />
-                      ) : (
-                        <div className="w-20 h-20 flex items-center justify-center" style={{ backgroundColor: "var(--card)" }}>📝</div>
-                      )}
-                    </button>
-                  ))}
-                </div>
+          {/* Closet picker strip for this day */}
+          {choosing && (
+            <>
+              <div className={s.sectionLabelRow}>
+                <span className={s.sectionLabel}>From your closet</span>
+                <span className={s.sectionMeta}>tap one to wear it {weekday(dk)} {dateLabel(dk)}</span>
               </div>
-            )}
-          </div>
+              <div className={s.pickerStrip}>
+                {myItems.map(([id, item]) => {
+                  const worn = firstWorn(id);
+                  return (
+                    <button key={id} onClick={() => { assignDay(dk, id); setChoosing(false); }}
+                      className={[s.pickerCard, id === mineTodayId && s.pickerCardActive].filter(Boolean).join(" ")}>
+                      <div className={s.pickerPhoto}>
+                        {hasPhoto(item) ? (
+                          <OutfitImage item={item} alt={item.desc || "Outfit"} className={s.fillImg} />
+                        ) : (
+                          <div className={s.cardPh}><Icon name="image" size={14} /></div>
+                        )}
+                        {item.visibility === "private" && (
+                          <span className={s.pickerLock}><Icon name="lock" size={8} strokeWidth={2.2} /></span>
+                        )}
+                      </div>
+                      <div className={s.pickerBody}>
+                        <span className={s.pickerName}>{item.desc || "Outfit"}</span>
+                        <span className={s.pickerWorn}>{worn ? `worn ${weekday(worn.date)} ${dateLabel(worn.date)}` : "free"}</span>
+                      </div>
+                    </button>
+                  );
+                })}
+                <button onClick={() => pickFile((photo) => addOutfit(photo, dk))} disabled={busy} aria-label="Upload a new outfit" className={s.pickerAdd}>
+                  <Icon name="plus" size={15} strokeWidth={1.8} />
+                </button>
+              </div>
+              <p className={s.pickerHint}>Wearing it twice is allowed — travellers repeat outfits.</p>
+            </>
+          )}
 
           {/* Other members' outfits — read-only, respecting per-outfit privacy */}
+          {others.length > 0 && (
+            <div className={s.sectionLabelRow}><span className={s.sectionLabel}>Everyone else</span></div>
+          )}
           {others.map((m) => {
             const o = outfitForDay(closetsAll[m.user_id], dk);
             const shown = o && visibleToOthers(o);
-            return (
-              <div key={m.user_id} className="p-4 border-t" style={{ borderColor: "var(--divider)" }}>
-                <div className="mb-2"><PersonBadge member={m} size="xs" /></div>
-                {shown && hasPhoto(o) ? (
-                  <OutfitPhoto key={`${m.user_id}:${dk}`} item={o} alt={`${m.name}'s outfit`} />
-                ) : (
-                  <div className="w-full rounded-xl py-8 text-center text-sm" style={{ backgroundColor: "var(--field)", color: "var(--faint)" }}>
-                    {o && !shown ? `${m.name} is keeping this outfit private 🔒` : `${m.name} hasn't planned this day yet`}
+            if (shown && hasPhoto(o)) {
+              return (
+                <button key={m.user_id} onClick={() => setGalleryOpen(true)} className={s.otherCard}>
+                  <div className={s.otherThumb}>
+                    <OutfitImage item={o} alt={`${m.name}'s outfit`} className={s.fillImg} />
                   </div>
+                  <span className={s.otherBody}>
+                    <PersonBadge member={m} size="xs" />
+                    {o.desc && <span className={s.otherDesc}>{o.desc}</span>}
+                  </span>
+                  <span className={s.otherIcon}><Icon name="arrow" size={13} strokeWidth={2} /></span>
+                </button>
+              );
+            }
+            return (
+              <div key={m.user_id} className={s.otherCard}>
+                <span className={s.otherAvatar}><Avatar name={m.name} color={m.color} size="xs" /></span>
+                {o && !shown ? (
+                  <>
+                    <span className={s.otherNote}>{m.name} is keeping this outfit private.</span>
+                    <span className={s.otherIcon}><Icon name="lock" size={12} strokeWidth={2} /></span>
+                  </>
+                ) : (
+                  <span className={s.otherNoteQuiet}>{m.name} hasn't planned this day yet.</span>
                 )}
-                {shown && o.desc && <p className="text-sm mt-2" style={{ color: "var(--ink)" }}>{o.desc}</p>}
               </div>
             );
           })}
-        </div>
-      </div>
+        </>
+      )}
 
-      {/* Grid: my days, with dots showing who else has an outfit */}
-      <div className="mt-5">
-        <SectionTitle>All days</SectionTitle>
-        <div className="grid grid-cols-3 gap-2">
-          {config.days.map((d) => {
-            const o = outfitForDay(myCloset, d.date);
-            const Lg = config.legs[d.leg] || {};
-            const otherDots = (members || []).filter((m) => {
-              if (m.user_id === myId) return false;
-              const theirs = outfitForDay(closetsAll[m.user_id], d.date);
-              return theirs && visibleToOthers(theirs) && hasPhoto(theirs);
-            });
-            return (
-              <button key={d.date} onClick={() => { selectDay(d.date); window.scrollTo({ top: 0, behavior: "smooth" }); }}
-                className="rounded-xl overflow-hidden border text-left relative" style={{ borderColor: "var(--border)", backgroundColor: "var(--card)" }}>
-                {hasPhoto(o) ? (
-                  <OutfitImage item={o} alt="" className="w-full h-20 object-cover" />
-                ) : (
-                  <div className="w-full h-20 flex items-center justify-center text-lg" style={{ backgroundColor: softBg(Lg.color) }}>{o?.desc ? "📝" : "＋"}</div>
-                )}
-                {otherDots.length > 0 && (
-                  <div className="absolute top-1 right-1 flex gap-0.5">
-                    {otherDots.map((m) => <span key={m.user_id} className="w-2 h-2 rounded-full border border-white" style={{ backgroundColor: m.color }} />)}
-                  </div>
-                )}
-                <div className="px-1.5 py-1 text-[10px] font-semibold" style={{ color: "var(--ink)" }}>{dateLabel(d.date)}</div>
-              </button>
-            );
-          })}
-        </div>
-      </div>
+      {/* ---- ALL DAYS ---- */}
+      {view === "alldays" && (
+        <>
+          <div className={s.grid}>
+            {config.days.map((d) => {
+              const o = outfitForDay(myCloset, d.date);
+              const Lg = config.legs[d.leg] || {};
+              const otherDots = (members || []).filter((m) => {
+                if (m.user_id === myId) return false;
+                const theirs = outfitForDay(closetsAll[m.user_id], d.date);
+                return theirs && visibleToOthers(theirs) && hasPhoto(theirs);
+              });
+              return (
+                <button key={d.date} onClick={() => openDay(d.date)} className={s.gridTile} style={{ "--c": Lg.color || "var(--ink-faint)" }}>
+                  <span className={s.gridHead}>
+                    <span className={s.gridDate}>{weekday(d.date)} {dateLabel(d.date)}</span>
+                    {d.date === today && <span className={s.gridToday} />}
+                  </span>
+                  <span className={s.gridMid}>
+                    {hasPhoto(o) ? (
+                      <span className={s.gridThumb}>
+                        <OutfitImage item={o} alt="" className={s.fillImg} />
+                      </span>
+                    ) : (
+                      <Icon name={o?.desc ? "image" : "plus"} size={15} strokeWidth={1.8} />
+                    )}
+                  </span>
+                  <span className={s.gridDots}>
+                    {otherDots.map((m) => <span key={m.user_id} className={s.gridDot} style={{ backgroundColor: m.color }} />)}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          <div className={s.legend}>
+            <span className={s.legendDot} />
+            <span className={s.legendText}>dots = trip-mates with an outfit you can see that day</span>
+          </div>
+        </>
+      )}
 
       {/* ---- Outfit editor ---- */}
       {editingItem && (
@@ -397,118 +472,106 @@ function OutfitPhoto({ item, alt, mine }) {
   const [onMe, setOnMe] = useState(false);
   const t = FEATURES.tryOn ? item.tryOn?.photo : null;
   return (
-    <div className="relative">
-      <OutfitImage item={item} src={onMe && t ? t : undefined} alt={alt} className="w-full rounded-xl object-cover" style={{ maxHeight: 380, minHeight: 96 }} />
+    <div className={s.photoWrap}>
+      <OutfitImage item={item} src={onMe && t ? t : undefined} alt={alt} className={s.fillImg} />
       {t && (
-        <button onClick={(e) => { e.stopPropagation(); setOnMe(!onMe); }}
-          className="absolute bottom-2 right-2 text-[11px] font-bold px-2.5 py-1 rounded-full text-white"
-          style={{ backgroundColor: "rgba(29,36,51,0.75)" }}>
-          {onMe ? "👕 Outfit" : mine ? "👤 On me" : "👤 On them"}
+        <button onClick={(e) => { e.stopPropagation(); setOnMe(!onMe); }} className={s.flipBtn}>
+          <Icon name={onMe ? "hanger" : "flip"} size={9} strokeWidth={2} /> {onMe ? "Outfit" : mine ? "On me" : "On them"}
         </button>
       )}
     </div>
   );
 }
 
-// Bottom-sheet editor for one closet outfit: photo, description, privacy,
-// try-on and which days it's worn. Every control persists immediately.
+// Bottom-sheet editor for one closet outfit. No save button — every change
+// lands instantly, and the header label says so.
 function OutfitEditor({ item, itemId, busy, config, daysMap, onToggleDay, onSaveDesc, onSetVisibility, onReplacePhoto, onDelete, onClose,
   basePhoto, onAddBasePhoto, tryOnBusy, tryOnError, onTryOn, onRemoveTryOn }) {
   const [desc, setDesc] = useState(item.desc || "");
   const isPrivate = item.visibility === "private";
-  const requestClose = useBackClose(onClose);
 
   return (
-    <div className="fixed inset-0 z-30 flex items-end sm:items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.4)" }} onClick={requestClose}>
-      <div className="w-full max-w-sm m-0 sm:m-4 rounded-t-2xl sm:rounded-2xl p-5 overflow-y-auto" style={{ backgroundColor: "var(--card)", maxHeight: "85vh" }} onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-base font-bold" style={{ color: "var(--ink)" }}>Your outfit</h2>
-          <button onClick={requestClose} className="text-sm font-bold px-3 py-1.5 rounded-full text-white" style={{ backgroundColor: "var(--solid)" }}>Done</button>
-        </div>
+    <Sheet onClose={onClose} label="Your outfit">
+      <div className={s.editorHead}>
+        <h2 className={s.editorTitle}>{item.desc || "Your outfit"}</h2>
+        <span className={s.editorSaves}>Saves as you go</span>
+      </div>
 
+      <div className={s.editorPhoto}>
         {hasPhoto(item) ? (
-          <OutfitImage item={item} alt={item.desc || "Outfit"} className="w-full rounded-xl object-cover" style={{ maxHeight: 300, minHeight: 96 }} />
+          <OutfitImage item={item} alt={item.desc || "Outfit"} className={s.fillImg} />
         ) : (
-          <div className="w-full rounded-xl py-10 text-center text-2xl" style={{ backgroundColor: "var(--field)" }}>📝</div>
+          <div className={s.editorPh}><Icon name="image" size={24} /></div>
         )}
-        <button onClick={onReplacePhoto} disabled={busy} className="mt-2 text-xs font-semibold" style={{ color: "var(--muted)" }}>
-          {busy ? "Saving…" : "Replace photo"}
+        <button onClick={onReplacePhoto} disabled={busy} className={s.replacePill}>
+          <Icon name="camera" size={10} strokeWidth={1.8} /> {busy ? "Saving…" : "Replace"}
         </button>
+      </div>
 
-        <div className="mt-3">
-          <label className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--muted)" }}>What it is</label>
-          <textarea value={desc} onChange={(e) => setDesc(e.target.value)} onBlur={() => onSaveDesc(desc)} rows={2}
-            placeholder="e.g. Black tee, olive chinos, rain jacket, white sneakers"
-            className="mt-1 w-full text-sm rounded-xl border p-3" style={{ borderColor: "var(--border)", backgroundColor: "var(--field)", color: "var(--ink)" }} />
+      <div className={s.field}>
+        <label className={s.fieldLabel}>What it is</label>
+        <Input value={desc} onChange={(e) => setDesc(e.target.value)} onBlur={() => onSaveDesc(desc)}
+          placeholder="e.g. Black tee, olive chinos, rain jacket" className={s.descInput} />
+      </div>
+
+      <div className={s.visRow}>
+        <span className={s.fieldLabel}>Who sees it</span>
+        <Segmented
+          value={isPrivate ? "private" : "trip"}
+          onChange={(v) => onSetVisibility(v)}
+          options={[{ id: "trip", label: "Trip-mates" }, { id: "private", label: "Only me", icon: "lock" }]}
+        />
+      </div>
+
+      <div className={s.field}>
+        <label className={s.fieldLabel}>Wear it on</label>
+        <div className={s.dayGrid}>
+          {config.days.map((d) => {
+            const assignedId = daysMap[d.date];
+            const checked = assignedId === itemId;
+            const taken = assignedId && !checked;
+            return (
+              <button key={d.date} onClick={() => onToggleDay(d.date)}
+                aria-pressed={checked}
+                className={[s.dayCell, checked && s.dayCellOn, taken && s.dayCellTaken].filter(Boolean).join(" ")}>
+                <Icon name={checked ? "check" : taken ? "swap" : "plus"} size={10} strokeWidth={checked ? 2.4 : 2} />
+                {weekday(d.date)} {dateLabel(d.date)}
+              </button>
+            );
+          })}
         </div>
+        <p className={s.fieldHint}>✓ assigned · ⇄ that day belongs to another outfit — tapping swaps it to this one · + free.</p>
+      </div>
 
-        <div className="mt-3">
-          <label className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--muted)" }}>Who can see it</label>
-          <div className="flex gap-2 mt-1.5">
-            <button onClick={() => onSetVisibility("trip")} className="flex-1 text-xs font-bold py-2 rounded-full border"
-              style={isPrivate ? { borderColor: "var(--border)", color: "var(--muted)" } : { borderColor: "var(--solid)", backgroundColor: "var(--solid)", color: "#FFF" }}>
-              👥 Trip-mates
-            </button>
-            <button onClick={() => onSetVisibility("private")} className="flex-1 text-xs font-bold py-2 rounded-full border"
-              style={isPrivate ? { borderColor: "var(--solid)", backgroundColor: "var(--solid)", color: "#FFF" } : { borderColor: "var(--border)", color: "var(--muted)" }}>
-              🔒 Only me
-            </button>
-          </div>
-        </div>
-
-        {FEATURES.tryOn && (
-        <div className="mt-3">
-          <label className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--muted)" }}>See it on me</label>
+      {FEATURES.tryOn && (
+        <div className={s.field}>
+          <label className={s.fieldLabel}>See it on me</label>
           {item.tryOn?.photo && (
-            <img src={item.tryOn.photo} alt="This outfit on you" className="mt-1.5 w-full rounded-xl object-cover" style={{ maxHeight: 300 }} />
+            <img src={item.tryOn.photo} alt="This outfit on you" className={s.tryOnImg} />
           )}
           {!basePhoto ? (
-            <div className="mt-1.5">
-              <button onClick={onAddBasePhoto} disabled={busy} className="w-full text-xs font-bold py-2.5 rounded-xl border" style={{ borderColor: "var(--border)", color: "var(--ink)" }}>
-                📷 Add a photo of yourself first
-              </button>
-              <p className="text-[11px] mt-1" style={{ color: "var(--faint)" }}>One photo, reused for every try-on. Only you can ever see it.</p>
+            <div>
+              <Button full variant="tonal" icon="camera" onClick={onAddBasePhoto} disabled={busy}>Add a photo of yourself first</Button>
+              <p className={s.fieldHint}>One photo, reused for every try-on. Only you can ever see it.</p>
             </div>
           ) : (
-            <div className="mt-1.5 flex gap-2 items-center">
-              <button onClick={onTryOn} disabled={tryOnBusy} className="flex-1 text-xs font-bold py-2.5 rounded-xl text-white" style={{ backgroundColor: "var(--solid)", opacity: tryOnBusy ? 0.6 : 1 }}>
-                {tryOnBusy ? "Dressing you up… can take a minute" : item.tryOn ? "↺ Regenerate" : "✨ See it on me"}
-              </button>
+            <div className={s.tryOnRow}>
+              <Button full icon={item.tryOn ? "reload" : "camera"} onClick={onTryOn} disabled={tryOnBusy}>
+                {tryOnBusy ? "Dressing you up…" : item.tryOn ? "Regenerate" : "See it on me"}
+              </Button>
               {item.tryOn && !tryOnBusy && (
-                <button onClick={onRemoveTryOn} className="text-xs font-semibold px-2" style={{ color: "var(--muted)" }}>Remove</button>
+                <Button variant="ghost" onClick={onRemoveTryOn}>Remove</Button>
               )}
             </div>
           )}
-          {tryOnError && <p className="text-[11px] mt-1 font-semibold" style={{ color: "#C0392B" }}>{tryOnError}</p>}
+          {tryOnError && <p className={s.error}>{tryOnError}</p>}
         </div>
-        )}
+      )}
 
-        <div className="mt-3">
-          <label className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--muted)" }}>Wearing it on</label>
-          <div className="mt-1.5 rounded-xl border divide-y overflow-hidden" style={{ borderColor: "var(--border)" }}>
-            {config.days.map((d) => {
-              const assignedId = daysMap[d.date];
-              const checked = assignedId === itemId;
-              const taken = assignedId && !checked;
-              return (
-                <button key={d.date} onClick={() => onToggleDay(d.date)}
-                  className="w-full flex items-center justify-between px-3 py-2.5 text-left" style={{ borderColor: "var(--divider)", backgroundColor: checked ? "var(--field)" : "transparent" }}>
-                  <span className="text-sm min-w-0 truncate" style={{ color: "var(--ink)" }}>
-                    <span className="font-semibold">{weekday(d.date)} {dateLabel(d.date)}</span>
-                    <span style={{ color: "var(--muted)" }}> · {d.title}</span>
-                  </span>
-                  <span className="text-xs font-bold flex-shrink-0 ml-2" style={{ color: checked ? "var(--ink)" : "var(--faint)" }}>
-                    {checked ? "✓" : taken ? "swap" : "＋"}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-          <p className="text-[11px] mt-1" style={{ color: "var(--faint)" }}>Tap a day to wear this outfit then — "swap" replaces that day's current outfit.</p>
-        </div>
-
-        <button onClick={onDelete} className="mt-4 text-xs font-bold" style={{ color: "#C0392B" }}>Delete this outfit</button>
+      <div className={s.deleteRow}>
+        <button onClick={onDelete} className={s.deleteLink}>Delete outfit</button>
+        <span className={s.deleteHint}>Days it was assigned to will be cleared.</span>
       </div>
-    </div>
+    </Sheet>
   );
 }

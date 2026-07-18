@@ -1,0 +1,231 @@
+.app {
+  min-height: 100dvh;
+  background-color: var(--bg);
+}
+
+/* ---------- header ---------- */
+.header {
+  padding: 20px 16px 12px;
+  background-color: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.headRow {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.backBtn {
+  display: inline-flex;
+  color: var(--ink);
+  padding: 2px;
+  flex: none;
+}
+
+.title {
+  flex: 1;
+  min-width: 0;
+  font: var(--type-title);
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.iconBtn {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  margin: -4px;
+  color: var(--ink-muted);
+}
+
+/* countdown + members + code row */
+.headMeta {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.countdown {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+
+.countdownNum {
+  font: 400 24px/1 var(--font-display);
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.countdownLabel {
+  font: italic 400 14px/1 var(--font-display);
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+.headRight {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.avStack {
+  display: flex;
+}
+
+.avWrap + .avWrap {
+  margin-left: -6px;
+}
+
+.avWrap > * {
+  border: 1.5px solid var(--bg);
+}
+
+.codeChip {
+  background-color: var(--chip);
+  color: var(--chip-ink);
+  font: 600 9px/1 var(--font-text);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  padding: 6px 8px 6px 10px;
+  border-radius: var(--r-control);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- content ---------- */
+.content {
+  padding: 16px 16px 96px;
+  max-width: 32rem;
+  margin: 0 auto;
+}
+
+/* ---------- bottom nav ---------- */
+.nav {
+  position: fixed;
+  inset: auto 0 0 0;
+  background-color: var(--surface);
+  border-top: 1px solid var(--divider);
+  padding-bottom: env(safe-area-inset-bottom);
+  z-index: 20;
+}
+
+.navInner {
+  display: flex;
+  max-width: 32rem;
+  margin: 0 auto;
+}
+
+.navItem {
+  flex: 1;
+  padding: 9px 0 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  color: var(--ink-faint);
+}
+
+.navActive {
+  color: var(--accent);
+}
+
+.navLabel {
+  font: 600 9px/1 var(--font-text);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* ---------- splash / setup-pending ---------- */
+.splash {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--bg);
+}
+
+.splashInner {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  color: var(--ink-faint);
+}
+
+.splashMark {
+  color: var(--accent);
+}
+
+.splashText {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font: 500 13px/1 var(--font-text);
+  color: var(--ink-muted);
+}
+
+.pending {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 24px;
+  background-color: var(--bg);
+}
+
+.pendingCard {
+  max-width: 22rem;
+  width: 100%;
+  text-align: center;
+}
+
+.pendingMark {
+  color: var(--ink-faint);
+  margin: 0 auto 14px;
+  width: 46px;
+  height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+}
+
+.pendingTitle {
+  composes: title from "./styles/type.module.css";
+  margin-bottom: 8px;
+}
+
+.pendingBody {
+  composes: run from "./styles/type.module.css";
+  margin-bottom: 18px;
+}
+
+.pendingLegacy {
+  margin-top: 12px;
+  font: 600 11.5px/1.4 var(--font-text);
+  color: var(--ink-muted);
+}
+
+/* ---------- profile editor sheet ---------- */
+.sheetTitle {
+  composes: titleSm from "./styles/type.module.css";
+  margin-bottom: 14px;
+}
+
+.sheetActions {
+  display: flex;
+  gap: 8px;
+  margin-top: 20px;
+}

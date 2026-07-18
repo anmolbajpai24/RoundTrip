@@ -1,0 +1,769 @@
+/* Three views under one segmented control — Closet, Day, All days — so
+   photos stay big instead of stacking every feature on one scroll. */
+
+.topRow {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.gallerySpacer {
+  flex: 1;
+}
+
+.galleryLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font: 600 9.5px/1 var(--font-text);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.hiddenFile {
+  display: none;
+}
+
+.error {
+  font: 500 12px/1.4 var(--font-text);
+  color: var(--danger);
+  margin-top: 8px;
+}
+
+/* ---------- closet view ---------- */
+.closetGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.card {
+  display: block;
+  text-align: left;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  overflow: hidden;
+}
+
+.cardPhoto {
+  position: relative;
+  height: 132px;
+  background-color: var(--field);
+}
+
+.cardImg {
+  width: 100%;
+  height: 100%;
+}
+
+.cardPh {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-faint);
+}
+
+.onlyMe {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background-color: rgb(24 15 9 / 0.55);
+  border-radius: var(--r-pill);
+  padding: 4px 8px;
+  font: 600 8px/1 var(--font-text);
+  letter-spacing: 0.1em;
+  color: #F5EDE0;
+}
+
+.cardBody {
+  padding: 8px 10px 10px;
+}
+
+.cardName {
+  font: 500 11.5px/1.3 var(--font-text);
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cardChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.dayChip {
+  display: inline-flex;
+  background-color: var(--chip);
+  border-radius: var(--r-chip);
+  padding: 4px 7px;
+  font: 600 8px/1 var(--font-text);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--chip-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.noDay {
+  display: inline-block;
+  font: 400 10px/1 var(--font-text);
+  color: var(--ink-faint);
+  margin-top: 8px;
+}
+
+/* the add tile sits LAST in the grid */
+.addTile {
+  min-height: 190px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  background-color: var(--field);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: 14px;
+  text-align: left;
+  color: var(--accent);
+}
+
+.addTileError {
+  border-color: var(--danger);
+  background-color: var(--danger-soft);
+}
+
+.addTitle {
+  font: 600 12.5px/1.3 var(--font-text);
+  color: var(--ink);
+  margin-top: 10px;
+}
+
+.addTitleError {
+  font: 600 12.5px/1.3 var(--font-text);
+  color: var(--danger);
+}
+
+.addSub {
+  font: 400 10.5px/1.45 var(--font-text);
+  color: var(--ink-muted);
+  margin-top: 4px;
+}
+
+.addProgress {
+  align-self: stretch;
+  display: flex;
+  height: 2px;
+  background-color: var(--border);
+  border-radius: var(--r-pill);
+  margin-top: 10px;
+  overflow: hidden;
+}
+
+.addProgress span {
+  width: 62%;
+  background-color: var(--accent);
+  border-radius: var(--r-pill);
+  animation: slide 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes slide {
+  from { margin-left: 0; }
+  to { margin-left: 38%; }
+}
+
+.emptyNote {
+  font: 400 12px/1.5 var(--font-text);
+  color: var(--ink-faint);
+  margin-top: 12px;
+}
+
+/* try-on teaser (flag-gated) */
+.tryonCard {
+  margin-top: 14px;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.tryonThumbPh {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border-radius: var(--r-thumb);
+  background-color: var(--field);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-faint);
+}
+
+.tryonThumb {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border-radius: var(--r-thumb);
+  object-fit: cover;
+}
+
+.tryonBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.tryonTitle {
+  font: 600 12px/1.3 var(--font-text);
+  color: var(--ink);
+}
+
+.tryonSub {
+  font: 400 10.5px/1.45 var(--font-text);
+  color: var(--ink-muted);
+  margin-top: 2px;
+}
+
+.tryonArrow {
+  flex: none;
+  color: var(--accent);
+}
+
+.sectionLabelRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 14px 0 0;
+}
+
+.sectionLabel {
+  composes: label from "../styles/type.module.css";
+  letter-spacing: 0.16em;
+}
+
+.sectionMeta {
+  font: 500 10.5px/1 var(--font-text);
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- day view ---------- */
+.dayCard {
+  margin-top: 7px;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  padding: 10px;
+  display: flex;
+  gap: 12px;
+}
+
+.dayThumb {
+  width: 118px;
+  height: 138px;
+  flex: none;
+  border-radius: var(--r-thumb);
+  overflow: hidden;
+  position: relative;
+  background-color: var(--field);
+}
+
+/* any OutfitImage / photo filling its thumb box */
+.fillImg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.dayDetails {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.dayDesc {
+  font: 500 13.5px/1.35 var(--font-text);
+  color: var(--ink);
+  margin-top: 6px;
+}
+
+.daySpacer {
+  flex: 1;
+}
+
+.actionRow {
+  display: flex;
+  gap: 14px;
+  padding-bottom: 2px;
+}
+
+.linkAccent {
+  font: 600 11px/1 var(--font-text);
+  color: var(--accent);
+}
+
+.linkMuted {
+  font: 600 11px/1 var(--font-text);
+  color: var(--ink-faint);
+}
+
+/* empty day */
+.emptyCard {
+  margin-top: 7px;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  padding: 16px;
+}
+
+.emptyTitle {
+  font: italic 400 15px/1.2 var(--font-display);
+  color: var(--accent);
+}
+
+.emptyBody {
+  font: 400 12px/1.5 var(--font-text);
+  color: var(--ink-muted);
+  margin-top: 5px;
+}
+
+.emptyActions {
+  display: flex;
+  gap: 10px;
+  margin-top: 13px;
+}
+
+.emptyActions > :first-child {
+  flex: 1.2;
+}
+
+.emptyActions > :last-child {
+  flex: 1;
+}
+
+/* closet picker strip */
+.pickerStrip {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.pickerCard {
+  width: 96px;
+  flex: none;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  overflow: hidden;
+  text-align: left;
+}
+
+.pickerCardActive {
+  border-color: var(--accent);
+}
+
+.pickerPhoto {
+  height: 78px;
+  position: relative;
+  background-color: var(--field);
+}
+
+.pickerLock {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: inline-flex;
+  background-color: rgb(24 15 9 / 0.55);
+  border-radius: var(--r-pill);
+  padding: 3px 5px;
+  color: #F5EDE0;
+}
+
+.pickerBody {
+  padding: 7px 9px 9px;
+}
+
+.pickerName {
+  display: block;
+  font: 500 10px/1.3 var(--font-text);
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pickerWorn {
+  display: block;
+  font: 400 9px/1 var(--font-text);
+  color: var(--ink-faint);
+  margin-top: 3px;
+  font-variant-numeric: tabular-nums;
+}
+
+.pickerAdd {
+  width: 40px;
+  flex: none;
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  background-color: var(--field);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+}
+
+.pickerHint {
+  font: 400 10.5px/1.5 var(--font-text);
+  color: var(--ink-faint);
+  margin-top: 9px;
+}
+
+/* everyone else */
+.otherCard {
+  margin-top: 6px;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  text-align: left;
+}
+
+.otherThumb {
+  width: 52px;
+  height: 60px;
+  flex: none;
+  border-radius: var(--r-thumb);
+  overflow: hidden;
+  background-color: var(--field);
+}
+
+.otherBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.otherDesc {
+  display: block;
+  font: 500 12.5px/1.35 var(--font-text);
+  color: var(--ink);
+  margin-top: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.otherAvatar {
+  flex: none;
+}
+
+.otherNote {
+  flex: 1;
+  min-width: 0;
+  font: 400 12px/1.4 var(--font-text);
+  color: var(--ink-muted);
+}
+
+.otherNoteQuiet {
+  flex: 1;
+  min-width: 0;
+  font: 400 12px/1.4 var(--font-text);
+  color: var(--ink-faint);
+}
+
+.otherIcon {
+  flex: none;
+  color: var(--ink-faint);
+}
+
+/* try-on flip chip (overlaid on photos) */
+.photoWrap {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.flipBtn {
+  position: absolute;
+  left: 6px;
+  bottom: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background-color: rgb(24 15 9 / 0.55);
+  border-radius: var(--r-pill);
+  padding: 4px 8px;
+  font: 600 8px/1 var(--font-text);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #F5EDE0;
+}
+
+/* ---------- all days view ---------- */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.gridTile {
+  height: 148px;
+  border-radius: var(--r-cell);
+  background-color: color-mix(in srgb, var(--c) 12%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--c) 32%, var(--surface));
+  padding: 9px 10px;
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+
+.gridHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.gridDate {
+  font: 600 8px/1 var(--font-text);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--c) 72%, var(--ink));
+  font-variant-numeric: tabular-nums;
+}
+
+.gridToday {
+  width: 5px;
+  height: 5px;
+  border-radius: var(--r-pill);
+  background-color: color-mix(in srgb, var(--c) 72%, var(--ink));
+}
+
+.gridMid {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 0;
+  color: var(--ink-faint);
+  min-height: 0;
+}
+
+.gridThumb {
+  width: 52px;
+  height: 62px;
+  border-radius: var(--r-thumb);
+  overflow: hidden;
+}
+
+.gridDots {
+  display: flex;
+  gap: 3px;
+  justify-content: center;
+  height: 7px;
+}
+
+.gridDot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--r-pill);
+}
+
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.legendDot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--r-pill);
+  background-color: var(--ink-faint);
+}
+
+.legendText {
+  font: 400 10.5px/1 var(--font-text);
+  color: var(--ink-muted);
+}
+
+/* ---------- editor sheet ---------- */
+.editorHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.editorTitle {
+  font: 400 21px/1.1 var(--font-display);
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.editorSaves {
+  flex: none;
+  font: 600 9px/1 var(--font-text);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.editorPhoto {
+  position: relative;
+  height: 118px;
+  border-radius: var(--r-thumb);
+  overflow: hidden;
+  margin-top: 12px;
+  background-color: var(--field);
+}
+
+.editorPh {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-faint);
+  height: 100%;
+}
+
+.replacePill {
+  position: absolute;
+  left: 8px;
+  bottom: 7px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background-color: rgb(24 15 9 / 0.55);
+  border-radius: var(--r-pill);
+  padding: 5px 9px;
+  font: 600 8.5px/1 var(--font-text);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #F5EDE0;
+}
+
+.field {
+  margin-top: 12px;
+}
+
+.fieldLabel {
+  composes: label from "../styles/type.module.css";
+  letter-spacing: 0.16em;
+  display: block;
+  margin-bottom: 7px;
+}
+
+.descInput {
+  height: 42px;
+}
+
+.visRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.dayGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.dayCell {
+  height: 32px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-control);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  font: 600 10px/1 var(--font-text);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.dayCell svg {
+  color: var(--ink-faint);
+}
+
+.dayCellOn {
+  background-color: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+
+.dayCellOn svg {
+  color: var(--accent-ink);
+}
+
+.dayCellTaken {
+  background-color: var(--chip);
+  border-color: color-mix(in srgb, var(--border) 45%, var(--ink-faint));
+  color: var(--chip-ink);
+}
+
+.dayCellTaken svg {
+  color: var(--chip-ink);
+}
+
+.fieldHint {
+  font: 400 10.5px/1.45 var(--font-text);
+  color: var(--ink-faint);
+  margin-top: 7px;
+}
+
+.tryOnImg {
+  width: 100%;
+  max-height: 300px;
+  object-fit: contain;
+  border-radius: var(--r-thumb);
+  margin-bottom: 8px;
+  background-color: var(--field);
+}
+
+.tryOnRow {
+  display: flex;
+  gap: 8px;
+}
+
+.deleteRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.deleteLink {
+  font: 600 12px/1 var(--font-text);
+  color: var(--danger);
+}
+
+.deleteHint {
+  font: 400 10.5px/1 var(--font-text);
+  color: var(--ink-faint);
+  text-align: right;
+}

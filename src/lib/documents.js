@@ -44,9 +44,6 @@ export async function removeDocument(doc) {
   if (error) throw friendly(error);
 }
 
-export const docIcon = (type) =>
-  type?.startsWith("image/") ? "🖼️" : type === "application/pdf" ? "📄" : "📎";
-
 export function docSize(bytes) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;

@@ -2,7 +2,6 @@ import { defineConfig, loadEnv } from "vite";
 import { pathToFileURL } from "node:url";
 import { resolve } from "node:path";
 import react from "@vitejs/plugin-react";
-import tailwindcss from "@tailwindcss/vite";
 import { VitePWA } from "vite-plugin-pwa";
 
 // Serve the api/ functions on the dev server so they work under `npm run dev`
@@ -47,17 +46,21 @@ function apiDevEndpoints(env) {
 export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
-    tailwindcss(),
     apiDevEndpoints(loadEnv(mode, process.cwd(), "")),
     VitePWA({
       registerType: "autoUpdate",
       includeAssets: ["apple-touch-icon.png"],
+      workbox: {
+        // Workbox's default glob skips fonts; without woff2 here an offline
+        // launch after cache eviction falls back to Georgia/system forever.
+        globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
+      },
       manifest: {
         name: "Roundtrip",
         short_name: "Roundtrip",
         description: "Shared trip companion — itinerary, outfits, packing, budget, bookings",
-        theme_color: "#1D2433",
-        background_color: "#F7F5F0",
+        theme_color: "#F5EFE4",
+        background_color: "#F5EFE4",
         display: "standalone",
         icons: [
           { src: "icon-192.png", sizes: "192x192", type: "image/png" },

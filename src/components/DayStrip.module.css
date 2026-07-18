@@ -1,0 +1,75 @@
+/* Full-width when the trip fits (mockup: 9 cells edge-to-edge, 4px gaps);
+   longer trips keep fixed 44px cells inside a horizontal scroller. */
+.strip {
+  display: flex;
+  gap: 4px;
+}
+
+.stripScroll {
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin: 0 -16px;
+  padding: 0 16px 4px;
+}
+
+.stripScroll::-webkit-scrollbar {
+  display: none;
+}
+
+.cell {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 54px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  border-radius: var(--r-cell);
+  /* destination colour mixed toward the surface (the 88% rule) */
+  background-color: color-mix(in srgb, var(--c) 12%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--c) 32%, var(--surface));
+}
+
+.stripScroll .cell {
+  flex: none;
+  width: 44px;
+}
+
+.active {
+  background-color: var(--c);
+  border-color: var(--c);
+}
+
+.weekday {
+  font: 600 8.5px/1 var(--font-text);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--c) 60%, var(--ink));
+}
+
+.date {
+  font: 400 17px/1 var(--font-display);
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.dot {
+  width: 4px;
+  height: 4px;
+  border-radius: var(--r-pill);
+  background-color: var(--c);
+}
+
+.active .weekday {
+  color: var(--on);
+  opacity: 0.75;
+}
+
+.active .date {
+  color: var(--on);
+}
+
+.active .dot {
+  background-color: var(--on);
+}

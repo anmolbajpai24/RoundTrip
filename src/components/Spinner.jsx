@@ -1,10 +1,14 @@
+import s from "./Spinner.module.css";
+
 // Minimal inline spinner for busy buttons and loading rows.
-export default function Spinner({ className = "w-4 h-4", light = false }) {
+// `on` names the token the ring rides on: "ink" (default) or "accent" (on an
+// accent-filled button, where the ring must read against accent-ink).
+export default function Spinner({ size = 16, on = "ink", className }) {
   return (
     <span
       aria-hidden="true"
-      className={`inline-block rounded-full border-2 animate-spin align-middle ${className}`}
-      style={{ borderColor: light ? "rgba(255,255,255,0.8)" : "var(--muted)", borderTopColor: "transparent" }}
+      className={[s.spinner, on === "accent" && s.onAccent, className].filter(Boolean).join(" ")}
+      style={{ width: size, height: size }}
     />
   );
 }

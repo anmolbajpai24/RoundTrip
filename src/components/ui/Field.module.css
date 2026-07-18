@@ -1,0 +1,79 @@
+.field {
+  display: block;
+}
+
+/* Container-owned form rhythm: the stack spaces ALL children uniformly
+   (Fields, toggle rows, row pairs), so spacing never depends on what kind of
+   element a Field happens to sit next to. */
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Side-by-side pair (dates, currency+rate). Children are margin-free so no
+   sibling rule can ever misalign the columns. */
+.row {
+  display: flex;
+  gap: 10px;
+}
+
+.row > * {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+
+.label {
+  composes: label from "../../styles/type.module.css";
+  display: block;
+  margin-bottom: 7px;
+}
+
+.hint {
+  display: block;
+  margin-top: 6px;
+  font: 400 11.5px/1.45 var(--font-text);
+  color: var(--ink-faint);
+}
+
+.input {
+  width: 100%;
+  height: 46px;
+  padding: 0 14px;
+  background-color: var(--field);
+  border: 1px solid var(--border);
+  border-radius: var(--r-control);
+  font: 500 14px/1 var(--font-text);
+  color: var(--ink);
+}
+
+.input::placeholder {
+  color: var(--ink-faint);
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.area {
+  height: auto;
+  min-height: 84px;
+  padding: 12px 14px;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.select {
+  appearance: none;
+}
+
+/* trip codes: tracked caps, share-legible */
+.code {
+  font: 600 15px/1 var(--font-text);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}

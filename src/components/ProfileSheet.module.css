@@ -1,0 +1,155 @@
+.head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.headTitle {
+  font: 400 21px/1.1 var(--font-display);
+  color: var(--ink);
+}
+
+.headCaption {
+  flex: none;
+  font: 600 9px/1 var(--font-text);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.identity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.identityMain {
+  flex: 1;
+  min-width: 0;
+}
+
+.swatches {
+  margin-top: 12px;
+}
+
+.section {
+  composes: label from "../styles/type.module.css";
+  letter-spacing: 0.16em;
+  margin: 18px 0 8px;
+}
+
+/* inline hairline stat row */
+.stats {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 16px;
+  padding: 0 2px;
+}
+
+.stat {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+}
+
+.statNum {
+  font: 400 22px/1 var(--font-display);
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.statLabel {
+  font: 600 9px/1 var(--font-text);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.statRule {
+  width: 1px;
+  height: 14px;
+  background-color: var(--border);
+}
+
+/* account — guest */
+.guestBody {
+  font: 400 12px/1.5 var(--font-text);
+  color: var(--ink-muted);
+}
+
+.guestCta {
+  margin-top: 10px;
+}
+
+.subCopy {
+  font: 400 10.5px/1.5 var(--font-text);
+  color: var(--ink-faint);
+  margin-top: 7px;
+}
+
+/* account — signed-in */
+.accountRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.accountEmail {
+  flex: 1;
+  min-width: 0;
+  font: 500 13px/1.3 var(--font-text);
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.signOut {
+  flex: none;
+  height: 34px;
+  padding: 0 13px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-control);
+  font: 600 12px/1 var(--font-text);
+  color: var(--ink);
+}
+
+.themePicker {
+  width: 100%;
+  display: flex;
+}
+
+.themePicker > * {
+  flex: 1;
+  justify-content: center;
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+.error {
+  font: 500 12px/1.4 var(--font-text);
+  color: var(--danger);
+  margin-top: 8px;
+}
+
+.footer {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.version {
+  font: 400 10.5px/1 var(--font-text);
+  color: var(--ink-faint);
+}
+
+.link {
+  font: 500 10.5px/1 var(--font-text);
+  color: var(--ink-faint);
+  text-decoration: underline;
+}

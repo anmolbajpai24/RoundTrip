@@ -1,27 +1,31 @@
 import { useState, useEffect, useMemo } from "react";
-import { TripConfigContext, CONFIG_KEY, dateRangeLabel, isDuringTrip, tripDayNumber, daysToGo, defaultDay } from "./lib/tripConfig.js";
+import { TripConfigContext, CONFIG_KEY, isDuringTrip, tripDayNumber, daysToGo, defaultDay } from "./lib/tripConfig.js";
 import { loadKey, saveKey, loadPersonalAll, loadClosetsAll, subscribe, subscribeMembers, flushOutbox } from "./lib/storage.js";
 import { refreshWeather } from "./lib/weather.js";
 import { loadSession, getSession, ensureAuth, loadMembers, setProfile, leaveToHome, deleteTrip, leaveTrip, COLORS } from "./lib/session.js";
 import { currentUser } from "./lib/auth.js";
-import BackupControls from "./components/BackupControls.jsx";
+import Avatar from "./components/Avatar.jsx";
 import TripGate from "./components/TripGate.jsx";
 import Onboarding, { hasOnboarded } from "./components/Onboarding.jsx";
 import TripsHome from "./components/TripsHome.jsx";
 import TripWizard from "./components/TripWizard.jsx";
 import TripSettings from "./components/TripSettings.jsx";
 import LegacyUpgrade from "./components/LegacyUpgrade.jsx";
-import PersonBadge from "./components/PersonBadge.jsx";
 import SyncChip from "./components/SyncChip.jsx";
 import Spinner from "./components/Spinner.jsx";
 import { toast } from "./components/dialogs.jsx";
-import useBackClose, { setTabPopHandler } from "./lib/useBackClose.js";
+import { setTabPopHandler } from "./lib/useBackClose.js";
 import ItineraryTab from "./tabs/ItineraryTab.jsx";
 import OutfitsTab from "./tabs/OutfitsTab.jsx";
 import PackingTab from "./tabs/PackingTab.jsx";
 import BudgetTab from "./tabs/BudgetTab.jsx";
 import BookingsTab from "./tabs/BookingsTab.jsx";
-import { ACCENT, INK, MUTED } from "./theme.js";
+import Icon from "./components/ui/icons.jsx";
+import Sheet from "./components/ui/Sheet.jsx";
+import Button from "./components/ui/Button.jsx";
+import Field, { Input, FormStack } from "./components/ui/Field.jsx";
+import SwatchPicker from "./components/ui/SwatchPicker.jsx";
+import s from "./App.module.css";
 
 const SHARED = "__shared__";
 const seedPacking = (config) =>
@@ -215,65 +219,50 @@ export default function App() {
   if (!loaded) return <Splash text="Syncing your trip…" />;
   if (!config) return <TripSetupPending onDone={() => window.location.reload()} />;
 
-  const me = membersById[myId] || { name: session.name, color: session.color };
   const dtg = daysToGo(config);
-  const countdownText =
-    dtg > 0 ? `${dtg} days to go` :
-    isDuringTrip(config) ? `Day ${tripDayNumber(config)} of the trip` : "Trip complete ✈️";
+  const cd =
+    dtg > 0 ? { n: String(dtg), label: dtg === 1 ? "day to go" : "days to go" } :
+    isDuringTrip(config) ? { n: `Day ${tripDayNumber(config)}`, label: "of the trip" } :
+    { n: null, label: "Trip complete" };
 
   const TABS = [
-    { id: "itinerary", label: "Trip", icon: "🗓️" },
-    { id: "outfits", label: "Outfits", icon: "👕" },
-    { id: "packing", label: "Pack", icon: "🧳" },
-    { id: "budget", label: "Budget", icon: "💰" },
-    { id: "bookings", label: "Book", icon: "🎫" },
+    { id: "itinerary", label: "Trip", icon: "route" },
+    { id: "outfits", label: "Outfits", icon: "hanger" },
+    { id: "packing", label: "Pack", icon: "case" },
+    { id: "budget", label: "Budget", icon: "wallet" },
+    { id: "bookings", label: "Book", icon: "ticket" },
   ];
-
   return (
     <TripConfigContext.Provider value={config}>
-    <div className="min-h-screen" style={{ backgroundColor: "var(--bg)", fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" }}>
+    <div className={s.app}>
       {/* Header */}
-      <div className="px-4 pt-5 pb-3" style={{ backgroundColor: "var(--solid)" }}>
-        <div className="flex items-center justify-between">
-          <div className="min-w-0">
-            <button onClick={goHome} className="text-[11px] font-bold uppercase tracking-widest flex items-center gap-1" style={{ color: ACCENT }}>
-              ‹ Trips <span style={{ color: MUTED }}>· {dateRangeLabel(config)}</span>
-            </button>
-            <div className="flex items-center gap-1 mt-0.5">
-              <h1 className="text-white text-xl font-bold truncate">{config.title}</h1>
-              <button onClick={() => setEditingTrip(true)} title="Trip settings" aria-label="Trip settings"
-                className="text-sm w-11 h-11 -my-3 -mx-1.5 flex-shrink-0 inline-flex items-center justify-center" style={{ color: MUTED }}>⚙</button>
-            </div>
-          </div>
-          <div className="text-right flex-shrink-0">
-            <div className="text-white text-sm font-bold" style={{ fontFamily: "ui-monospace, monospace" }}>{countdownText}</div>
-            <button onClick={() => setEditingProfile(true)} aria-label="Edit profile"
-              className="mt-1 inline-flex items-center gap-1.5 py-2 -my-2 pl-2 -ml-2">
-              <PersonBadge member={me} />
-              <span className="text-[11px]" style={{ color: MUTED }}>· {session.code} ✎</span>
-            </button>
-          </div>
+      <div className={s.header}>
+        <div className={s.headRow}>
+          <button onClick={goHome} aria-label="Back to your trips" className={s.backBtn}>
+            <Icon name="back" size={18} strokeWidth={1.8} />
+          </button>
+          <h1 className={s.title}>{config.title}</h1>
+          <SyncChip />
+          <button onClick={() => setEditingTrip(true)} title="Trip settings" aria-label="Trip settings" className={s.iconBtn}>
+            <Icon name="gear" size={18} strokeWidth={1.6} />
+          </button>
         </div>
-        <SyncChip />
-        {/* Who's on this trip */}
-        {members.length > 1 && (
-          <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-            <span className="text-[10px] uppercase tracking-wide font-semibold" style={{ color: MUTED }}>On this trip:</span>
-            {members.map((m) => <PersonBadge key={m.user_id} member={m} size="xs" />)}
-          </div>
-        )}
-        {/* Route line */}
-        <div className="flex items-center gap-1 mt-3 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
-          {config.legOrder.map((leg, i, arr) => (
-            <div key={i} className="flex items-center gap-1 flex-shrink-0">
-              <span className="text-[10px] font-bold px-2 py-1 rounded-full" style={{ backgroundColor: config.legs[leg]?.color || "#555", color: "#FFF" }}>
-                {config.legs[leg]?.name || leg}
-              </span>
-              {i < arr.length - 1 && <span className="text-[10px]" style={{ color: MUTED }}>→</span>}
-            </div>
-          ))}
+        <div className={s.headMeta}>
+          <span className={s.countdown}>
+            {cd.n && <span className={s.countdownNum}>{cd.n}</span>}
+            <span className={s.countdownLabel}>{cd.label}</span>
+          </span>
+          <span className={s.headRight}>
+            <button onClick={() => setEditingProfile(true)} aria-label="Edit profile" className={s.avStack}>
+              {members.map((m) => (
+                <span key={m.user_id} className={s.avWrap}>
+                  <Avatar name={m.name} color={m.color} size="xs" />
+                </span>
+              ))}
+            </button>
+            <span className={s.codeChip}>{session.code}</span>
+          </span>
         </div>
-        <BackupControls />
       </div>
 
       {editingProfile && (
@@ -299,7 +288,7 @@ export default function App() {
       )}
 
       {/* Content */}
-      <div className="px-4 py-4 pb-24 max-w-lg mx-auto">
+      <div className={s.content}>
         {tab === "itinerary" && (
           <ItineraryTab
             overrides={overrides} setOverrides={setOverrides}
@@ -329,16 +318,17 @@ export default function App() {
       </div>
 
       {/* Bottom nav */}
-      <div className="fixed bottom-0 left-0 right-0 border-t" style={{ backgroundColor: "var(--card)", borderColor: "var(--border)", paddingBottom: "env(safe-area-inset-bottom)" }}>
-        <div className="flex max-w-lg mx-auto">
+      <nav className={s.nav}>
+        <div className={s.navInner}>
           {TABS.map((t) => (
-            <button key={t.id} onClick={() => setTab(t.id)} className="flex-1 py-2.5 flex flex-col items-center gap-0.5">
-              <span className="text-lg" style={{ filter: tab === t.id ? "none" : "grayscale(1) opacity(0.5)" }}>{t.icon}</span>
-              <span className="text-[10px] font-bold" style={{ color: tab === t.id ? ACCENT : "var(--faint)" }}>{t.label}</span>
+            <button key={t.id} onClick={() => setTab(t.id)} aria-current={tab === t.id ? "page" : undefined}
+              className={[s.navItem, tab === t.id && s.navActive].filter(Boolean).join(" ")}>
+              <Icon name={t.icon} size={21} strokeWidth={tab === t.id ? 1.7 : 1.6} />
+              <span className={s.navLabel}>{t.label}</span>
             </button>
           ))}
         </div>
-      </div>
+      </nav>
     </div>
     </TripConfigContext.Provider>
   );
@@ -346,11 +336,11 @@ export default function App() {
 
 function Splash({ text }) {
   return (
-    <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: "var(--bg)" }}>
-      <div className="text-center">
-        <div className="text-3xl mb-2">✈️</div>
-        <div className="text-sm font-semibold flex items-center justify-center gap-2" style={{ color: MUTED }}>
-          <Spinner className="w-3.5 h-3.5" /> {text}
+    <div className={s.splash}>
+      <div className={s.splashInner}>
+        <Icon name="route" size={34} strokeWidth={1.6} className={s.splashMark} />
+        <div className={s.splashText}>
+          <Spinner size={14} /> {text}
         </div>
       </div>
     </div>
@@ -366,18 +356,16 @@ function TripSetupPending({ onDone }) {
   const [showUpgrade, setShowUpgrade] = useState(false);
   if (showUpgrade) return <LegacyUpgrade onDone={onDone} />;
   return (
-    <div className="min-h-screen flex items-center justify-center px-6" style={{ backgroundColor: "var(--bg)" }}>
-      <div className="max-w-sm w-full text-center">
-        <div className="text-3xl mb-2">⏳</div>
-        <h1 className="text-lg font-bold mb-2" style={{ color: INK }}>Setting up this trip…</h1>
-        <p className="text-sm leading-relaxed mb-4" style={{ color: MUTED }}>
+    <div className={s.pending}>
+      <div className={s.pendingCard}>
+        <div className={s.pendingMark}><Icon name="reload" size={22} /></div>
+        <h1 className={s.pendingTitle}>Setting up this trip…</h1>
+        <p className={s.pendingBody}>
           The trip's setup hasn't reached this device yet. It finishes on its
           own once the trip creator completes their setup — hang tight, or reload.
         </p>
-        <button onClick={() => window.location.reload()} className="w-full text-sm font-bold text-white py-3 rounded-full mb-3" style={{ backgroundColor: ACCENT }}>
-          Reload
-        </button>
-        <button onClick={() => setShowUpgrade(true)} className="w-full text-xs font-semibold py-2" style={{ color: MUTED }}>
+        <Button full onClick={() => window.location.reload()}>Reload</Button>
+        <button onClick={() => setShowUpgrade(true)} className={s.pendingLegacy}>
           Is this a trip from before in-app setup existed? Upgrade it
         </button>
       </div>
@@ -389,7 +377,6 @@ function ProfileEditor({ session, onClose, onSaved }) {
   const [name, setName] = useState(session.name || "");
   const [color, setColor] = useState(session.color || COLORS[0]);
   const [busy, setBusy] = useState(false);
-  const requestClose = useBackClose(onClose);
   const save = async () => {
     if (!name.trim()) return;
     setBusy(true);
@@ -397,28 +384,24 @@ function ProfileEditor({ session, onClose, onSaved }) {
     onSaved(next);
   };
   return (
-    <div className="fixed inset-0 z-30 flex items-end sm:items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.4)" }} onClick={requestClose}>
-      <div className="w-full max-w-sm m-4 rounded-2xl p-5" style={{ backgroundColor: "var(--card)" }} onClick={(e) => e.stopPropagation()}>
-        <h2 className="text-base font-bold mb-3" style={{ color: INK }}>Your profile</h2>
-        <label className="text-xs font-bold uppercase tracking-wide" style={{ color: MUTED }}>Name</label>
-        <input value={name} onChange={(e) => setName(e.target.value)} maxLength={24}
-          className="mt-1 mb-4 w-full text-sm rounded-xl border px-4 py-3" style={{ borderColor: "var(--border)", backgroundColor: "var(--field)", color: INK }} />
-        <div className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: MUTED }}>Colour</div>
-        <div className="flex gap-2 mb-5">
-          {COLORS.map((c) => (
-            <button key={c} onClick={() => setColor(c)} className="w-9 h-9 rounded-full flex items-center justify-center"
-              style={{ backgroundColor: c, outline: color === c ? "3px solid var(--ink)" : "none", outlineOffset: 2 }}>
-              {color === c && <span className="text-white text-sm font-bold">✓</span>}
-            </button>
-          ))}
-        </div>
-        <div className="flex gap-2">
-          <button onClick={save} disabled={busy} className="flex-1 text-sm font-bold text-white py-2.5 rounded-full" style={{ backgroundColor: ACCENT }}>
-            {busy ? "Saving…" : "Save"}
-          </button>
-          <button onClick={requestClose} className="text-sm font-semibold px-4 py-2.5 rounded-full" style={{ color: MUTED }}>Cancel</button>
-        </div>
-      </div>
-    </div>
+    <Sheet onClose={onClose} label="Your profile">
+      {(requestClose) => (
+        <>
+          <h2 className={s.sheetTitle}>Your profile</h2>
+          <FormStack>
+            <Field label="Name">
+              <Input value={name} onChange={(e) => setName(e.target.value)} maxLength={24} />
+            </Field>
+            <Field label="Colour">
+              <SwatchPicker colors={COLORS} value={color} onChange={setColor} />
+            </Field>
+          </FormStack>
+          <div className={s.sheetActions}>
+            <Button full onClick={save} disabled={busy}>{busy ? "Saving…" : "Save"}</Button>
+            <Button variant="ghost" onClick={requestClose}>Cancel</Button>
+          </div>
+        </>
+      )}
+    </Sheet>
   );
 }

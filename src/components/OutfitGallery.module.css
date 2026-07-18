@@ -1,0 +1,344 @@
+/* Deliberate dark photo-viewer surface (espresso black + cream), not app chrome. */
+.shell {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  background-color: #160F08;
+  color: #FBF6EC;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: max(1rem, env(safe-area-inset-top)) 16px 8px;
+}
+
+.modes {
+  display: flex;
+  border-radius: var(--r-pill);
+  overflow: hidden;
+  background-color: rgb(255 255 255 / 0.08);
+}
+
+.mode {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 14px;
+  font: 600 9.5px/1 var(--font-text);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgb(251 246 236 / 0.65);
+}
+
+.modeActive {
+  background-color: #FBF6EC;
+  color: #160F08;
+}
+
+.close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  color: #FBF6EC;
+}
+
+.topSpacer {
+  flex: 1;
+}
+
+.topCount {
+  font: 500 11px/1 var(--font-text);
+  color: rgb(251 246 236 / 0.65);
+  font-variant-numeric: tabular-nums;
+}
+
+.members {
+  display: flex;
+  gap: 6px;
+  padding: 0 16px 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.memberChip {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 11px;
+  border: 1px solid rgb(251 246 236 / 0.22);
+  border-radius: var(--r-pill);
+  font: 600 10px/1 var(--font-text);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgb(251 246 236 / 0.75);
+}
+
+.memberActive {
+  border-color: #F1E9DB;
+  color: #FFF;
+}
+
+.memberDot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--r-pill);
+}
+
+.deck {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  touch-action: pan-y;
+}
+
+.slideWrap {
+  position: absolute;
+  inset: 0;
+  padding: 0 16px 4px;
+  transition: transform 0.28s ease;
+}
+
+.empty {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 0 32px;
+  text-align: center;
+}
+
+.emptyMark,
+.placeholderMark {
+  width: 52px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgb(255 255 255 / 0.2);
+  border-radius: var(--r-pill);
+  color: rgb(251 246 236 / 0.7);
+}
+
+.emptyText {
+  font: 500 13px/1.5 var(--font-text);
+  color: rgb(251 246 236 / 0.65);
+}
+
+.slidePlaceholder {
+  height: 100%;
+  border-radius: var(--r-card);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background-color: rgb(255 255 255 / 0.04);
+}
+
+.placeholderText {
+  font: 500 13px/1.4 var(--font-text);
+  color: rgb(251 246 236 / 0.65);
+  padding: 0 32px;
+  text-align: center;
+}
+
+.slide {
+  position: relative;
+  height: 100%;
+}
+
+.slideImg {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: var(--r-card);
+  background-color: rgb(255 255 255 / 0.04);
+}
+
+.descOnly {
+  height: 100%;
+  border-radius: var(--r-card);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 0 32px;
+  background-color: rgb(255 255 255 / 0.04);
+}
+
+.descText {
+  font: 500 16px/1.4 var(--font-text);
+  text-align: center;
+}
+
+.flipBtn {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: var(--r-pill);
+  background-color: rgb(15 10 5 / 0.7);
+  color: #FBF6EC;
+  font: 600 11px/1 var(--font-text);
+}
+
+.nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 56px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-card);
+  background-color: rgb(15 10 5 / 0.5);
+  color: #FBF6EC;
+}
+
+.nav:disabled {
+  color: rgb(251 246 236 / 0.4);
+}
+
+.navPrev {
+  left: 6px;
+}
+
+.navNext {
+  right: 6px;
+}
+
+.captionBar {
+  padding: 8px 20px max(1rem, env(safe-area-inset-bottom));
+}
+
+/* overlaid on the photo's lower edge, above a soft scrim */
+.captionOverlay {
+  position: absolute;
+  left: 26px;
+  right: 26px;
+  bottom: 24px;
+  pointer-events: none;
+}
+
+.caption {
+  text-align: left;
+  text-shadow: 0 1px 8px rgb(10 6 3 / 0.65);
+}
+
+.captionOwner {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font: 600 10px/1 var(--font-text);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgb(251 246 236 / 0.85);
+  margin-bottom: 5px;
+}
+
+.captionOwnerDot {
+  width: 7px;
+  height: 7px;
+  border-radius: var(--r-pill);
+}
+
+.captionHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.captionTitle {
+  font: 600 14px/1 var(--font-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.captionSub {
+  font: 400 12px/1.3 var(--font-text);
+  color: rgb(251 246 236 / 0.65);
+  margin-top: 3px;
+}
+
+.captionDesc {
+  font: 400 15px/1.35 var(--font-display);
+  margin-top: 4px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.captionDescStrong {
+  font: 400 17px/1.3 var(--font-display);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.captionMuted {
+  font: italic 400 15px/1.3 var(--font-display);
+  color: rgb(251 246 236 / 0.6);
+}
+
+.captionChips {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 7px;
+}
+
+.gChip,
+.gChipFaint {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: var(--r-pill);
+  font: 600 10px/1.4 var(--font-text);
+  background-color: rgb(255 255 255 / 0.12);
+}
+
+.gChipFaint {
+  background-color: rgb(255 255 255 / 0.06);
+  color: rgb(251 246 236 / 0.6);
+}
+
+.dots {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.dotBtn {
+  padding: 6px;
+  margin: -4px;
+}
+
+.dot {
+  display: block;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--r-pill);
+  background-color: rgb(251 246 236 / 0.6);
+}
+
+.dotActive {
+  background-color: #FBF6EC;
+}

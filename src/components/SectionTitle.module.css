@@ -1,0 +1,12 @@
+.wrap {
+  margin-bottom: 12px;
+}
+
+.title {
+  composes: title from "../styles/type.module.css";
+}
+
+.sub {
+  composes: run from "../styles/type.module.css";
+  margin-top: 3px;
+}

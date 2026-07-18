@@ -1,0 +1,273 @@
+.summary {
+  padding: 16px;
+  margin-bottom: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  background-color: var(--surface);
+}
+
+.summaryTop {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+}
+
+.statRight {
+  text-align: right;
+}
+
+.statLabel {
+  composes: label from "../styles/type.module.css";
+  font-size: 9px;
+}
+
+.statNum {
+  font: 400 22px/1.1 var(--font-display);
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  margin-top: 3px;
+}
+
+/* SPENT is the hero; LEFT stays secondary at 22px */
+.statNumHero {
+  font: 400 34px/1 var(--font-display);
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  margin-top: 4px;
+}
+
+.statSub {
+  font: 500 12px/1 var(--font-text);
+  color: var(--ink-muted);
+  margin-top: 3px;
+  font-variant-numeric: tabular-nums;
+}
+
+.good {
+  color: var(--success);
+}
+
+.bad {
+  color: var(--danger);
+}
+
+.bar {
+  margin-top: 14px;
+}
+
+.catTotals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 14px;
+}
+
+.catTotal {
+  display: inline-flex;
+  align-items: center;
+  height: 26px;
+  padding: 0 9px;
+  border-radius: var(--r-chip);
+  background-color: var(--chip);
+  color: var(--chip-ink);
+  font: 600 9px/1 var(--font-text);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+}
+
+.sectionLabel {
+  composes: label from "../styles/type.module.css";
+  letter-spacing: 0.16em;
+  margin: 14px 0 6px;
+}
+
+.card {
+  padding: 2px 14px;
+  margin-bottom: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  background-color: var(--surface);
+}
+
+.settleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 9px 0;
+}
+
+.settleRow + .settleRow {
+  border-top: 1px solid var(--divider);
+}
+
+.settleWho {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.settleName {
+  font: 500 12.5px/1 var(--font-text);
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.settlePaid {
+  font: 500 11px/1 var(--font-text);
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.settleNet {
+  font: 700 12px/1 var(--font-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.expensesHead {
+  display: flex;
+  align-items: center;
+  margin: 14px 0 6px;
+}
+
+.sectionLabelInline {
+  composes: label from "../styles/type.module.css";
+  letter-spacing: 0.16em;
+}
+
+.headSpacer {
+  flex: 1;
+}
+
+.addLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font: 600 10px/1 var(--font-text);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.sheetTitle {
+  font: 400 21px/1.1 var(--font-display);
+  color: var(--ink);
+  margin-bottom: 14px;
+}
+
+.addRow {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.descInput {
+  flex: 1;
+}
+
+.amtInput {
+  width: 84px;
+  flex: none;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.chipRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.catChip {
+  padding: 6px 11px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--border);
+  font: 600 11px/1 var(--font-text);
+  color: var(--ink-muted);
+}
+
+.catChipActive {
+  background-color: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+
+.paidRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.paidLabel {
+  composes: label from "../styles/type.module.css";
+  font-size: 9px;
+}
+
+.payer {
+  padding: 6px 13px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--border);
+  font: 600 11px/1 var(--font-text);
+  color: var(--ink-muted);
+}
+
+.list {
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  overflow: hidden;
+  background-color: var(--surface);
+}
+
+.expRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 16px;
+}
+
+.expRow + .expRow {
+  border-top: 1px solid var(--divider);
+}
+
+.expMain {
+  flex: 1;
+  min-width: 0;
+}
+
+.expDesc {
+  font: 500 14px/1.2 var(--font-text);
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.expMeta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 3px;
+  font: 500 11px/1 var(--font-text);
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.expAmt {
+  flex: none;
+  font: 500 14px/1 var(--font-text);
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.expRemove {
+  flex: none;
+  color: var(--ink-faint);
+  padding: 2px;
+}

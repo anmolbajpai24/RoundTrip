@@ -5,14 +5,13 @@ import { FEATURES } from "../appConfig.js";
 import useBackClose from "../lib/useBackClose.js";
 import LegChip from "./LegChip.jsx";
 import OutfitImage from "./OutfitImage.jsx";
+import Icon from "./ui/icons.jsx";
+import g from "./OutfitGallery.module.css";
 
 // Full-screen swipe-deck gallery: one outfit photo at a time, flicked
 // left/right through a member's closet or through the trip days. Read-only
-// viewer — planning/editing stays in the Outfits tab underneath.
-
-const BG = "#0D1017";
-const DIM = "rgba(255,255,255,0.65)";
-const FAINT = "rgba(255,255,255,0.6)";
+// viewer — planning/editing stays in the Outfits tab underneath. The dark
+// shell is a deliberate photography surface, not app chrome.
 
 export default function OutfitGallery({ closetsAll, members, membersById, myId, onClose }) {
   const config = useTripConfig();
@@ -22,32 +21,42 @@ export default function OutfitGallery({ closetsAll, members, membersById, myId, 
   const touch = useRef(null);
 
   const mine = memberId === myId;
-  const closet = closetsAll[memberId] || { items: {}, days: {} };
+  const closet = (memberId && closetsAll[memberId]) || { items: {}, days: {} };
 
-  // Days each outfit id is worn, for closet captions.
-  const daysOfItem = (id) => config.days.filter((d) => closet.days[d.date] === id);
+  // Days an outfit id is worn (owner's closet), for closet captions.
+  const daysOfItem = (id, ownerId) =>
+    config.days.filter((d) => (closetsAll[ownerId]?.days || {})[d.date] === id);
 
-  // Build the slide sequence for the current mode + member.
+  // Build the slide sequence for the current mode + member. memberId === null
+  // is the ALL deck: everyone's visible closet items in one flick-through.
   const slides = useMemo(() => {
+    if (!memberId) {
+      return (members || [])
+        .flatMap((m) => Object.entries(closetsAll[m.user_id]?.items || {})
+          .filter(([, item]) => item && (m.user_id === myId || visibleToOthers(item)))
+          .map(([id, item]) => ({ key: `${m.user_id}:${id}`, id, item, member: m })))
+        .sort((a, b) => (b.item?.createdAt || "").localeCompare(a.item?.createdAt || ""));
+    }
     const visible = (item) => item && (mine || visibleToOthers(item));
     if (mode === "closet") {
       return Object.entries(closet.items || {})
         .filter(([, item]) => visible(item))
         .sort((a, b) => (b[1]?.createdAt || "").localeCompare(a[1]?.createdAt || ""))
-        .map(([id, item]) => ({ key: id, item }));
+        .map(([id, item]) => ({ key: id, id, item }));
     }
     return config.days.map((d) => {
       const item = outfitForDay(closet, d.date);
       return { key: d.date, day: d, item: visible(item) ? item : null, hidden: !!item && !visible(item) };
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, memberId, closetsAll, config]);
+  }, [mode, memberId, closetsAll, config, members]);
 
   const count = slides.length;
   const i = Math.min(index, Math.max(0, count - 1));
   const go = (next) => setIndex(Math.max(0, Math.min(count - 1, next)));
-  const switchMode = (m) => { setMode(m); setIndex(0); };
-  const switchMember = (id) => { setMemberId(id); setIndex(0); };
+  // BY DAY needs one member's plan, so leaving the ALL deck falls back to me.
+  const switchMode = (m) => { if (m === "byday" && !memberId) setMemberId(myId); setMode(m); setIndex(0); };
+  const switchMember = (id) => { if (!id) setMode("closet"); setMemberId(id); setIndex(0); };
   const requestClose = useBackClose(onClose);
 
   // Keyboard + body scroll lock while open.
@@ -75,32 +84,38 @@ export default function OutfitGallery({ closetsAll, members, membersById, myId, 
   };
 
   const current = slides[i];
+  const curOwner = current?.member?.user_id || memberId;
+  const curMine = curOwner === myId;
 
   return (
-    <div className="fixed inset-0 z-40 flex flex-col" style={{ backgroundColor: BG, color: "#FFF" }}>
-      {/* Top bar: view toggle + close */}
-      <div className="flex items-center justify-between px-4 pt-4 pb-2" style={{ paddingTop: "max(1rem, env(safe-area-inset-top))" }}>
-        <div className="flex rounded-full overflow-hidden text-[11px] font-bold" style={{ backgroundColor: "rgba(255,255,255,0.08)" }}>
-          {[["closet", "👕 Closet"], ["byday", "🗓 By day"]].map(([id, lbl]) => (
-            <button key={id} onClick={() => switchMode(id)} className="px-3.5 py-2"
-              style={mode === id ? { backgroundColor: "#FFF", color: "#1D2433" } : { color: DIM }}>
+    <div className={g.shell}>
+      {/* Top bar: close · view toggle · position */}
+      <div className={g.topbar}>
+        <button onClick={requestClose} aria-label="Close gallery" className={g.close}><Icon name="x" size={18} strokeWidth={2} /></button>
+        <div className={g.modes}>
+          {[["closet", "Closet"], ["byday", "By day"]].map(([id, lbl]) => (
+            <button key={id} onClick={() => switchMode(id)} className={[g.mode, mode === id && memberId && g.modeActive].filter(Boolean).join(" ")}>
               {lbl}
             </button>
           ))}
         </div>
-        <button onClick={requestClose} aria-label="Close gallery" className="w-11 h-11 rounded-full text-base font-bold" style={{ backgroundColor: "rgba(255,255,255,0.08)" }}>✕</button>
+        <span className={g.topSpacer} />
+        {count > 1 && <span className={g.topCount}>{i + 1} / {count}</span>}
       </div>
 
       {/* Member chips */}
       {(members || []).length > 1 && (
-        <div className="flex gap-1.5 px-4 pb-1 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
+        <div className={g.members}>
+          <button onClick={() => switchMember(null)}
+            className={[g.memberChip, !memberId && g.memberActive].filter(Boolean).join(" ")}>
+            All
+          </button>
           {members.map((m) => {
             const active = m.user_id === memberId;
             return (
               <button key={m.user_id} onClick={() => switchMember(m.user_id)}
-                className="flex-shrink-0 flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-full"
-                style={active ? { backgroundColor: m.color, color: "#FFF" } : { backgroundColor: "rgba(255,255,255,0.08)", color: DIM }}>
-                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: active ? "#FFF" : m.color }} />
+                className={[g.memberChip, active && g.memberActive].filter(Boolean).join(" ")}>
+                <span className={g.memberDot} style={{ backgroundColor: m.color }} />
                 {m.user_id === myId ? "Me" : m.name}
               </button>
             );
@@ -111,21 +126,21 @@ export default function OutfitGallery({ closetsAll, members, membersById, myId, 
       {/* Deck */}
       {/* touch-action: pan-y — the browser keeps vertical scrolling, we take
           horizontal swipes (otherwise some browsers hijack them for history). */}
-      <div className="relative flex-1 min-h-0 overflow-hidden" style={{ touchAction: "pan-y" }} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+      <div className={g.deck} onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
         {count === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center gap-2 px-8 text-center">
-            <span className="text-4xl">🪞</span>
-            <p className="text-sm font-semibold" style={{ color: DIM }}>
+          <div className={g.empty}>
+            <span className={g.emptyMark}><Icon name="hanger" size={26} /></span>
+            <p className={g.emptyText}>
               {mine ? "Your closet is empty — add outfits in the planner to see them here." : `${membersById[memberId]?.name || "They"} has no outfits to show yet.`}
             </p>
           </div>
         ) : (
           slides.map((s, j) => {
             if (Math.abs(j - i) > 1) return null; // only current ± 1 mounted
+            const owner = s.member?.user_id || memberId;
             return (
-              <div key={s.key} className="absolute inset-0 px-4 pb-1"
-                style={{ transform: `translateX(${(j - i) * 100}%)`, transition: "transform 0.28s ease" }}>
-                <Slide slide={s} mine={mine} memberName={membersById[memberId]?.name} active={j === i} />
+              <div key={s.key} className={g.slideWrap} style={{ transform: `translateX(${(j - i) * 100}%)` }}>
+                <Slide slide={s} mine={owner === myId} memberName={s.member?.name || membersById[memberId]?.name} active={j === i} />
               </div>
             );
           })
@@ -134,33 +149,31 @@ export default function OutfitGallery({ closetsAll, members, membersById, myId, 
         {/* ‹ › nav */}
         {count > 1 && (
           <>
-            <button onClick={() => go(i - 1)} disabled={i === 0} aria-label="Previous"
-              className="absolute left-1.5 top-1/2 -translate-y-1/2 w-11 h-14 rounded-xl text-xl font-bold"
-              style={{ backgroundColor: "rgba(13,16,23,0.5)", color: i === 0 ? FAINT : "#FFF" }}>‹</button>
-            <button onClick={() => go(i + 1)} disabled={i === count - 1} aria-label="Next"
-              className="absolute right-1.5 top-1/2 -translate-y-1/2 w-11 h-14 rounded-xl text-xl font-bold"
-              style={{ backgroundColor: "rgba(13,16,23,0.5)", color: i === count - 1 ? FAINT : "#FFF" }}>›</button>
+            <button onClick={() => go(i - 1)} disabled={i === 0} aria-label="Previous" className={[g.nav, g.navPrev].join(" ")}><Icon name="back" size={20} strokeWidth={1.8} /></button>
+            <button onClick={() => go(i + 1)} disabled={i === count - 1} aria-label="Next" className={[g.nav, g.navNext].join(" ")}><Icon name="chev" size={20} strokeWidth={1.8} /></button>
           </>
+        )}
+
+        {/* Caption overlaid on the photo's lower edge */}
+        {current && (
+          <div className={g.captionOverlay}>
+            <Caption slide={current} mine={curMine} owner={current.member || membersById[curOwner]}
+              daysOfItem={(id) => daysOfItem(id, curOwner)} />
+          </div>
         )}
       </div>
 
-      {/* Caption + position */}
-      <div className="px-5 pt-2 pb-4" style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))", minHeight: 92 }}>
-        {current && <Caption slide={current} mine={mine} daysOfItem={daysOfItem} />}
-        {count > 1 && (
-          count <= 10 ? (
-            <div className="flex justify-center gap-1.5 mt-2.5">
-              {slides.map((s, j) => (
-                <button key={s.key} onClick={() => go(j)} aria-label={`Slide ${j + 1}`} className="p-1.5 -m-1 rounded-full">
-                  <span className="block w-2 h-2 rounded-full" style={{ backgroundColor: j === i ? "#FFF" : FAINT }} />
-                </button>
-              ))}
-            </div>
-          ) : (
-            <p className="text-center text-[11px] font-bold mt-2.5" style={{ color: DIM }}>{i + 1} / {count}</p>
-          )
-        )}
-      </div>
+      {count > 1 && count <= 10 && (
+        <div className={g.captionBar}>
+          <div className={g.dots}>
+            {slides.map((s, j) => (
+              <button key={s.key} onClick={() => go(j)} aria-label={`Slide ${j + 1}`} className={g.dotBtn}>
+                <span className={[g.dot, j === i && g.dotActive].filter(Boolean).join(" ")} />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -173,9 +186,9 @@ function Slide({ slide, mine, memberName, active }) {
 
   if (!item) {
     return (
-      <div className="h-full rounded-2xl flex flex-col items-center justify-center gap-2" style={{ backgroundColor: "rgba(255,255,255,0.04)" }}>
-        <span className="text-3xl">{slide.hidden ? "🔒" : "🫥"}</span>
-        <p className="text-sm font-semibold px-8 text-center" style={{ color: DIM }}>
+      <div className={g.slidePlaceholder}>
+        <span className={g.placeholderMark}><Icon name={slide.hidden ? "lock" : "image"} size={24} /></span>
+        <p className={g.placeholderText}>
           {slide.hidden ? `${memberName || "They"} kept this day's outfit private` : "Nothing planned for this day yet"}
         </p>
       </div>
@@ -185,62 +198,63 @@ function Slide({ slide, mine, memberName, active }) {
   const t = FEATURES.tryOn ? item.tryOn?.photo : null;
   const showTry = onMe && t;
   return (
-    <div className="relative h-full">
+    <div className={g.slide}>
       {showTry || hasPhoto(item) ? (
-        <OutfitImage item={item} src={showTry ? t : undefined} alt={item.desc || "Outfit"}
-          className="w-full h-full object-contain rounded-2xl" style={{ backgroundColor: "rgba(255,255,255,0.04)" }} />
+        <OutfitImage item={item} src={showTry ? t : undefined} alt={item.desc || "Outfit"} className={g.slideImg} />
       ) : (
-        <div className="h-full rounded-2xl flex flex-col items-center justify-center gap-3 px-8" style={{ backgroundColor: "rgba(255,255,255,0.04)" }}>
-          <span className="text-4xl">📝</span>
-          {item.desc && <p className="text-base font-semibold text-center">{item.desc}</p>}
+        <div className={g.descOnly}>
+          <span className={g.placeholderMark}><Icon name="image" size={26} /></span>
+          {item.desc && <p className={g.descText}>{item.desc}</p>}
         </div>
       )}
       {t && (
-        <button onClick={() => setOnMe(!onMe)}
-          className="absolute bottom-3 right-3 text-[11px] font-bold px-3 py-1.5 rounded-full text-white"
-          style={{ backgroundColor: "rgba(13,16,23,0.7)" }}>
-          {onMe ? "👕 Outfit" : mine ? "👤 On me" : "👤 On them"}
+        <button onClick={() => setOnMe(!onMe)} className={g.flipBtn}>
+          <Icon name={onMe ? "hanger" : "flip"} size={12} /> {onMe ? "Outfit" : mine ? "On me" : "On them"}
         </button>
       )}
     </div>
   );
 }
 
-function Caption({ slide, mine, daysOfItem }) {
+function Caption({ slide, mine, owner, daysOfItem }) {
   const item = slide.item;
 
   if (slide.day) {
     const d = slide.day;
     return (
-      <div className="text-center">
-        <div className="flex items-center justify-center gap-2">
-          <span className="text-sm font-bold">{weekday(d.date)} {dateLabel(d.date)}</span>
+      <div className={g.caption}>
+        <div className={g.captionHead}>
+          <span className={g.captionTitle}>{weekday(d.date)} {dateLabel(d.date)}</span>
           <LegChip leg={d.leg} />
         </div>
-        <p className="text-xs mt-0.5" style={{ color: DIM }}>{d.title}</p>
-        {item?.desc && <p className="text-xs mt-1 line-clamp-2" style={{ color: "#FFF" }}>{item.desc}</p>}
+        <p className={g.captionSub}>{d.title}</p>
+        {item?.desc && <p className={g.captionDesc}>{item.desc}</p>}
       </div>
     );
   }
 
-  const chips = item ? daysOfItem(slide.key) : [];
+  const chips = item ? daysOfItem(slide.id || slide.key) : [];
   return (
-    <div className="text-center">
+    <div className={g.caption}>
+      {owner && (
+        <div className={g.captionOwner}>
+          <span className={g.captionOwnerDot} style={{ backgroundColor: owner.color }} />
+          {mine ? "You" : owner.name}
+        </div>
+      )}
       {item?.desc
-        ? <p className="text-sm font-semibold line-clamp-2">{item.desc}</p>
-        : <p className="text-sm" style={{ color: FAINT }}>No description</p>}
-      <div className="flex items-center justify-center gap-1.5 mt-1.5 flex-wrap">
+        ? <p className={g.captionDescStrong}>{item.desc}</p>
+        : <p className={g.captionMuted}>No description</p>}
+      <div className={g.captionChips}>
         {mine && item?.visibility === "private" && (
-          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: "rgba(255,255,255,0.12)" }}>🔒 Only me</span>
+          <span className={g.gChip}><Icon name="lock" size={10} strokeWidth={2} /> Only me</span>
         )}
         {chips.length > 0 ? (
           chips.map((d) => (
-            <span key={d.date} className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: "rgba(255,255,255,0.12)" }}>
-              {weekday(d.date)} {dateLabel(d.date)}
-            </span>
+            <span key={d.date} className={g.gChip}>{weekday(d.date)} {dateLabel(d.date)}</span>
           ))
         ) : (
-          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: "rgba(255,255,255,0.06)", color: FAINT }}>No day yet</span>
+          <span className={g.gChipFaint}>No day yet</span>
         )}
       </div>
     </div>

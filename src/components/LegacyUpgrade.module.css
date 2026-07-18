@@ -1,0 +1,71 @@
+.page {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background-color: var(--bg);
+}
+
+.wrap {
+  max-width: 24rem;
+  width: 100%;
+  text-align: center;
+}
+
+.mark {
+  width: 52px;
+  height: 52px;
+  margin: 0 auto 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+  color: var(--accent);
+}
+
+.title {
+  composes: title from "../styles/type.module.css";
+  margin-bottom: 10px;
+}
+
+.body {
+  font: 400 13px/1.6 var(--font-text);
+  color: var(--ink-muted);
+  margin-bottom: 18px;
+}
+
+.strong {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.upgrade {
+  margin-bottom: 10px;
+}
+
+.reload {
+  margin-bottom: 16px;
+  font-size: 12px;
+}
+
+.error {
+  font: 500 12px/1.4 var(--font-text);
+  color: var(--danger);
+  margin-bottom: 12px;
+}
+
+.backup {
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  background-color: var(--surface);
+  padding: 12px;
+  text-align: left;
+}
+
+.backupHint {
+  font: 500 11.5px/1.4 var(--font-text);
+  color: var(--ink-muted);
+  margin-bottom: 6px;
+}

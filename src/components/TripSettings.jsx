@@ -4,13 +4,19 @@ import usePlaceSearch from "../lib/usePlaceSearch.js";
 import Spinner from "./Spinner.jsx";
 import { searchCoverPhotos, trackDownload, asCover, unsplashEnabled } from "../lib/unsplash.js";
 import { CURRENCIES } from "../data/currencies.js";
-import { COLORS } from "../lib/session.js";
+import { DEST_COLORS } from "../theme.js";
+import { getSession } from "../lib/session.js";
 import { confirmDialog } from "./dialogs.jsx";
-import useBackClose from "../lib/useBackClose.js";
-import { ACCENT, INK, MUTED } from "../theme.js";
+import Sheet from "./ui/Sheet.jsx";
+import Button from "./ui/Button.jsx";
+import Field, { Input, Select, FormStack, FieldRow } from "./ui/Field.jsx";
+import Toggle from "./ui/Toggle.jsx";
+import SwatchPicker from "./ui/SwatchPicker.jsx";
+import Icon from "./ui/icons.jsx";
+import BackupControls from "./BackupControls.jsx";
+import s from "./TripSettings.module.css";
 
 const MAX_TRIP_DAYS = 60;
-const inputStyle = { borderColor: "var(--border)", backgroundColor: "var(--field)", color: INK };
 
 // Trip settings modal: title, dates, money, destinations. Saving rebuilds the
 // day list for the (possibly new) date range while preserving each existing
@@ -31,10 +37,10 @@ export default function TripSettings({ config, onSave, onClose, memberCount = 1,
   const [coverChoices, setCoverChoices] = useState(null);
   const [coverBusy, setCoverBusy] = useState(false);
   const [error, setError] = useState("");
-  const requestClose = useBackClose(onClose);
 
   // destination search
   const [query, setQuery] = useState("");
+  const [addingDest, setAddingDest] = useState(false);
   const { results, searching } = usePlaceSearch(query);
 
   const uniqueLegKeys = [...new Set(legOrder)];
@@ -51,13 +57,14 @@ export default function TripSettings({ config, onSave, onClose, memberCount = 1,
     while (legs[key]) key += "2";
     setLegs((l) => ({
       ...l,
-      [key]: { name: place.name, color: COLORS[Object.keys(l).length % COLORS.length], soft: softOf(COLORS[Object.keys(l).length % COLORS.length]), lat: place.lat, lon: place.lon, norm: null },
+      [key]: { name: place.name, color: DEST_COLORS[Object.keys(l).length % DEST_COLORS.length], soft: softOf(DEST_COLORS[Object.keys(l).length % DEST_COLORS.length]), lat: place.lat, lon: place.lon, norm: null },
     }));
     setLegOrder((o) => [...o, key]);
     setQuery("");
+    setAddingDest(false);
   };
 
-  const save = () => {
+  const save = (requestClose) => {
     setError("");
     if (!title.trim()) { setError("The trip needs a name."); return; }
     if (!startDate || !endDate || endDate < startDate) { setError("Check the dates."); return; }
@@ -87,157 +94,196 @@ export default function TripSettings({ config, onSave, onClose, memberCount = 1,
     requestClose();
   };
 
-  const label = (t) => <label className="text-xs font-bold uppercase tracking-wide" style={{ color: MUTED }}>{t}</label>;
+  const pickCovers = async () => {
+    setCoverBusy(true);
+    try { setCoverChoices(await searchCoverPhotos(`${legs[uniqueLegKeys[0]]?.name || title} travel`)); }
+    catch { setCoverChoices([]); }
+    setCoverBusy(false);
+  };
 
   return (
-    <div className="fixed inset-0 z-40 flex items-end sm:items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.4)" }} onClick={requestClose}>
-      <div className="w-full max-w-sm m-4 rounded-2xl p-5 overflow-y-auto" style={{ backgroundColor: "var(--card)", maxHeight: "85vh" }} onClick={(e) => e.stopPropagation()}>
-        <h2 className="text-base font-bold mb-4" style={{ color: INK }}>Trip settings</h2>
+    <Sheet onClose={onClose} label="Trip settings">
+      {(requestClose) => (
+        <>
+          <h2 className={s.title}>Trip settings</h2>
 
-        {label("Trip name")}
-        <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={40}
-          className="mt-1 mb-3 w-full text-sm rounded-xl border px-4 py-2.5" style={inputStyle} />
+          <FormStack>
+            <Field label="Trip name">
+              <Input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={40} />
+            </Field>
 
-        <div className="flex gap-2 mb-3">
-          <div className="flex-1">
-            {label("First day")}
-            <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)}
-              className="mt-1 w-full text-sm rounded-xl border px-3 py-2.5" style={inputStyle} />
-          </div>
-          <div className="flex-1">
-            {label("Last day")}
-            <input type="date" value={endDate} min={startDate} onChange={(e) => setEndDate(e.target.value)}
-              className="mt-1 w-full text-sm rounded-xl border px-3 py-2.5" style={inputStyle} />
-          </div>
-        </div>
-        {(startDate !== config.startDate || endDate !== config.endDate) && (
-          <p className="text-[11px] mb-3" style={{ color: "var(--warn-ink)" }}>
-            Changing dates re-generates the day list. Notes and outfits on removed dates are kept and come back if the dates return.
-          </p>
-        )}
-
-        {label("Trip currency")}
-        <select value={currency} onChange={(e) => setCurrency(e.target.value)} className="mt-1 mb-3 w-full text-sm rounded-xl border px-3 py-2.5" style={inputStyle}>
-          {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code} · {c.name}</option>)}
-        </select>
-
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-semibold" style={{ color: INK }}>Second currency</span>
-          <button onClick={() => setHomeOn(!homeOn)} className="w-11 h-6 rounded-full relative transition-colors" style={{ backgroundColor: homeOn ? "#2E7D4F" : "var(--chip)" }}>
-            <span className="absolute top-0.5 w-5 h-5 rounded-full bg-white transition-all" style={{ left: homeOn ? 22 : 2 }} />
-          </button>
-        </div>
-        {homeOn && (
-          <div className="flex gap-2 mb-3">
-            <select value={homeCurrency} onChange={(e) => setHomeCurrency(e.target.value)} className="flex-1 text-sm rounded-xl border px-3 py-2.5" style={inputStyle}>
-              {CURRENCIES.filter((c) => c.code !== currency).map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
-            </select>
-            <input value={homeRate} onChange={(e) => setHomeRate(e.target.value)} inputMode="decimal" placeholder={`1 ${currency} = ?`}
-              className="flex-1 text-sm rounded-xl border px-3 py-2.5" style={inputStyle} />
-          </div>
-        )}
-
-        {label(`Budget in ${currency} (optional)`)}
-        <input value={budget} onChange={(e) => setBudget(e.target.value)} inputMode="decimal" placeholder="No budget bar when empty"
-          className="mt-1 mb-4 w-full text-sm rounded-xl border px-4 py-2.5" style={inputStyle} />
-
-        <div className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: MUTED }}>Cover photo</div>
-        <div className="rounded-xl overflow-hidden mb-2 relative" style={{ height: 72 }}>
-          <div className="absolute inset-0" style={cover?.url
-            ? { backgroundImage: `url("${cover.url}")`, backgroundSize: "cover", backgroundPosition: "center" }
-            : { background: legGradient({ legs, legOrder }) }} />
-          {cover?.author && (
-            <span className="absolute bottom-1 right-2 text-[9px]" style={{ color: "rgba(255,255,255,0.75)" }}>Photo: {cover.author} / Unsplash</span>
-          )}
-        </div>
-        <div className="flex gap-2 mb-2">
-          {unsplashEnabled && (
-            <button onClick={async () => {
-              setCoverBusy(true);
-              try { setCoverChoices(await searchCoverPhotos(`${legs[uniqueLegKeys[0]]?.name || title} travel`)); }
-              catch { setCoverChoices([]); }
-              setCoverBusy(false);
-            }} className="text-xs font-bold px-3 py-1.5 rounded-full border" style={{ borderColor: "var(--border)", color: INK }}>
-              {coverBusy ? "Searching…" : "Choose a photo"}
-            </button>
-          )}
-          {cover && (
-            <button onClick={() => { setCover(null); setCoverChoices(null); }} className="text-xs font-semibold px-3 py-1.5 rounded-full" style={{ color: MUTED }}>
-              Use colours instead
-            </button>
-          )}
-        </div>
-        {coverChoices !== null && (
-          coverChoices.length === 0 ? (
-            <p className="text-[11px] mb-3" style={{ color: MUTED }}>No photos found — the colour gradient will be used.</p>
-          ) : (
-            <div className="grid grid-cols-3 gap-1.5 mb-3">
-              {coverChoices.map((p, i) => (
-                <button key={i} onClick={() => { setCover(asCover(p)); trackDownload(p); }} className="rounded-lg overflow-hidden" style={{ height: 52, outline: cover?.url === p.url ? "3px solid #C8102E" : "none" }}>
-                  <img src={p.thumb} alt={`Photo by ${p.author}`} className="w-full h-full object-cover" loading="lazy" />
-                </button>
-              ))}
+            <div>
+              <FieldRow>
+                <Field label="First day">
+                  <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+                </Field>
+                <Field label="Last day">
+                  <Input type="date" value={endDate} min={startDate} onChange={(e) => setEndDate(e.target.value)} />
+                </Field>
+              </FieldRow>
+              {(startDate !== config.startDate || endDate !== config.endDate) && (
+                <p className={s.dateNote}>
+                  Changing dates re-generates the day list. Notes and outfits on removed dates are kept and come back if the dates return.
+                </p>
+              )}
             </div>
-          )
-        )}
-        {!unsplashEnabled && (
-          <p className="text-[11px] mb-3" style={{ color: MUTED }}>Covers use your destination colours. Add an Unsplash key to pick real photos — see README.</p>
-        )}
 
-        <div className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: MUTED }}>Destinations</div>
-        {uniqueLegKeys.map((key) => {
-          const L = legs[key];
-          if (!L) return null;
-          return (
-            <div key={key} className="rounded-xl border p-3 mb-2" style={{ borderColor: "var(--border)" }}>
-              <div className="flex items-center gap-2">
-                <input value={L.name} onChange={(e) => renameLeg(key, e.target.value)} maxLength={30}
-                  className="flex-1 text-sm rounded-lg border px-2.5 py-1.5" style={inputStyle} />
-                <button onClick={() => removeLeg(key)} className="text-xs px-1" style={{ color: "var(--faint)" }}>✕</button>
+            {/* Money — one grouped hairline card with keyed rows */}
+            <div>
+              <div className={s.sectionLabelTight}>Money</div>
+              <div className={s.groupCard}>
+                <div className={s.groupRow}>
+                  <span className={s.rowKey}>Currency</span>
+                  <Select value={currency} onChange={(e) => setCurrency(e.target.value)} className={s.rowControl}>
+                    {CURRENCIES.map((c) => <option key={c.code} value={c.code}>{c.code} · {c.name}</option>)}
+                  </Select>
+                </div>
+                <div className={s.groupRow}>
+                  <span className={s.rowKey}>Second</span>
+                  <span className={s.rowSpacer} />
+                  <Toggle checked={homeOn} onChange={setHomeOn} />
+                </div>
+                {homeOn && (
+                  <div className={s.groupRow}>
+                    <span className={s.rowKey}>Home</span>
+                    <Select value={homeCurrency} onChange={(e) => setHomeCurrency(e.target.value)} className={s.rowControl}>
+                      {CURRENCIES.filter((c) => c.code !== currency).map((c) => <option key={c.code} value={c.code}>{c.code}</option>)}
+                    </Select>
+                    <Input value={homeRate} onChange={(e) => setHomeRate(e.target.value)} inputMode="decimal"
+                      placeholder={`1 ${currency} = ?`} aria-label="Conversion rate" className={s.rowRate} />
+                  </div>
+                )}
+                <div className={s.groupRow}>
+                  <span className={s.rowKey}>Budget</span>
+                  <Input value={budget} onChange={(e) => setBudget(e.target.value)} inputMode="decimal"
+                    placeholder="Optional — no bar when empty" aria-label={`Budget in ${currency}`} className={s.rowControl} />
+                </div>
               </div>
-              <div className="flex gap-1.5 mt-2">
-                {COLORS.map((c) => (
-                  <button key={c} onClick={() => recolorLeg(key, c)} className="w-6 h-6 rounded-full"
-                    style={{ backgroundColor: c, outline: L.color === c ? "2px solid var(--ink)" : "none", outlineOffset: 1 }} />
+            </div>
+          </FormStack>
+
+          <div className={s.sectionLabel}>Cover</div>
+          <div className={s.coverRow}>
+            <span className={s.coverThumb} style={cover?.url
+              ? { backgroundImage: `url("${cover.url}")`, backgroundSize: "cover", backgroundPosition: "center" }
+              : { background: legGradient({ legs, legOrder }) }} />
+            <span className={s.coverBody}>
+              <span className={s.coverTitle}>{cover?.author ? `Photo · ${cover.author}` : "Destination colours"}</span>
+              <span className={s.coverSub}>Shows on the trips list and the trip header.</span>
+            </span>
+            {unsplashEnabled && (
+              <button onClick={pickCovers} disabled={coverBusy} className={s.linkAccent}>
+                {coverBusy ? "Searching…" : "Change"}
+              </button>
+            )}
+            {cover && (
+              <button onClick={() => { setCover(null); setCoverChoices(null); }} className={s.linkMuted}>Reset</button>
+            )}
+          </div>
+          {coverChoices !== null && (
+            coverChoices.length === 0 ? (
+              <p className={s.hint}>No photos found — the colour gradient will be used.</p>
+            ) : (
+              <div className={s.coverGrid}>
+                {coverChoices.map((p, i) => (
+                  <button key={i} onClick={() => { setCover(asCover(p)); trackDownload(p); }}
+                    className={[s.coverChoice, cover?.url === p.url && s.coverChoiceSel].filter(Boolean).join(" ")}>
+                    <img src={p.thumb} alt={`Photo by ${p.author}`} loading="lazy" />
+                  </button>
                 ))}
               </div>
+            )
+          )}
+          {!unsplashEnabled && (
+            <p className={s.hint}>Covers use your destination colours. Add an Unsplash key to pick real photos — see README.</p>
+          )}
+
+          <div className={s.sectionLabel}>Destinations</div>
+          <div className={s.legList}>
+            {uniqueLegKeys.map((key) => {
+              const L = legs[key];
+              if (!L) return null;
+              return (
+                <div key={key} className={s.legRow}>
+                  <div className={s.legHead}>
+                    <span className={s.legDot} style={{ "--c": L.color }} />
+                    <Input value={L.name} onChange={(e) => renameLeg(key, e.target.value)} maxLength={30} className={s.legName} />
+                    <button onClick={() => removeLeg(key)} aria-label={`Remove ${L.name}`} className={s.legRemove}>
+                      <Icon name="x" size={13} strokeWidth={1.8} />
+                    </button>
+                  </div>
+                  <div className={s.legSwatches}>
+                    <SwatchPicker colors={DEST_COLORS} value={L.color} onChange={(c) => recolorLeg(key, c)} />
+                  </div>
+                </div>
+              );
+            })}
+            {/* add lives INSIDE the destinations card, as its last row */}
+            <div className={s.addLegRow}>
+              {addingDest ? (
+                <label className={s.addSearch}>
+                  <Icon name="search" size={14} strokeWidth={1.8} />
+                  <input value={query} onChange={(e) => setQuery(e.target.value)} autoFocus
+                    placeholder="Search a city…" className={s.addInput} />
+                </label>
+              ) : (
+                <button onClick={() => setAddingDest(true)} className={s.addLegBtn}>
+                  <Icon name="plus" size={12} strokeWidth={2} /> Add a destination
+                </button>
+              )}
             </div>
-          );
-        })}
-        <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Add a destination…"
-          className="w-full text-sm rounded-xl border px-4 py-2.5" style={inputStyle} />
-        {searching && <p className="text-xs mt-2 flex items-center gap-2" style={{ color: MUTED }}><Spinner className="w-3.5 h-3.5" /> Searching…</p>}
-        {results.map((r, i) => (
-          <button key={i} onClick={() => addLeg(r)} className="w-full text-left rounded-xl border px-3 py-2 mt-1.5 text-sm" style={{ borderColor: "var(--border)", color: INK }}>
-            <span className="font-semibold">{r.name}</span>
-            <span style={{ color: MUTED }}> · {[r.admin1, r.country].filter(Boolean).join(", ")}</span>
-          </button>
-        ))}
-        <p className="text-[11px] mt-2" style={{ color: MUTED }}>Assign a day to a destination from the itinerary's ✎ day editor.</p>
+          </div>
+          {searching && <p className={s.searching}><Spinner size={14} /> Searching…</p>}
+          {results.map((r, i) => (
+            <button key={i} onClick={() => addLeg(r)} className={s.result}>
+              <span className={s.resultName}>{r.name}</span>
+              <span className={s.resultWhere}> · {[r.admin1, r.country].filter(Boolean).join(", ")}</span>
+            </button>
+          ))}
+          <p className={s.assignHint}>Assign a day to a destination from the itinerary's day editor.</p>
 
-        {error && <p className="text-xs mt-3" style={{ color: ACCENT }}>{error}</p>}
+          {error && <p className={s.error}>{error}</p>}
 
-        <div className="flex gap-2 mt-4">
-          <button onClick={save} className="flex-1 text-sm font-bold text-white py-2.5 rounded-full" style={{ backgroundColor: ACCENT }}>Save</button>
-          <button onClick={requestClose} className="text-sm font-semibold px-4 py-2.5 rounded-full" style={{ color: MUTED }}>Cancel</button>
-        </div>
+          <div className={s.actions}>
+            <Button full onClick={() => save(requestClose)}>Save</Button>
+            <Button variant="ghost" onClick={requestClose}>Cancel</Button>
+          </div>
 
-        <div className="mt-5 pt-4 border-t text-center" style={{ borderColor: "var(--border)" }}>
+          <div className={s.sectionLabel}>Backup</div>
+          <BackupControls />
+
+          <div className={s.dangerLabel}>Danger</div>
           {memberCount > 1 ? (
             <button
               onClick={async () => { if (await confirmDialog({ title: "Leave this trip?", message: "You'll lose access to it, but it stays for everyone else on it.", confirmLabel: "Leave trip", danger: true })) onLeave?.(); }}
-              className="text-xs font-bold" style={{ color: "#C0392B" }}>
-              Leave this trip
+              className={s.dangerCard}>
+              <span className={s.dangerBody}>
+                <span className={s.dangerTitle}>Leave this trip</span>
+                <span className={s.dangerSub}>The trip stays for everyone else on it.</span>
+              </span>
+              <Icon name="chev" size={14} strokeWidth={1.8} />
             </button>
           ) : (
             <button
-              onClick={async () => { if (await confirmDialog({ title: "Delete this trip?", message: "This permanently removes its itinerary, outfits, packing, budget, bookings and documents. This can't be undone.", confirmLabel: "Delete forever", danger: true })) onDelete?.(); }}
-              className="text-xs font-bold" style={{ color: "#C0392B" }}>
-              Delete this trip
+              onClick={async () => {
+                const ok = await confirmDialog({
+                  title: "Delete this trip?",
+                  message: "This permanently removes its itinerary, outfits, packing, budget, bookings and documents. This can't be undone.",
+                  confirmLabel: "Delete forever", danger: true,
+                  typeToConfirm: getSession()?.code || null,
+                });
+                if (ok) onDelete?.();
+              }}
+              className={s.dangerCard}>
+              <span className={s.dangerBody}>
+                <span className={s.dangerTitle}>Delete this trip</span>
+                <span className={s.dangerSub}>For everyone, forever. Only you see this — you made the trip.</span>
+              </span>
+              <Icon name="chev" size={14} strokeWidth={1.8} />
             </button>
           )}
-        </div>
-      </div>
-    </div>
+        </>
+      )}
+    </Sheet>
   );
 }

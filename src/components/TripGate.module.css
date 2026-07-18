@@ -1,0 +1,83 @@
+.page {
+  min-height: 100dvh;
+  background-color: var(--bg);
+  display: flex;
+  justify-content: center;
+}
+
+.centerPage {
+  min-height: 100dvh;
+  background-color: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.wrap {
+  width: 100%;
+  max-width: 24rem;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 8px;
+  color: var(--accent);
+}
+
+.wordmark {
+  font: 400 21px/1 var(--font-display);
+  color: var(--ink);
+}
+
+.title {
+  font: 400 30px/1.15 var(--font-display);
+  color: var(--ink);
+  margin-top: 44px;
+}
+
+.tagline {
+  font: 400 13px/1.55 var(--font-text);
+  color: var(--ink-muted);
+  margin-top: 8px;
+  max-width: 290px;
+}
+
+.plan {
+  margin-top: 24px;
+}
+
+.rule {
+  height: 1px;
+  background-color: var(--divider);
+  margin-top: 26px;
+}
+
+.joinLabel {
+  composes: label from "../styles/type.module.css";
+  letter-spacing: 0.16em;
+  margin: 20px 0 9px;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.signin {
+  font: 500 12.5px/1 var(--font-text);
+  color: var(--ink-muted);
+  text-align: left;
+  padding-bottom: 30px;
+  white-space: nowrap;
+}
+
+.signinLink {
+  color: var(--accent);
+  font-weight: 600;
+}

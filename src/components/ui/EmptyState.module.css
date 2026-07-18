@@ -1,0 +1,57 @@
+/* Left-aligned quiet empty/error/offline state: motif row (or icon), an
+   italic-serif accent line, one action. Never centered. */
+.wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  padding: 14px 15px 15px;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+}
+
+.motif {
+  display: flex;
+  align-items: center;
+  width: 110px;
+}
+
+.motifDot {
+  width: 6px;
+  height: 6px;
+  flex: none;
+  border-radius: var(--r-pill);
+}
+
+.motifSeg {
+  flex: 1;
+  height: 1px;
+  background: repeating-linear-gradient(90deg, var(--border) 0 4px, transparent 4px 9px);
+}
+
+.icon {
+  color: var(--ink-faint);
+}
+
+.title {
+  font: italic 400 15px/1.25 var(--font-display);
+  color: var(--accent);
+  margin-top: 9px;
+}
+
+/* full-tab empties get the bigger voice */
+.hero .title {
+  font: italic 400 24px/1.15 var(--font-display);
+}
+
+.body {
+  font: 400 12px/1.5 var(--font-text);
+  color: var(--ink-muted);
+  margin-top: 5px;
+  max-width: 40ch;
+}
+
+.action {
+  margin-top: 9px;
+}

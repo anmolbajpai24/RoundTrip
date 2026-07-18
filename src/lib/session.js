@@ -9,8 +9,9 @@ import { clearLocalTrip } from "./storage.js";
 
 const SESSION_KEY = "__session__"; // { tripId, code, userId, name, color }
 
-// Colours members can pick for their profile.
-export const COLORS = ["#1D2433", "#5B3B8C", "#C8102E", "#2E7D4F", "#C77E1F", "#0F7C8C"];
+// Colours members can pick for their profile (the Grand Tour member palette;
+// legacy stored colours keep rendering as-is — see theme.js).
+export { MEMBER_COLORS as COLORS } from "../theme.js";
 
 let cached; // in-memory copy of the session
 

@@ -1,0 +1,244 @@
+.routeWrap {
+  margin-top: 7px;
+  padding: 0 2px;
+}
+
+.viewRow {
+  display: flex;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.dayCard {
+  position: relative;
+  margin-top: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  background-color: var(--surface);
+  padding: 13px 16px;
+}
+
+.editBtn {
+  position: absolute;
+  top: 13px;
+  right: 14px;
+  color: var(--ink-faint);
+  padding: 2px;
+}
+
+.dayContext {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-right: 28px;
+}
+
+.dayMeta {
+  font: 500 11.5px/1 var(--font-text);
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dayTitle {
+  font: 400 26px/1.1 var(--font-display);
+  color: var(--ink);
+  margin-top: 10px;
+}
+
+.plan {
+  font: 400 13px/1.55 var(--font-text);
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  white-space: pre-wrap;
+  margin-top: 7px;
+}
+
+.planEmpty {
+  composes: plan;
+  color: var(--ink-faint);
+}
+
+.editor {
+  margin-top: 10px;
+  margin-bottom: 4px;
+}
+
+.editActions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.legPick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.legOption {
+  padding: 6px 11px;
+  border-radius: var(--r-pill);
+  font: 600 11px/1 var(--font-text);
+  background-color: color-mix(in srgb, var(--c) 12%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--c) 32%, var(--surface));
+  color: color-mix(in srgb, var(--c) 72%, var(--ink));
+}
+
+.legOn {
+  background-color: var(--c);
+  border-color: var(--c);
+  color: var(--on);
+}
+
+/* ---------- outfits for the day (page-level) ---------- */
+.sectionLabel {
+  composes: label from "../styles/type.module.css";
+  letter-spacing: 0.16em;
+  margin: 9px 0 7px;
+}
+
+.outfitRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.outfitTile {
+  flex: 1;
+  min-width: 150px;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  overflow: hidden;
+  text-align: left;
+}
+
+.outfitPhoto {
+  height: 48px;
+  background-color: var(--field);
+}
+
+.outfitImg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.outfitBody {
+  padding: 8px 10px 10px;
+}
+
+.outfitWho {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font: 600 10px/1 var(--font-text);
+  color: var(--c);
+}
+
+.outfitDot {
+  width: 7px;
+  height: 7px;
+  border-radius: var(--r-pill);
+  background-color: var(--c);
+}
+
+.outfitDesc {
+  display: block;
+  font: 400 10.5px/1.35 var(--font-text);
+  color: var(--ink-muted);
+  margin-top: 4px;
+}
+
+.outfitEmpty {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font: 500 12px/1.4 var(--font-text);
+  color: var(--accent);
+  text-align: left;
+}
+
+/* ---------- notes (page-level) ---------- */
+.notes {
+  margin-top: 9px;
+}
+
+.notesHead {
+  display: flex;
+  align-items: center;
+  margin-bottom: 7px;
+}
+
+.sectionLabelInline {
+  composes: label from "../styles/type.module.css";
+  letter-spacing: 0.16em;
+}
+
+.notesSpacer {
+  flex: 1;
+}
+
+.notesAdd {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font: 600 10px/1 var(--font-text);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.noteCard {
+  padding: 7px 12px 8px;
+  margin-bottom: 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  background-color: var(--surface);
+}
+
+.noteMine {
+  border-color: var(--c);
+}
+
+.noteOther {
+  background-color: var(--field);
+}
+
+.noteHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 5px;
+}
+
+.kicker {
+  composes: label from "../styles/type.module.css";
+  font-size: 9px;
+  letter-spacing: 0.12em;
+}
+
+.noteAction {
+  font: 600 12px/1 var(--font-text);
+  color: var(--accent);
+}
+
+.noteEditor {
+  margin-top: 4px;
+}
+
+.noteText {
+  font: 400 12px/1.5 var(--font-text);
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  white-space: pre-wrap;
+}
+
+.noteEmpty {
+  composes: noteText;
+  color: var(--ink-faint);
+}

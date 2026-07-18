@@ -1,27 +1,29 @@
 import { useEffect, useState } from "react";
 import { subscribeSyncStatus, flushOutbox } from "../lib/storage.js";
+import s from "./SyncChip.module.css";
 
-// Small header chip showing offline-outbox state: hidden when everything is
-// synced, "n to sync" while writes are queued, and a tap-to-retry error state
-// when a flush failed. Tapping always kicks a flush.
+// Header sync state: a 6px status dot + tracked-caps label, always visible in
+// a trip — SYNCED (green, quiet), N PENDING (amber, queued writes), OFFLINE /
+// retry (failed flush). Tapping always kicks a flush.
 export default function SyncChip() {
   const [status, setStatus] = useState({ pending: 0, error: null });
   useEffect(() => subscribeSyncStatus(setStatus), []);
 
-  if (!status.error && status.pending === 0) return null;
   const failed = !!status.error;
+  const pending = status.pending > 0;
+  const label = failed ? "Retry sync" : pending ? `${status.pending} pending` : "Synced";
+  const tone = failed ? s.failed : pending ? s.pending : s.synced;
+
   return (
-    <div className="mt-1.5 flex justify-end">
-      <button
-        onClick={() => flushOutbox()}
-        title={failed ? `${status.error} — tap to retry` : "Changes saved on this phone, waiting for a connection"}
-        className="text-[11px] font-bold px-2.5 py-1 rounded-full border"
-        style={failed
-          ? { borderColor: "var(--danger-soft)", backgroundColor: "var(--danger-soft)", color: "#E4707E" }
-          : { borderColor: "var(--warn-border)", backgroundColor: "var(--warn-bg)", color: "var(--warn-ink)" }}
-      >
-        {failed ? "⚠ Sync issue — tap to retry" : `↺ ${status.pending} to sync`}
-      </button>
-    </div>
+    <button
+      onClick={() => flushOutbox()}
+      title={failed ? `${status.error} — tap to retry`
+        : pending ? "Changes saved on this phone, waiting for a connection"
+        : "Everything is synced"}
+      className={[s.chip, tone].join(" ")}
+    >
+      <span className={s.dot} />
+      {label}
+    </button>
   );
 }

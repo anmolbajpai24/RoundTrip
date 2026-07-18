@@ -1,0 +1,50 @@
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 46px;
+  padding: 0 18px;
+  border-radius: var(--r-control);
+  font: 600 13px/1 var(--font-text);
+  transition: opacity 120ms ease;
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.sm {
+  height: 36px;
+  padding: 0 13px;
+  font-size: 12px;
+}
+
+.full {
+  width: 100%;
+}
+
+.primary {
+  background-color: var(--accent);
+  color: var(--accent-ink);
+}
+
+.tonal {
+  background-color: var(--chip);
+  color: var(--chip-ink);
+}
+
+.ghost {
+  color: var(--ink-muted);
+}
+
+.ghost:hover {
+  color: var(--ink);
+}
+
+/* --accent-ink doubles as the on-colour for danger fills in both themes */
+.danger {
+  background-color: var(--danger);
+  color: var(--accent-ink);
+}

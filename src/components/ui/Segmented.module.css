@@ -1,0 +1,26 @@
+.track {
+  display: inline-flex;
+  padding: 2px;
+  background-color: var(--field);
+  border: 1px solid var(--border);
+  border-radius: var(--r-control);
+}
+
+.seg {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: calc(var(--r-control) - 2px);
+  font: 600 9.5px/1 var(--font-text);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--ink-muted);
+}
+
+.active {
+  background-color: var(--surface);
+  color: var(--ink);
+}

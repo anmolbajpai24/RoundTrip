@@ -1,46 +1,7 @@
-@import "tailwindcss";
-
-/* Theme tokens. initTheme() in src/theme.js stamps data-theme="light|dark"
-   on <html> at boot (and follows the OS when the preference is "system"). */
-:root {
-  color-scheme: light;
-  --bg: #F7F5F0;
-  --card: #FFFFFF;
-  --field: #FAF9F6;
-  --border: #E5E2DA;
-  --divider: #F0EDE6;
-  --chip: #EDEAE2;
-  --chip-ink: #5A5F6A;
-  --ink: #1D2433;
-  --muted: #8A8F98;
-  --faint: #8F8B81; /* AA-ish on --bg/--card; was #B8B5AD (≈1.9:1, unreadable) */
-  --solid: #1D2433; /* dark surfaces (header, primary dark buttons) */
-  --warn-bg: #FDF6E3;
-  --warn-border: #F0D9A8;
-  --warn-ink: #8A6D1A;
-  --danger-soft: #FBE9EC;
-}
-
-:root[data-theme="dark"] {
-  color-scheme: dark;
-  --bg: #12161F;
-  --card: #1C222E;
-  --field: #161B25;
-  --border: #2B3240;
-  --divider: #252C3A;
-  --chip: #2B3240;
-  --chip-ink: #A6ADBB;
-  --ink: #ECEEF2;
-  --muted: #9AA1AD;
-  --faint: #667080;
-  --solid: #232B3B;
-  --warn-bg: #2E2712;
-  --warn-border: #57491F;
-  --warn-ink: #E3C979;
-  --danger-soft: #3A2027;
-}
-
-html,
-body {
-  background-color: var(--bg);
-}
+/* Style entry. Order matters: fonts first (start woff2 requests early) →
+   tokens → base reset. Latin subsets only — keeps the PWA precache lean. */
+@import "@fontsource/instrument-serif/latin-400.css";
+@import "@fontsource/instrument-serif/latin-400-italic.css";
+@import "@fontsource-variable/instrument-sans/standard.css";
+@import "./styles/tokens.css";
+@import "./styles/base.css";

@@ -1,0 +1,45 @@
+.chip {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 10px;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+  font: 600 9px/1 var(--font-text);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--r-pill);
+}
+
+.synced {
+  color: var(--ink-muted);
+}
+
+.synced .dot {
+  background-color: var(--success);
+}
+
+.pending {
+  color: var(--warning);
+}
+
+.pending .dot {
+  background-color: var(--warning);
+}
+
+.failed {
+  color: var(--danger);
+}
+
+.failed .dot {
+  background-color: var(--danger);
+}
