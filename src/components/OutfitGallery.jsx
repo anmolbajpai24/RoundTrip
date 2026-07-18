@@ -21,32 +21,42 @@ export default function OutfitGallery({ closetsAll, members, membersById, myId, 
   const touch = useRef(null);
 
   const mine = memberId === myId;
-  const closet = closetsAll[memberId] || { items: {}, days: {} };
+  const closet = (memberId && closetsAll[memberId]) || { items: {}, days: {} };
 
-  // Days each outfit id is worn, for closet captions.
-  const daysOfItem = (id) => config.days.filter((d) => closet.days[d.date] === id);
+  // Days an outfit id is worn (owner's closet), for closet captions.
+  const daysOfItem = (id, ownerId) =>
+    config.days.filter((d) => (closetsAll[ownerId]?.days || {})[d.date] === id);
 
-  // Build the slide sequence for the current mode + member.
+  // Build the slide sequence for the current mode + member. memberId === null
+  // is the ALL deck: everyone's visible closet items in one flick-through.
   const slides = useMemo(() => {
+    if (!memberId) {
+      return (members || [])
+        .flatMap((m) => Object.entries(closetsAll[m.user_id]?.items || {})
+          .filter(([, item]) => item && (m.user_id === myId || visibleToOthers(item)))
+          .map(([id, item]) => ({ key: `${m.user_id}:${id}`, id, item, member: m })))
+        .sort((a, b) => (b.item?.createdAt || "").localeCompare(a.item?.createdAt || ""));
+    }
     const visible = (item) => item && (mine || visibleToOthers(item));
     if (mode === "closet") {
       return Object.entries(closet.items || {})
         .filter(([, item]) => visible(item))
         .sort((a, b) => (b[1]?.createdAt || "").localeCompare(a[1]?.createdAt || ""))
-        .map(([id, item]) => ({ key: id, item }));
+        .map(([id, item]) => ({ key: id, id, item }));
     }
     return config.days.map((d) => {
       const item = outfitForDay(closet, d.date);
       return { key: d.date, day: d, item: visible(item) ? item : null, hidden: !!item && !visible(item) };
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, memberId, closetsAll, config]);
+  }, [mode, memberId, closetsAll, config, members]);
 
   const count = slides.length;
   const i = Math.min(index, Math.max(0, count - 1));
   const go = (next) => setIndex(Math.max(0, Math.min(count - 1, next)));
-  const switchMode = (m) => { setMode(m); setIndex(0); };
-  const switchMember = (id) => { setMemberId(id); setIndex(0); };
+  // BY DAY needs one member's plan, so leaving the ALL deck falls back to me.
+  const switchMode = (m) => { if (m === "byday" && !memberId) setMemberId(myId); setMode(m); setIndex(0); };
+  const switchMember = (id) => { if (!id) setMode("closet"); setMemberId(id); setIndex(0); };
   const requestClose = useBackClose(onClose);
 
   // Keyboard + body scroll lock while open.
@@ -74,31 +84,38 @@ export default function OutfitGallery({ closetsAll, members, membersById, myId, 
   };
 
   const current = slides[i];
+  const curOwner = current?.member?.user_id || memberId;
+  const curMine = curOwner === myId;
 
   return (
     <div className={g.shell}>
-      {/* Top bar: view toggle + close */}
+      {/* Top bar: close · view toggle · position */}
       <div className={g.topbar}>
+        <button onClick={requestClose} aria-label="Close gallery" className={g.close}><Icon name="x" size={18} strokeWidth={2} /></button>
         <div className={g.modes}>
-          {[["closet", "Closet", "hanger"], ["byday", "By day", "grip"]].map(([id, lbl, icon]) => (
-            <button key={id} onClick={() => switchMode(id)} className={[g.mode, mode === id && g.modeActive].filter(Boolean).join(" ")}>
-              <Icon name={icon} size={13} /> {lbl}
+          {[["closet", "Closet"], ["byday", "By day"]].map(([id, lbl]) => (
+            <button key={id} onClick={() => switchMode(id)} className={[g.mode, mode === id && memberId && g.modeActive].filter(Boolean).join(" ")}>
+              {lbl}
             </button>
           ))}
         </div>
-        <button onClick={requestClose} aria-label="Close gallery" className={g.close}><Icon name="x" size={18} strokeWidth={2} /></button>
+        <span className={g.topSpacer} />
+        {count > 1 && <span className={g.topCount}>{i + 1} / {count}</span>}
       </div>
 
       {/* Member chips */}
       {(members || []).length > 1 && (
         <div className={g.members}>
+          <button onClick={() => switchMember(null)}
+            className={[g.memberChip, !memberId && g.memberActive].filter(Boolean).join(" ")}>
+            All
+          </button>
           {members.map((m) => {
             const active = m.user_id === memberId;
             return (
               <button key={m.user_id} onClick={() => switchMember(m.user_id)}
-                className={[g.memberChip, active && g.memberActive].filter(Boolean).join(" ")}
-                style={active ? { backgroundColor: m.color } : undefined}>
-                <span className={g.memberDot} style={{ backgroundColor: active ? "#FFF" : m.color }} />
+                className={[g.memberChip, active && g.memberActive].filter(Boolean).join(" ")}>
+                <span className={g.memberDot} style={{ backgroundColor: m.color }} />
                 {m.user_id === myId ? "Me" : m.name}
               </button>
             );
@@ -120,9 +137,10 @@ export default function OutfitGallery({ closetsAll, members, membersById, myId, 
         ) : (
           slides.map((s, j) => {
             if (Math.abs(j - i) > 1) return null; // only current ± 1 mounted
+            const owner = s.member?.user_id || memberId;
             return (
               <div key={s.key} className={g.slideWrap} style={{ transform: `translateX(${(j - i) * 100}%)` }}>
-                <Slide slide={s} mine={mine} memberName={membersById[memberId]?.name} active={j === i} />
+                <Slide slide={s} mine={owner === myId} memberName={s.member?.name || membersById[memberId]?.name} active={j === i} />
               </div>
             );
           })
@@ -135,25 +153,27 @@ export default function OutfitGallery({ closetsAll, members, membersById, myId, 
             <button onClick={() => go(i + 1)} disabled={i === count - 1} aria-label="Next" className={[g.nav, g.navNext].join(" ")}><Icon name="chev" size={20} strokeWidth={1.8} /></button>
           </>
         )}
-      </div>
 
-      {/* Caption + position */}
-      <div className={g.captionBar}>
-        {current && <Caption slide={current} mine={mine} daysOfItem={daysOfItem} />}
-        {count > 1 && (
-          count <= 10 ? (
-            <div className={g.dots}>
-              {slides.map((s, j) => (
-                <button key={s.key} onClick={() => go(j)} aria-label={`Slide ${j + 1}`} className={g.dotBtn}>
-                  <span className={[g.dot, j === i && g.dotActive].filter(Boolean).join(" ")} />
-                </button>
-              ))}
-            </div>
-          ) : (
-            <p className={g.position}>{i + 1} / {count}</p>
-          )
+        {/* Caption overlaid on the photo's lower edge */}
+        {current && (
+          <div className={g.captionOverlay}>
+            <Caption slide={current} mine={curMine} owner={current.member || membersById[curOwner]}
+              daysOfItem={(id) => daysOfItem(id, curOwner)} />
+          </div>
         )}
       </div>
+
+      {count > 1 && count <= 10 && (
+        <div className={g.captionBar}>
+          <div className={g.dots}>
+            {slides.map((s, j) => (
+              <button key={s.key} onClick={() => go(j)} aria-label={`Slide ${j + 1}`} className={g.dotBtn}>
+                <span className={[g.dot, j === i && g.dotActive].filter(Boolean).join(" ")} />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -196,7 +216,7 @@ function Slide({ slide, mine, memberName, active }) {
   );
 }
 
-function Caption({ slide, mine, daysOfItem }) {
+function Caption({ slide, mine, owner, daysOfItem }) {
   const item = slide.item;
 
   if (slide.day) {
@@ -213,9 +233,15 @@ function Caption({ slide, mine, daysOfItem }) {
     );
   }
 
-  const chips = item ? daysOfItem(slide.key) : [];
+  const chips = item ? daysOfItem(slide.id || slide.key) : [];
   return (
     <div className={g.caption}>
+      {owner && (
+        <div className={g.captionOwner}>
+          <span className={g.captionOwnerDot} style={{ backgroundColor: owner.color }} />
+          {mine ? "You" : owner.name}
+        </div>
+      )}
       {item?.desc
         ? <p className={g.captionDescStrong}>{item.desc}</p>
         : <p className={g.captionMuted}>No description</p>}

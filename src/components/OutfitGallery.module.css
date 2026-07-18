@@ -12,7 +12,7 @@
 .topbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 14px;
   padding: max(1rem, env(safe-area-inset-top)) 16px 8px;
 }
 
@@ -26,9 +26,10 @@
 .mode {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
   padding: 8px 14px;
-  font: 600 11px/1 var(--font-text);
+  font: 600 9.5px/1 var(--font-text);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
   color: rgb(251 246 236 / 0.65);
 }
 
@@ -38,14 +39,21 @@
 }
 
 .close {
-  width: 40px;
-  height: 40px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--r-pill);
-  background-color: rgb(255 255 255 / 0.08);
+  padding: 6px;
   color: #FBF6EC;
+}
+
+.topSpacer {
+  flex: 1;
+}
+
+.topCount {
+  font: 500 11px/1 var(--font-text);
+  color: rgb(251 246 236 / 0.65);
+  font-variant-numeric: tabular-nums;
 }
 
 .members {
@@ -61,14 +69,18 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 12px;
+  height: 28px;
+  padding: 0 11px;
+  border: 1px solid rgb(251 246 236 / 0.22);
   border-radius: var(--r-pill);
-  font: 600 11px/1 var(--font-text);
-  background-color: rgb(255 255 255 / 0.08);
-  color: rgb(251 246 236 / 0.65);
+  font: 600 10px/1 var(--font-text);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgb(251 246 236 / 0.75);
 }
 
 .memberActive {
+  border-color: #F1E9DB;
   color: #FFF;
 }
 
@@ -211,17 +223,42 @@
 
 .captionBar {
   padding: 8px 20px max(1rem, env(safe-area-inset-bottom));
-  min-height: 92px;
+}
+
+/* overlaid on the photo's lower edge, above a soft scrim */
+.captionOverlay {
+  position: absolute;
+  left: 26px;
+  right: 26px;
+  bottom: 24px;
+  pointer-events: none;
 }
 
 .caption {
-  text-align: center;
+  text-align: left;
+  text-shadow: 0 1px 8px rgb(10 6 3 / 0.65);
+}
+
+.captionOwner {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font: 600 10px/1 var(--font-text);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgb(251 246 236 / 0.85);
+  margin-bottom: 5px;
+}
+
+.captionOwnerDot {
+  width: 7px;
+  height: 7px;
+  border-radius: var(--r-pill);
 }
 
 .captionHead {
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: 8px;
 }
 
@@ -237,7 +274,7 @@
 }
 
 .captionDesc {
-  font: 400 12px/1.4 var(--font-text);
+  font: 400 15px/1.35 var(--font-display);
   margin-top: 4px;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -246,7 +283,7 @@
 }
 
 .captionDescStrong {
-  font: 600 14px/1.4 var(--font-text);
+  font: 400 17px/1.3 var(--font-display);
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -254,17 +291,16 @@
 }
 
 .captionMuted {
-  font: 400 14px/1.3 var(--font-text);
+  font: italic 400 15px/1.3 var(--font-display);
   color: rgb(251 246 236 / 0.6);
 }
 
 .captionChips {
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: 6px;
   flex-wrap: wrap;
-  margin-top: 6px;
+  margin-top: 7px;
 }
 
 .gChip,
@@ -305,11 +341,4 @@
 
 .dotActive {
   background-color: #FBF6EC;
-}
-
-.position {
-  text-align: center;
-  font: 600 11px/1 var(--font-text);
-  color: rgb(251 246 236 / 0.65);
-  margin-top: 10px;
 }
