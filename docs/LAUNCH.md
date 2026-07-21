@@ -4,17 +4,47 @@ The repo side (landing site, account deletion, Sentry, CI, backups, redirect)
 is done in code. Everything below is dashboard/DNS work only you can do, in
 order. Tick as you go.
 
-## 1. Vercel projects & domains
+## 1. Vercel projects & domains (domain is on GoDaddy)
 
-- [ ] Existing app project → Settings → Domains → add `app.roundtrip.one`.
+Do the Vercel half first — it tells you the exact DNS values to type into
+GoDaddy.
+
+**In Vercel:**
+
+- [ ] Existing app project → Settings → Domains → Add → `app.roundtrip.one`.
+      Vercel shows a record like `CNAME  app → cname.vercel-dns.com.` (it may
+      show a project-specific host like `cname.vercel-dns-XXX.com` — always
+      copy the exact value from this screen). Leave the tab open.
 - [ ] Create new project `roundtrip-landing` from the same GitHub repo with
       **Root Directory = `landing`**, Framework Preset = Other (static).
-      Add domains `roundtrip.one` and `www.roundtrip.one` (www → redirect to apex).
+      Add domains `roundtrip.one` and `www.roundtrip.one` (choose "redirect
+      www → roundtrip.one" when asked). Vercel shows an `A` record for the
+      apex (classically `76.76.21.21`) and a `CNAME` for `www` — again, copy
+      the exact values it displays.
 - [ ] Connect **both** projects to the GitHub repo (`anmolbajpai24/RoundTrip`),
       production branch `main`. This replaces CLI deploys: push to main = prod,
       branches = preview URLs.
-- [ ] At your registrar, set the DNS records Vercel shows for each domain
-      (apex A/ALIAS + `CNAME app` + `CNAME www`).
+
+**In GoDaddy** (godaddy.com → sign in → My Products → Domains →
+`roundtrip.one` → **Manage DNS** / "DNS" button):
+
+- [ ] Delete the default **Parked** `A` record for `@` (and any
+      "Domain Forwarding" / Website Builder records) — Vercel's apex record
+      can't coexist with it.
+- [ ] Add record → Type `A`, Name `@`, Value = the IP Vercel showed for
+      `roundtrip.one` (e.g. `76.76.21.21`), TTL default.
+- [ ] Add record → Type `CNAME`, Name `app`, Value = the host Vercel showed
+      for `app.roundtrip.one` (e.g. `cname.vercel-dns.com`), TTL default.
+- [ ] Add record → Type `CNAME`, Name `www`, Value = the host Vercel showed
+      for `www.roundtrip.one`, TTL default.
+- [ ] GoDaddy sometimes appends the domain automatically — the Name field
+      should read exactly `app`, not `app.roundtrip.one.roundtrip.one`.
+
+**Back in Vercel:**
+
+- [ ] Wait for each domain's status to turn green/Valid (usually minutes,
+      up to ~1 h for GoDaddy TTLs). SSL certificates are issued automatically —
+      nothing to do.
 - [ ] Enable **Web Analytics** on both projects (Analytics tab → Enable).
       The code is already wired (`<Analytics/>` in the app, script tag on landing).
 - [ ] Keep the app project's `round-trip-mauve.vercel.app` domain attached —
@@ -33,8 +63,10 @@ order. Tick as you go.
 
 ## 3. Resend (auth emails)
 
-- [ ] Create a Resend account, add domain `roundtrip.one`, add the SPF/DKIM DNS
-      records it gives you, wait for Verified.
+- [ ] Create a Resend account, add domain `roundtrip.one`, then add the 3-4
+      records it lists (DKIM TXT + SPF MX/TXT, all on subdomains like
+      `resend._domainkey` and `send`) in the same GoDaddy Manage DNS screen as
+      step 1. Wait for Verified (can take up to an hour).
 - [ ] Create an SMTP password (Resend → SMTP).
 - [ ] Supabase → Authentication → Emails → SMTP Settings: host
       `smtp.resend.com`, port 465, user `resend`, the SMTP password, sender
@@ -43,10 +75,20 @@ order. Tick as you go.
 
 ## 4. Support email
 
-- [ ] Set up forwarding for `support@roundtrip.one` → your Gmail (Cloudflare
-      Email Routing if you move DNS there, otherwise your registrar's email
-      forwarding). The landing footer, ToS, privacy policy and app already
+GoDaddy no longer bundles free email forwarding with most domain plans, so use
+[ImprovMX](https://improvmx.com) (free tier) — it just needs two MX records:
+
+- [ ] ImprovMX: add domain `roundtrip.one`, alias `support` → your Gmail.
+- [ ] GoDaddy Manage DNS: add `MX` Name `@` Value `mx1.improvmx.com`
+      Priority `10`, and `MX` Name `@` Value `mx2.improvmx.com` Priority `20`
+      (delete any existing `@` MX records first). Optionally add TXT `@` =
+      `v=spf1 include:spf.improvmx.com ~all` — this doesn't clash with
+      Resend, whose SPF lives on the `send` subdomain.
+- [ ] Email `support@roundtrip.one` from another account and confirm it lands
+      in your Gmail. The landing footer, ToS, privacy policy and app already
       link to it.
+- [ ] (If your GoDaddy plan happens to include free forwarding, that works
+      too — skip ImprovMX and set `support@` → Gmail there instead.)
 
 ## 5. Sentry
 

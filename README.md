@@ -6,8 +6,12 @@ budget with settle-up, a booking checklist, and a documents wallet for tickets
 and PDFs. Create a trip in the app, share a 6-letter code, and everyone stays
 in sync in near real-time. Light and dark themes.
 
-Built with Vite + React + Tailwind CSS on Supabase (anonymous-first auth with
-optional email/Google account linking). Installable as a PWA — works offline.
+Built with Vite + React (CSS Modules + design tokens) on Supabase
+(anonymous-first auth with optional email/Google account linking). Installable
+as a PWA — works offline.
+
+Live at [roundtrip.one](https://roundtrip.one) (landing, served from
+`landing/`) and [app.roundtrip.one](https://app.roundtrip.one) (the app).
 
 ## Develop
 
@@ -15,6 +19,13 @@ optional email/Google account linking). Installable as a PWA — works offline.
 npm install
 npm run dev
 ```
+
+## Deploy / launch
+
+Two Vercel projects off this one repo (the app at the root, the landing site
+rooted at `landing/`), auto-deployed from `main`. The full go-live checklist —
+GoDaddy DNS records, Vercel domains, Supabase auth URLs, Resend SMTP, support
+email, backups — lives in [`docs/LAUNCH.md`](docs/LAUNCH.md).
 
 ## Backend setup (one-time)
 
