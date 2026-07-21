@@ -1,0 +1,41 @@
+name: Database backup
+
+# Weekly pg_dump of the production Supabase database, stored as a workflow
+# artifact (90 days — with weekly runs that's ~13 restore points). Storage
+# files (documents, outfit photos) are knowingly excluded: users can re-upload
+# them, trip data they can't.
+#
+# Needs the SUPABASE_DB_URL repo secret: the SESSION POOLER connection string
+# (Supabase dashboard → Connect → Session pooler, port 5432) — GitHub runners
+# are IPv4-only and the direct db host is IPv6.
+
+on:
+  schedule:
+    - cron: "0 3 * * 1" # Mondays 03:00 UTC
+  workflow_dispatch:
+
+jobs:
+  dump:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install PostgreSQL 17 client
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -sSo /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          sudo sh -c 'echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+          sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client-17
+
+      - name: Dump database
+        env:
+          DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          test -n "$DB_URL" || { echo "SUPABASE_DB_URL secret is not set"; exit 1; }
+          pg_dump "$DB_URL" --no-owner --no-privileges | gzip > "roundtrip-$(date +%F).sql.gz"
+          ls -lh roundtrip-*.sql.gz
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: db-backup-${{ github.run_id }}
+          path: roundtrip-*.sql.gz
+          retention-days: 90
+          if-no-files-found: error

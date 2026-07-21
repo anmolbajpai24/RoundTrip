@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { isGuest, linkEmailStart, linkEmailVerify, linkGoogle, signInEmailStart, signInEmailVerify, signInGoogle, signOut } from "../lib/auth.js";
+import { deleteAccount, isGuest, linkEmailStart, linkEmailVerify, linkGoogle, signInEmailStart, signInEmailVerify, signInGoogle, signOut } from "../lib/auth.js";
+import { confirmDialog } from "./dialogs.jsx";
 import Sheet from "./ui/Sheet.jsx";
 import Button from "./ui/Button.jsx";
 import Field, { Input } from "./ui/Field.jsx";
@@ -48,6 +49,21 @@ export default function AccountSheet({ user, mode = "link", onClose, onChanged }
     });
   };
   const google = () => run(() => (signin ? signInGoogle() : linkGoogle()));
+
+  const doDelete = async () => {
+    const ok = await confirmDialog({
+      title: "Delete your account?",
+      message: "This permanently deletes your account, your personal content and photos, and any trips where you're the only member. Trips you share with others stay for them. This can't be undone.",
+      confirmLabel: "Delete forever",
+      danger: true,
+      typeToConfirm: "DELETE",
+      typeLabel: "Type DELETE to confirm",
+    });
+    if (!ok) return;
+    // A full navigation (not SPA state surgery) is the reliable reset: the
+    // user, session and caches are all gone server-side by now.
+    run(async () => { await deleteAccount(); window.location.assign("/"); });
+  };
 
   return (
     <Sheet onClose={onClose} label="Account">
@@ -117,6 +133,12 @@ export default function AccountSheet({ user, mode = "link", onClose, onChanged }
                 {error && <p className={s.error}>{error}</p>}
                 <Button full variant="ghost" onClick={requestClose}>Not now</Button>
               </>
+            )}
+
+            {/* Account deletion — guests have server-side trips too, so both
+                non-signin modes offer it (GDPR erasure lives here). */}
+            {!signin && stage !== "done" && (
+              <button onClick={doDelete} disabled={busy} className={s.deleteBtn}>Delete my account…</button>
             )}
           </>
         );

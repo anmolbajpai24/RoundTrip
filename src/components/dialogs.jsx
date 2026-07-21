@@ -18,10 +18,10 @@ export function toast(message, { kind = "info", duration = 3500 } = {}) {
   notify({ type: "toast", toast: { id: crypto.randomUUID(), message, kind, duration } });
 }
 
-export function confirmDialog({ title, message, confirmLabel = "Confirm", cancelLabel = "Cancel", danger = false, typeToConfirm = null } = {}) {
+export function confirmDialog({ title, message, confirmLabel = "Confirm", cancelLabel = "Cancel", danger = false, typeToConfirm = null, typeLabel = "Type the trip code to confirm" } = {}) {
   if (!notify) return Promise.resolve(false);
   return new Promise((resolve) => {
-    notify({ type: "confirm", confirm: { title, message, confirmLabel, cancelLabel, danger, typeToConfirm, resolve } });
+    notify({ type: "confirm", confirm: { title, message, confirmLabel, cancelLabel, danger, typeToConfirm, typeLabel, resolve } });
   });
 }
 
@@ -75,7 +75,7 @@ export default function DialogHost() {
             {confirm.message && <p className={s.message}>{confirm.message}</p>}
             {confirm.typeToConfirm && (
               <>
-                <div className={s.gateLabel}>Type the trip code to confirm</div>
+                <div className={s.gateLabel}>{confirm.typeLabel}</div>
                 <input
                   value={typed}
                   onChange={(e) => setTyped(e.target.value)}

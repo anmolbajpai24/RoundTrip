@@ -110,7 +110,11 @@ export default function ProfileSheet({ user, stats, onClose, onChanged }) {
 
           <div className={s.footer}>
             <span className={s.version}>{APP_NAME} v{pkg.version}</span>
-            <a href="/privacy.html" target="_blank" rel="noreferrer" className={s.link}>Privacy policy</a>
+            <span className={s.links}>
+              <a href="https://roundtrip.one/privacy" target="_blank" rel="noreferrer" className={s.link}>Privacy</a>
+              <a href="https://roundtrip.one/terms" target="_blank" rel="noreferrer" className={s.link}>Terms</a>
+              <a href="mailto:support@roundtrip.one" className={s.link}>Support</a>
+            </span>
           </div>
 
           {account && (

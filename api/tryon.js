@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { Client, handle_file } from "@gradio/client";
 import { FEATURES } from "../src/appConfig.js";
+import { reportError } from "./_lib/sentry.js";
 
 // Virtual try-on endpoint. Takes the caller's base photo + a garment photo and
 // returns a generated "wearing it" image. The engine is free-first: a public
@@ -52,6 +53,7 @@ export async function runTryOn(body, authHeader) {
       return reply(503, "busy", "The free try-on engine is busy right now — try again in a minute.");
     }
     console.error("tryon failed:", msg);
+    await reportError(e, { fn: "tryon" });
     return reply(502, "unavailable", "The try-on engine is unavailable right now — try again later.");
   }
 }

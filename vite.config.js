@@ -3,6 +3,7 @@ import { pathToFileURL } from "node:url";
 import { resolve } from "node:path";
 import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
+import { sentryVitePlugin } from "@sentry/vite-plugin";
 
 // Serve the api/ functions on the dev server so they work under `npm run dev`
 // (in production Vercel serves them as serverless functions). Server-side env
@@ -13,6 +14,7 @@ function apiDevEndpoints(env) {
   const routes = {
     "/api/tryon": ["api/tryon.js", "runTryOn"],
     "/api/itinerary": ["api/itinerary.js", "runItinerary"],
+    "/api/account-delete": ["api/account-delete.js", "runAccountDelete"],
   };
   return {
     name: "api-dev-endpoints",
@@ -44,9 +46,20 @@ function apiDevEndpoints(env) {
 }
 
 export default defineConfig(({ mode }) => ({
+  // Hidden source maps: generated only when Sentry will upload them (the
+  // plugin deletes them from dist afterwards, so none are ever served).
+  build: { sourcemap: process.env.SENTRY_AUTH_TOKEN ? "hidden" : false },
   plugins: [
     react(),
     apiDevEndpoints(loadEnv(mode, process.cwd(), "")),
+    // Uploads source maps on CI/Vercel builds where SENTRY_AUTH_TOKEN is set;
+    // local builds skip it entirely.
+    process.env.SENTRY_AUTH_TOKEN && sentryVitePlugin({
+      org: process.env.SENTRY_ORG,
+      project: process.env.SENTRY_PROJECT,
+      authToken: process.env.SENTRY_AUTH_TOKEN,
+      sourcemaps: { filesToDeleteAfterUpload: ["dist/**/*.map"] },
+    }),
     VitePWA({
       registerType: "autoUpdate",
       includeAssets: ["apple-touch-icon.png"],

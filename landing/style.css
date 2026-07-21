@@ -1,0 +1,213 @@
+/* Landing-site styles. Colour tokens mirror src/styles/tokens.css (Grand Tour,
+   locked) — the landing stays dependency-free, so the values are copied, not
+   imported. The app follows a data-theme attribute; here the OS decides. */
+
+:root {
+  color-scheme: light;
+
+  --bg: #F5EFE4;
+  --surface: #FDFAF3;
+  --raised: #FFFFFF;
+  --field: #EEE6D6;
+  --border: #DFD4BF;
+  --divider: #E9E0CD;
+  --ink: #271C11;
+  --ink-muted: #6E604F;
+  --ink-faint: #A19381;
+  --accent: #722F37;
+  --accent-ink: #F9F2E7;
+  --chip: #ECE3D0;
+  --chip-ink: #57493A;
+
+  --r-control: 6px;
+  --r-chip: 7px;
+  --r-card: 10px;
+  --r-sheet: 18px;
+  --r-pill: 999px;
+
+  --font-display: "Instrument Serif", Georgia, serif;
+  --font-text: "Instrument Sans", system-ui, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+
+    --bg: #1A140D;
+    --surface: #221B12;
+    --raised: #2B2318;
+    --field: #2F261A;
+    --border: #403525;
+    --divider: #352C1F;
+    --ink: #F1E9DB;
+    --ink-muted: #B4A691;
+    --ink-faint: #857866;
+    --accent: #D69089;
+    --accent-ink: #3A1518;
+    --chip: #362C1E;
+    --chip-ink: #D9CDB8;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 400 15px/1.55 var(--font-text);
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--accent); }
+
+.wrap { max-width: 960px; margin: 0 auto; padding: 0 20px; }
+
+/* ---------- header ---------- */
+.top {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 20px 0;
+}
+.wordmark {
+  font: 400 24px/1 var(--font-display);
+  color: var(--ink);
+  text-decoration: none;
+  letter-spacing: -0.01em;
+}
+.top-open {
+  font: 600 13px/1 var(--font-text);
+  color: var(--ink);
+  text-decoration: none;
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+  padding: 9px 16px;
+  background: var(--surface);
+}
+.top-open:hover { border-color: var(--ink-faint); }
+
+/* ---------- hero ---------- */
+.hero { padding: 56px 0 40px; text-align: center; }
+.hero h1 {
+  font: 400 clamp(38px, 7vw, 60px)/1.08 var(--font-display);
+  margin: 0 auto 16px;
+  max-width: 17ch;
+  letter-spacing: -0.01em;
+}
+.hero p.sub {
+  color: var(--ink-muted);
+  max-width: 52ch;
+  margin: 0 auto 28px;
+  font-size: 16px;
+}
+.cta {
+  display: inline-block;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font: 600 15px/1 var(--font-text);
+  text-decoration: none;
+  border-radius: var(--r-pill);
+  padding: 15px 30px;
+}
+.cta:hover { filter: brightness(1.08); }
+.hero .aside {
+  margin: 14px 0 0;
+  color: var(--ink-faint);
+  font-size: 13px;
+}
+.hero .aside a { color: var(--ink-muted); }
+
+/* ---------- screenshots ---------- */
+.shots {
+  display: flex; justify-content: center; gap: 24px;
+  padding: 32px 0 8px;
+  flex-wrap: wrap;
+}
+.phone {
+  width: 240px;
+  border: 1px solid var(--border);
+  border-radius: 28px;
+  background: var(--surface);
+  padding: 10px;
+  box-shadow: 0 18px 40px -24px rgba(39, 28, 17, 0.35);
+}
+.phone .screen {
+  border-radius: 20px;
+  overflow: hidden;
+  background: linear-gradient(160deg, var(--field), var(--chip));
+  aspect-ratio: 9 / 19;
+  display: flex; align-items: center; justify-content: center;
+}
+.phone .screen img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.phone .screen .coming {
+  color: var(--ink-faint);
+  font: 600 11px/1.4 var(--font-text);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  text-align: center;
+  padding: 12px;
+}
+.phone figcaption {
+  text-align: center;
+  color: var(--ink-muted);
+  font-size: 13px;
+  padding: 10px 0 2px;
+}
+
+/* ---------- features ---------- */
+.features { padding: 48px 0 8px; }
+.features h2, .install h2 {
+  font: 400 28px/1.15 var(--font-display);
+  text-align: center;
+  margin: 0 0 28px;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
+}
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  padding: 18px;
+}
+.card h3 { font: 400 18px/1.2 var(--font-display); margin: 0 0 6px; }
+.card p { margin: 0; color: var(--ink-muted); font-size: 14px; }
+
+/* ---------- install / together ---------- */
+.install { padding: 48px 0; }
+.install .card { max-width: 640px; margin: 0 auto; text-align: center; }
+
+/* ---------- footer ---------- */
+footer {
+  border-top: 1px solid var(--divider);
+  margin-top: 40px;
+  padding: 28px 0 40px;
+  color: var(--ink-faint);
+  font-size: 13px;
+}
+footer .wrap { display: flex; flex-wrap: wrap; gap: 8px 20px; justify-content: space-between; }
+footer a { color: var(--ink-muted); text-decoration: none; }
+footer a:hover { text-decoration: underline; }
+footer nav { display: flex; gap: 20px; }
+
+/* ---------- legal pages ---------- */
+.legal { max-width: 700px; margin: 0 auto; padding: 8px 20px 60px; }
+.legal h1 { font: 400 34px/1.1 var(--font-display); margin: 24px 0 4px; }
+.legal .updated { color: var(--ink-faint); font-size: 13px; margin: 0 0 30px; }
+.legal h2 { font: 400 21px/1.2 var(--font-display); margin: 34px 0 10px; }
+.legal p, .legal li { color: var(--ink); font-size: 14.5px; }
+.legal .muted { color: var(--ink-muted); font-size: 13.5px; }
+.legal ul { padding-left: 20px; }
+.legal li { margin: 6px 0; }
+.legal table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 14px; }
+.legal td { padding: 9px 6px; border-bottom: 1px solid var(--divider); vertical-align: top; }
+.legal td:first-child { font-weight: 600; white-space: nowrap; padding-right: 16px; }
+.legal .scroll { overflow-x: auto; }
+.legal .callout {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  padding: 14px 18px;
+  margin: 16px 0;
+}

@@ -54,6 +54,15 @@
   padding: 10px 0 2px;
 }
 
+.deleteBtn {
+  display: block;
+  width: 100%;
+  text-align: center;
+  font: 600 12px/1 var(--font-text);
+  color: var(--danger);
+  padding: 12px 0 2px;
+}
+
 .done {
   display: flex;
   align-items: center;

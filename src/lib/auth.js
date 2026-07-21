@@ -62,6 +62,22 @@ export async function signOut() {
   if (error) throw error;
 }
 
+// Permanently delete the account server-side (/api/account-delete removes
+// memberships, personal data, sole-member trips, then the auth user), then
+// drop the now-dead local session.
+export async function deleteAccount() {
+  const { data } = await supabase.auth.getSession();
+  const token = data?.session?.access_token || "";
+  const res = await fetch("/api/account-delete", {
+    method: "POST",
+    headers: { "content-type": "application/json", ...(token && { authorization: `Bearer ${token}` }) },
+    body: JSON.stringify({ confirm: true }),
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(body.message || "Couldn't delete the account — please try again.");
+  await supabase.auth.signOut().catch(() => {}); // server already deleted the user; clear local tokens
+}
+
 export function onAuthChange(callback) {
   if (!isConfigured) return () => {};
   const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => callback(session?.user || null));

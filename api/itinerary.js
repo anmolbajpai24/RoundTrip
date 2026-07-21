@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { FEATURES } from "../src/appConfig.js";
+import { reportError } from "./_lib/sentry.js";
 
 // AI itinerary endpoint. Takes the trip's title, dates, day/leg list and the
 // traveller's free-text description and returns a suggested plan per day.
@@ -81,6 +82,7 @@ export async function runItinerary(body, authHeader) {
       return reply(503, "busy", "The AI planner is busy right now — try again in a minute.");
     }
     console.error("itinerary failed:", msg);
+    await reportError(e, { fn: "itinerary" });
     return reply(502, "unavailable", "The AI planner is unavailable right now — try again later.");
   }
 }
