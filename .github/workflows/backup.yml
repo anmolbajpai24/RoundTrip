@@ -34,7 +34,9 @@ jobs:
         run: |
           set -o pipefail
           test -n "$DB_URL" || { echo "SUPABASE_DB_URL secret is not set"; exit 1; }
-          pg_dump "$DB_URL" --no-owner --no-privileges | gzip > "roundtrip-$(date +%F).sql.gz"
+          # Versioned path: Ubuntu's pg_wrapper resolves bare `pg_dump` to the
+          # preinstalled v16 client, which refuses the v17 server.
+          /usr/lib/postgresql/17/bin/pg_dump "$DB_URL" --no-owner --no-privileges | gzip > "roundtrip-$(date +%F).sql.gz"
           size=$(stat -c%s roundtrip-*.sql.gz)
           echo "dump size: $size bytes"
           test "$size" -ge 2048 || { echo "dump suspiciously small — treating as failure"; exit 1; }
