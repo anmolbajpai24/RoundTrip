@@ -28,10 +28,16 @@ jobs:
       - name: Dump database
         env:
           DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        # pipefail: without it a pg_dump failure is masked by gzip's exit 0 and
+        # the run goes green with an empty file (happened on the first run).
+        # The size floor catches any other silently-empty dump.
         run: |
+          set -o pipefail
           test -n "$DB_URL" || { echo "SUPABASE_DB_URL secret is not set"; exit 1; }
           pg_dump "$DB_URL" --no-owner --no-privileges | gzip > "roundtrip-$(date +%F).sql.gz"
-          ls -lh roundtrip-*.sql.gz
+          size=$(stat -c%s roundtrip-*.sql.gz)
+          echo "dump size: $size bytes"
+          test "$size" -ge 2048 || { echo "dump suspiciously small — treating as failure"; exit 1; }
 
       - uses: actions/upload-artifact@v4
         with:
