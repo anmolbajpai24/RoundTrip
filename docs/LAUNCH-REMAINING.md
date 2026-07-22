@@ -6,21 +6,13 @@ created, roundtrip-dev schema + auth toggles, og.png). This file is only the
 open items — all of them involve secrets or your phone, which is why they're
 yours. Work top to bottom; each block says how to verify it.
 
-## 1. Sentry env vars → Vercel (app project `round-trip`)
+## 1. Sentry — ✅ DONE (verified 22 Jul)
 
-Settings → Environment Variables, scope **Production**, add all five:
-
-| Name | Value |
-|---|---|
-| `VITE_SENTRY_DSN` | the `roundtrip` project DSN (Sentry → Settings → Projects → roundtrip → Client Keys) |
-| `SENTRY_DSN` | same DSN |
-| `SENTRY_ORG` | `personal-20o` |
-| `SENTRY_PROJECT` | `roundtrip` |
-| `SENTRY_AUTH_TOKEN` | the org auth token you created (`org:ci` scope) |
-
-**Verify:** after the next deploy, open the app console and run
-`throw new Error("sentry smoke test")` (or trigger any crash) — the event
-should appear in Sentry with a readable (un-minified) stack trace.
+Env vars are in the deployed build; a scripted browser threw
+"sentry smoke test — launch verification" on the live app and Sentry's ingest
+accepted the events (3× HTTP 200). Check the issue in Sentry shows source
+lines (not minified gibberish) — if it's minified, `SENTRY_AUTH_TOKEN` wasn't
+present at build time; re-check it and redeploy.
 
 ## 2. Dev environment wiring (`roundtrip-dev`, ref `mkxqrgnnfjobwukoztcg`)
 
