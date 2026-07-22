@@ -16,35 +16,43 @@ present at build time; re-check it and redeploy.
 
 ## 2. Dev environment wiring (`roundtrip-dev`, ref `mkxqrgnnfjobwukoztcg`)
 
-- [ ] **Google sign-in in dev:** Google Cloud project `alien-dialect-468618-r2`
-      → the "RoundTrip" OAuth client → add redirect URI
+Tested 22 Jul: `.env.local` ✅ (scripted end-to-end pass: anonymous sign-in →
+create_trip_with_code → kv write/read → delete_trip, all against dev). Vercel
+scoping ✅ (dev entries were Development-only; Preview-scoped dev values added
+via CLI — Production keeps prod values, verified in the live bundle). Still
+open:
+
+- [ ] **Google sign-in in dev** — the dev authorize endpoint still returns
+      "provider is not enabled". In Supabase **roundtrip-dev** → Authentication
+      → Providers → Google: paste the "RoundTrip" client ID + secret (GCP
+      project `alien-dialect-468618-r2`), toggle ON, **Save**. Also confirm the
+      Google client's redirect URIs include
       `https://mkxqrgnnfjobwukoztcg.supabase.co/auth/v1/callback`.
-      Then Supabase roundtrip-dev → Authentication → Providers → Google:
-      paste client ID + secret, toggle ON.
-- [ ] **`.env.local`** (repo root — dev only, never committed):
-      ```
-      VITE_SUPABASE_URL=https://mkxqrgnnfjobwukoztcg.supabase.co
-      VITE_SUPABASE_ANON_KEY=<roundtrip-dev anon key — Settings → API Keys → Legacy tab>
-      ```
-- [ ] **Vercel env scoping** (app project): make `VITE_SUPABASE_URL` and
-      `VITE_SUPABASE_ANON_KEY` Production-only (prod values), then add a second
-      entry of each scoped **Preview + Development** with the dev values.
 
-**Verify:** `npm run dev` → create a throwaway trip → it appears in
-roundtrip-dev's Table Editor (`trips`), not in prod. Then push any branch and
-check the preview URL's network tab hits `mkxqrgnnfjobwukoztcg.supabase.co`.
+**Verify:** `https://mkxqrgnnfjobwukoztcg.supabase.co/auth/v1/authorize?provider=google`
+in a browser should bounce to a Google sign-in page, not a JSON error.
 
-## 3. Backups
+## 3. Backups — ❌ first run FAILED, needs redo
 
-- [ ] GitHub repo → Settings → Secrets and variables → Actions → New secret:
-      `SUPABASE_DB_URL` = roundtrip-**prod** → Connect → **Session pooler**
-      string (port 5432) with the DB password filled in.
-- [ ] Actions tab → "Database backup" → Run workflow → wait for green.
-- [ ] Download the artifact and restore it into roundtrip-dev once to prove
-      it's restorable:
-      `gunzip -c roundtrip-*.sql.gz | psql "<dev session-pooler string>"`
-      (restoring into dev may spew "already exists" notices — fine; the point
-      is that trip rows arrive).
+The 22 Jul run produced a 20-byte empty dump: the secret used the **direct**
+`db.…supabase.co` host (unreachable from GitHub) and the DB password's special
+characters (`#`, `*`…) weren't URL-encoded, so pg_dump couldn't parse the
+string. The workflow now fails loudly on this instead of going green. Redo:
+
+- [ ] Supabase roundtrip-**prod** → Project Settings → Database → **Reset
+      database password**, choose one with letters+digits only (kills both the
+      encoding problem and the partial leak of the old password into the run
+      log — private repo, but still).
+- [ ] Prod dashboard → **Connect** (top bar) → **Session pooler** tab → copy
+      that URI (host `…pooler.supabase.com`, port **5432**, user
+      `postgres.tqzzpmpfhwujazjajogb`) and substitute the new password.
+- [ ] GitHub repo → Settings → Secrets and variables → Actions → edit
+      `SUPABASE_DB_URL` → paste the full string.
+- [ ] Actions → "Database backup" → Run workflow. Green now genuinely means
+      success; the log prints the dump size (expect tens of KB+, not 20 bytes).
+- [ ] Once: download the artifact, un-gzip, paste into roundtrip-dev's SQL
+      Editor and run, then check dev's Table Editor shows prod's trips
+      ("already exists" notices are fine — the proof is the data arriving).
 
 ## 4. Landing screenshots
 
