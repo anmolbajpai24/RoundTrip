@@ -1,17 +1,61 @@
-# Roundtrip — shared trip companion
+# Roundtrip
 
-Plan a trip together and carry it with you: itinerary with per-day weather and
-outfit advice, a trip map, outfit planner with photos, packing lists, shared
-budget with settle-up, a booking checklist, and a documents wallet for tickets
-and PDFs. Create a trip in the app, share a 6-letter code, and everyone stays
-in sync in near real-time. Light and dark themes.
+A trip planner for groups. One person creates a trip, shares a six-letter
+code, and everyone on it sees the same itinerary, budget, bookings and
+documents, syncing in near real-time. Installs to the home screen and works
+offline.
 
-Built with Vite + React (CSS Modules + design tokens) on Supabase
-(anonymous-first auth with optional email/Google account linking). Installable
-as a PWA — works offline.
+Live at [roundtrip.one](https://roundtrip.one) (landing) and
+[app.roundtrip.one](https://app.roundtrip.one) (the app). No account needed
+to start.
 
-Live at [roundtrip.one](https://roundtrip.one) (landing, served from
-`landing/`) and [app.roundtrip.one](https://app.roundtrip.one) (the app).
+<!-- SCREENSHOT: the trip itinerary view on mobile, with the day list and
+     weather strip visible. Use a real trip with real destinations, not
+     placeholder data. Full width, right here. -->
+
+## Why I built it
+
+I was planning a 24-day trip with a group and we were running it across a
+spreadsheet, three chat threads and a folder of screenshots. Nobody knew
+which version of the plan was current. So I built this, and then used it
+every day of that trip. Most of the design decisions came from things that
+annoyed us while we were actually travelling: the packing list needed to be
+per person but the budget needed to be shared, notes needed to work with no
+signal, and nobody wanted to make an account before they could see anything.
+
+## What's in it
+
+Itinerary with per-day weather and outfit advice, a trip map, outfit planner
+with photos, packing lists, shared budget with settle-up, a booking
+checklist, and a documents wallet for tickets and PDFs. Light and dark
+themes. Backup and restore of a whole trip as JSON.
+
+### The AI parts
+
+**Itinerary planner.** In the trip wizard, generates a starting plan for the
+destinations and dates you picked. Runs on Gemini.
+
+**Virtual try-on.** Upload one photo of yourself, private, and any outfit in
+the closet can be rendered on you. Defaults to the public IDM-VTON
+HuggingFace Space, which is free and takes 30 to 90 seconds. Setting
+`GEMINI_API_KEY` switches it to Gemini 2.5 Flash Image, roughly four cents an
+image with no daily cap. Results are cached per outfit, so nothing
+regenerates unless you ask.
+
+Both run server-side in `api/tryon.js`, a Vercel function also mounted on the
+dev server, so engine keys never reach the browser.
+
+<!-- GIF: the try-on flow. Pick an outfit, hit "See it on me", show the
+     result. Cut the wait, nobody needs to watch 60 seconds of spinner. -->
+
+## Stack
+
+Vite and React (CSS Modules with design tokens) on Supabase. Anonymous-first
+auth: everything works as a guest in one browser, and linking an email or
+Google account carries the same identity onto other devices.
+
+ESLint and Vitest, Sentry for errors, GitHub Actions for CI and for versioned
+`pg_dump` backups.
 
 ## Develop
 
@@ -20,106 +64,72 @@ npm install
 npm run dev
 ```
 
-## Deploy / launch
-
-Two Vercel projects off this one repo (the app at the root, the landing site
-rooted at `landing/`), auto-deployed from `main`. The full go-live checklist —
-GoDaddy DNS records, Vercel domains, Supabase auth URLs, Resend SMTP, support
-email, backups — lives in [`docs/LAUNCH.md`](docs/LAUNCH.md).
-
 ## Backend setup (one-time)
 
-The app uses a free [Supabase](https://supabase.com) project for sync + auth.
-Follow [`supabase/SETUP.md`](supabase/SETUP.md): create the project, run
-[`supabase/schema.sql`](supabase/schema.sql) **once** (never again — it drops
-the tables), run [`supabase/migrations/001_public_hardening.sql`](supabase/migrations/001_public_hardening.sql)
-and [`supabase/migrations/002_documents_storage.sql`](supabase/migrations/002_documents_storage.sql)
-(both additive and live-safe), enable the auth providers, and put your project
-URL + anon key in `.env.local`.
+The app uses a free Supabase project for sync and auth. Follow
+`supabase/SETUP.md`: create the project, run `supabase/schema.sql` once and
+never again because it drops the tables, then run
+`supabase/migrations/001_public_hardening.sql` and
+`002_documents_storage.sql`, both additive and live-safe. Enable the auth
+providers, and put your project URL and anon key in `.env.local`.
 
-### Optional: trip cover photos (Unsplash)
+### Optional keys, all with free tiers
 
-Trip cards use a colour gradient by default. To offer real destination photos,
-create a free [Unsplash developer app](https://unsplash.com/developers) and add
-its Access Key to `.env.local` (and Vercel):
+| Variable | What it turns on |
+|---|---|
+| `VITE_UNSPLASH_ACCESS_KEY` | Real destination photos on trip cards instead of gradients |
+| `HF_TOKEN` | Your own free ZeroGPU quota for try-on, roughly 7 to 14 a day |
+| `GEMINI_API_KEY` | Faster, better try-on, and the itinerary planner |
 
-```
-VITE_UNSPLASH_ACCESS_KEY=your-access-key
-```
+If the IDM-VTON Space moves or breaks, point `HF_TRYON_SPACE` at another one
+with the same `/tryon` API.
 
-Photos are only fetched from the trip wizard and trip settings, so the demo
-tier's 50 requests/hour is plenty.
+## Deploy
 
-### Optional: virtual try-on ("See it on me")
-
-Upload one photo of yourself (private — nobody else can ever see it) and any
-closet outfit can be rendered on you. Generation runs server-side in
-`api/tryon.js` (a Vercel function, also mounted on the dev server), so engine
-keys never reach the browser. Engines:
-
-- **Free (default):** the public [IDM-VTON](https://huggingface.co/spaces/yisol/IDM-VTON)
-  HuggingFace Space. Add `HF_TOKEN` (free HF account token) to `.env.local`
-  and Vercel to use your own free ZeroGPU quota (~7–14 try-ons/day); without
-  a token it uses the stricter shared anonymous pool. Generations take
-  30–90s. If the Space moves or breaks, point `HF_TRYON_SPACE` at another
-  IDM-VTON space with the same `/tryon` API.
-- **Paid upgrade (optional):** set `GEMINI_API_KEY` and try-ons switch to
-  Gemini 2.5 Flash Image (~$0.04/image, no daily cap, better quality).
-
-Results are cached on the outfit, so each look is only generated when you ask.
+Two Vercel projects off this one repo, the app at the root and the landing
+site rooted at `landing/`, both auto-deployed from `main`. The full go-live
+checklist, DNS through to backups, is in `docs/LAUNCH.md`.
 
 ## How trips work
 
-- **Create a trip** in the app: name, dates, currency (plus an optional second
-  display currency and budget), then search-and-add destinations — each day is
-  assigned to a destination automatically and can be edited afterwards.
-- **Share the trip code** so others can join. Everyone sees the whole trip,
-  with each person's additions labelled.
-- **Your trips** home screen lists every trip you're on and who's on it.
-- **Accounts are optional**: everything works as a guest (this browser only).
-  Linking an email or Google account keeps the same identity and unlocks your
-  trips on any device.
+Create a trip: name, dates, currency (plus an optional second display
+currency and budget), then search and add destinations. Each day is assigned
+to a destination automatically and can be edited after. Share the trip code
+so others can join. Everyone sees the whole trip, with each person's
+additions labelled.
 
 ## Where the data lives
 
-Everything is stored in **Supabase** and mirrored to **IndexedDB on each
-device** as an offline cache with a write outbox.
+Everything is stored in Supabase and mirrored to IndexedDB on each device as
+an offline cache with a write outbox.
 
-- **Shared** by all members: the trip definition (days, destinations, money
-  settings, cover photo), shared day notes, expenses (who-paid + settle-up),
-  bookings, and the document list (files themselves live in a private
-  Supabase Storage bucket, member-only).
-- **Personal** per member: packing list, outfit photos, own per-day notes.
-- **Profile** (display name + colour) lives in auth user metadata and follows
-  your account across trips and devices.
-- **↓ Backup data** in the header downloads a JSON backup of the current trip;
-  **↑ Restore** loads one back.
-
-If you ever want to swap the backend, everything network-related lives in
-`src/lib/supabase.js`, `src/lib/session.js`, `src/lib/auth.js`, and `src/lib/storage.js`.
+- **Shared by all members:** the trip definition (days, destinations, money
+  settings, cover photo), shared day notes, expenses with who-paid and
+  settle-up, bookings, and the document list. The files themselves live in a
+  private, member-only Supabase Storage bucket.
+- **Personal per member:** packing list, outfit photos, own per-day notes.
+- **Profile** (display name and colour) lives in auth user metadata and
+  follows your account across trips and devices.
 
 ## Structure
 
 ```
 src/
-  App.jsx                    shell: routing (gate → trips home → trip), header, tabs
-  theme.js                   app name + chrome colours
-  data/currencies.js         currency picker list
-  data/exampleTrips/         archived original trip + legacy upgrade seed
-  lib/tripConfig.js          per-trip config context + date/money helpers
-  lib/session.js             trip create/join/enter, members, trips list
-  lib/auth.js                account linking + sign-in (email OTP, Google)
-  lib/storage.js             Supabase kv + IndexedDB cache + backup/restore
-  lib/weather.js             Open-Meteo forecast, cached + synced
-  lib/outfitAdvisor.js       rule-based outfit suggestions
-  lib/geocode.js             Open-Meteo place search
-  lib/profile.js             global display name/colour (auth user metadata)
-  lib/unsplash.js            optional trip cover photos
-  lib/documents.js           documents wallet (Supabase Storage)
-  lib/legacyMigration.js     one-time upgrade of the pre-wizard trip
-  components/                shared UI (wizard, settings, trips home, …)
-  tabs/                      one file per tab
-supabase/
-  schema.sql                 first-time schema (DO NOT re-run)
-  migrations/                additive SQL to run after first setup
+  App.jsx             shell: routing (gate -> trips home -> trip), header, tabs
+  lib/tripConfig.js   per-trip config context + date/money helpers
+  lib/session.js      trip create/join/enter, members, trips list
+  lib/auth.js         account linking + sign-in (email OTP, Google)
+  lib/storage.js      Supabase kv + IndexedDB cache + backup/restore
+  lib/weather.js      Open-Meteo forecast, cached and synced
+  lib/documents.js    documents wallet (Supabase Storage)
+  components/         shared UI (wizard, settings, trips home)
+  tabs/               one file per tab
+api/tryon.js          server-side try-on, holds the engine keys
+supabase/             schema.sql (do not re-run) + additive migrations
+landing/              the marketing site at roundtrip.one
 ```
+
+Everything network-related lives in `src/lib/supabase.js`, `session.js`,
+`auth.js` and `storage.js`, so swapping the backend touches four files.
+
+Built and maintained by me, [Anmol Bajpai](https://github.com/anmolbajpai24).
