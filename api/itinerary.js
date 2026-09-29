@@ -133,7 +133,9 @@ async function geminiItinerary({ title, startDate, endDate, description, days })
           },
           temperature: 0.7,
           maxOutputTokens: 16384,
-          thinkingConfig: { thinkingBudget: 0 },
+          // 3.x models (what the -latest alias now resolves to) reject
+          // thinkingBudget with a bare 400 INVALID_ARGUMENT; use thinkingLevel.
+          thinkingConfig: { thinkingLevel: "minimal" },
         },
       }),
     },
