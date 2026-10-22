@@ -1,6 +1,6 @@
 import { get, set, del, keys } from "idb-keyval";
 import { supabase, isConfigured } from "./supabase.js";
-import { getSession, myId } from "./session.js";
+import { getSession, myId, canEditShared } from "./session.js";
 import { APP_SLUG, LEGACY_APP_SLUG } from "../theme.js";
 
 // Persistence layer. Public surface stays close to the local-only version
@@ -10,12 +10,19 @@ import { APP_SLUG, LEGACY_APP_SLUG } from "../theme.js";
 // offline cache + a write outbox so the app still works with no signal.
 
 const SHARED = "__shared__";
+const LOCAL = "__local__"; // cache-only owner for device-local keys
 const OUTBOX_KEY = "__outbox__";
 
-// Which keys are shared between everyone vs. personal to one member.
+// Which keys are shared between everyone vs. personal to one member, plus
+// "local" keys that never leave this device.
+//   trip-weather is a cache every device can rebuild from Open-Meteo. It used
+//   to be a shared row written by every member's phone, which fails RLS for
+//   members once roles exist (008), so it stays in IndexedDB only.
 function scopeOf(key) {
   if (key.startsWith("outfit:") || key.startsWith("outfit-item:")) return "personal";
   switch (key) {
+    case "trip-weather":
+      return "local";
     case "trip-packing":
     case "trip-itinerary-override":
     case "outfit-days":
@@ -27,7 +34,9 @@ function scopeOf(key) {
 }
 
 function ownerOf(key) {
-  return scopeOf(key) === "shared" ? SHARED : (myId() || "unknown");
+  const scope = scopeOf(key);
+  if (scope === "local") return LOCAL;
+  return scope === "shared" ? SHARED : (myId() || "unknown");
 }
 
 // ---------- local cache ----------
@@ -46,7 +55,7 @@ export async function loadKey(key, fallback) {
   if (!s) return fallback;
   const owner = ownerOf(key);
 
-  if (online()) {
+  if (owner !== LOCAL && online()) {
     try {
       const { data, error } = await supabase
         .from("trip_kv").select("value")
@@ -170,13 +179,28 @@ function assembleClosets(raw) {
 const isLegacyDayKey = (day) => /^d\d+$/.test(day);
 
 // ---------- writes (optimistic: cache now, sync via outbox) ----------
+// Shared writes are skipped when this person can't edit shared data (RLS
+// would reject them, and a rejected entry would show "Sync failed"). The UI
+// should already hide those controls; this is the backstop.
 export async function saveKey(key, value) {
   const s = getSession();
   if (!s) return;
   const owner = ownerOf(key);
+  if (owner === LOCAL) return saveLocal(key, value);
+  if (owner === SHARED && !canEditShared()) {
+    console.warn(`Not saved: you can't edit "${key}" on this trip.`);
+    return;
+  }
   await writeCache(s.tripId, owner, key, value);
   await enqueue({ tripId: s.tripId, owner, key, value });
   flushOutbox();
+}
+
+// Device-only write for "local" keys: IndexedDB, no outbox, no Supabase.
+export async function saveLocal(key, value) {
+  const s = getSession();
+  if (!s) return;
+  await writeCache(s.tripId, LOCAL, key, value);
 }
 
 // ---------- write outbox ----------
@@ -212,6 +236,11 @@ export async function flushOutbox() {
         { trip_id: entry.tripId, owner: entry.owner, key: entry.key, value: entry.value, updated_at: new Date().toISOString() },
         { onConflict: "trip_id,owner,key" }
       );
+      // 42501 = RLS refused it: this person may no longer edit (an organiser
+      // turned "Members can edit" off while the write was queued). Retrying
+      // can't succeed and would block every later write, so drop it and put
+      // the server's value back in the cache.
+      if (error?.code === "42501") { await dropRejected(id, entry); continue; }
       if (error) throw error;
       // Dequeue only if the entry wasn't superseded while the upsert was in
       // flight — otherwise the newer value must survive for the next flush.
@@ -230,6 +259,18 @@ export async function flushOutbox() {
   } finally {
     flushing = false;
   }
+}
+
+async function dropRejected(id, entry) {
+  const box = (await get(OUTBOX_KEY)) || {};
+  if (box[id] && box[id].at === entry.at) { delete box[id]; await set(OUTBOX_KEY, box); }
+  setSyncStatus({ pending: Object.keys(box).length });
+  try {
+    const { data } = await supabase.from("trip_kv").select("value")
+      .eq("trip_id", entry.tripId).eq("owner", entry.owner).eq("key", entry.key).maybeSingle();
+    if (data) await writeCache(entry.tripId, entry.owner, entry.key, data.value);
+    else await del(cacheId(entry.tripId, entry.owner, entry.key));
+  } catch { /* the next load refetches anyway */ }
 }
 
 // Drop every local trace of a trip (its cached kv rows, cached photo blobs +
@@ -261,6 +302,9 @@ export function subscribe(onChange) {
       (payload) => {
         const row = payload.new && Object.keys(payload.new).length ? payload.new : payload.old;
         if (!row) return;
+        // Older app builds still write trip-weather as a shared row; this
+        // device keeps its own copy, so ignore theirs.
+        if (row.key && scopeOf(row.key) === "local") return;
         const value = payload.eventType === "DELETE" ? undefined : row.value;
         writeCache(s.tripId, row.owner, row.key, value);
         onChange(row.key, value, row.owner);

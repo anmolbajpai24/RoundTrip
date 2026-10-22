@@ -2,18 +2,31 @@ import { get, set, del } from "idb-keyval";
 import { supabase, isConfigured } from "./supabase.js";
 import { getProfile, saveProfile, syncProfileToAuth } from "./profile.js";
 import { clearLocalTrip } from "./storage.js";
+import shiftTrip from "./shiftTrip.js";
 
 // The session ties this device to a shared trip and to the profile (name +
 // colour) this person chose. It's cached locally so the app boots instantly
 // and works offline; Supabase is the source of truth once online.
 
-const SESSION_KEY = "__session__"; // { tripId, code, userId, name, color }
+// { tripId, code, userId, name, color, role, membersCanEdit }
+//   role: "organiser" | "member" (this person on this trip)
+//   membersCanEdit: the trip's members_can_edit switch (migration 008)
+const SESSION_KEY = "__session__";
+const SHARED = "__shared__";
 
 // Colours members can pick for their profile (the Grand Tour member palette;
 // legacy stored colours keep rendering as-is — see theme.js).
 export { MEMBER_COLORS as COLORS } from "../theme.js";
 
 let cached; // in-memory copy of the session
+
+// Listeners for any session change, so the UI re-renders when an organiser
+// changes this person's role or the trip's "Members can edit" switch.
+const sessionListeners = new Set();
+export function subscribeSession(cb) {
+  sessionListeners.add(cb);
+  return () => sessionListeners.delete(cb);
+}
 
 export function getSession() {
   return cached || null;
@@ -24,29 +37,157 @@ export function myId() {
   return cached?.userId || null;
 }
 
+// Can I write this trip's shared data (itinerary, bookings, documents,
+// config)? Synchronous so render code can call it. No session means no: the
+// read-only demo relies on that. RLS enforces the same rule server-side.
+export function canEditShared() {
+  if (!cached) return false;
+  return cached.role === "organiser" || cached.membersCanEdit === true;
+}
+
 export async function loadSession() {
   if (cached) return cached;
-  const stored = (await get(SESSION_KEY)) || null;
+  let stored = (await get(SESSION_KEY)) || null;
   // Discard sessions from an older app version (before named profiles), which
   // lack userId/name — they'd break loading and re-onboarding fixes them.
   if (stored && (!stored.userId || !stored.name)) {
     await del(SESSION_KEY);
-    cached = null;
+    setCached(null);
     return null;
   }
-  cached = stored;
+  // Sessions saved before roles existed belong to pre-008 trips, where the
+  // backfill made everyone an organiser. The refresh below corrects it.
+  if (stored && stored.role === undefined) stored = { ...stored, role: "organiser", membersCanEdit: true };
+  setCached(stored);
+  if (stored) refreshAccess();
   return cached;
 }
 
 async function saveSession(next) {
-  cached = next;
+  setCached(next);
   await set(SESSION_KEY, next);
   return next;
 }
 
 export async function clearSession() {
-  cached = null;
+  setCached(null);
   await del(SESSION_KEY);
+}
+
+function setCached(next) {
+  cached = next;
+  watchAccess();
+  for (const cb of sessionListeners) cb(cached || null);
+}
+
+// ---------- role and "Members can edit" ----------
+
+// Databases without migration 008 have no role or members_can_edit columns.
+// There every member can write everything, so treat everyone as an organiser.
+const columnMissing = (error) => error?.code === "42703";
+const LEGACY_ACCESS = { role: "organiser", membersCanEdit: true };
+
+// Run a select with the 008 columns; on a pre-008 database, run it again
+// without them.
+async function selectCompat(run, cols, legacyCols) {
+  const res = await run(cols);
+  return columnMissing(res.error) ? run(legacyCols) : res;
+}
+
+// { role, membersCanEdit } for a user on a trip, or null when they aren't on it.
+async function fetchAccess(tripId, userId) {
+  const [m, t] = await Promise.all([
+    supabase.from("trip_members").select("role").eq("trip_id", tripId).eq("user_id", userId).maybeSingle(),
+    supabase.from("trips").select("members_can_edit").eq("id", tripId).maybeSingle(),
+  ]);
+  if (columnMissing(m.error) || columnMissing(t.error)) return LEGACY_ACCESS;
+  if (m.error) throw m.error;
+  if (t.error) throw t.error;
+  if (!m.data || !t.data) return null;
+  return { role: m.data.role, membersCanEdit: !!t.data.members_can_edit };
+}
+
+// Re-read my role and the trip's switch from the server. Called on boot, on
+// realtime changes to trip_members or trips, and when the app regains focus,
+// so an organiser's change reaches open apps without a reinstall. Offline or
+// on error it keeps the cached values.
+export async function refreshAccess() {
+  const s = cached;
+  if (!s || !isConfigured || (typeof navigator !== "undefined" && navigator.onLine === false)) return s || null;
+  try {
+    const access = await fetchAccess(s.tripId, s.userId);
+    if (!access || cached?.tripId !== s.tripId) return cached || null;
+    if (access.role !== cached.role || access.membersCanEdit !== cached.membersCanEdit) {
+      await saveSession({ ...cached, ...access });
+    }
+  } catch { /* offline or transient — keep what we have */ }
+  return cached || null;
+}
+
+// One pair of realtime channels for the current trip, swapped when the trip
+// changes. Two channels, not one, so a database where `trips` isn't in the
+// realtime publication yet (pre-008) can't break the trip_members one.
+let watch = null; // { tripId, channels }
+function watchAccess() {
+  const tripId = cached?.tripId || null;
+  if (watch?.tripId === tripId) return;
+  if (watch) { for (const ch of watch.channels) supabase.removeChannel(ch); watch = null; }
+  if (!tripId || !isConfigured) return;
+  const listen = (table, filter) =>
+    supabase.channel(`session-access:${table}:${tripId}`)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table, filter }, () => refreshAccess())
+      .subscribe();
+  watch = { tripId, channels: [listen("trip_members", `trip_id=eq.${tripId}`), listen("trips", `id=eq.${tripId}`)] };
+}
+
+// Backstop for missed realtime events (phone asleep, socket dropped).
+let lastFocusRefresh = 0;
+function refreshOnFocus() {
+  if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
+  if (Date.now() - lastFocusRefresh < 15000) return;
+  lastFocusRefresh = Date.now();
+  refreshAccess();
+}
+if (typeof window !== "undefined") {
+  window.addEventListener("focus", refreshOnFocus);
+  window.addEventListener("online", refreshOnFocus);
+  document.addEventListener("visibilitychange", refreshOnFocus);
+}
+
+// Turn an RPC error into a thrown Error with a plain message.
+function rpcError(error) {
+  if (rpcMissing(error)) return new Error("The app's backend isn't fully set up — please try again later.");
+  const msg = `${error?.message || ""}`;
+  if (msg.includes("at least one organiser")) return new Error("A trip needs at least one organiser.");
+  if (msg.includes("only an organiser")) return new Error("Only an organiser can do that.");
+  return Object.assign(new Error(msg || "Something went wrong — please try again."), { code: error?.code });
+}
+
+function requireOrganiser() {
+  requireConfig();
+  const s = getSession();
+  if (!s) throw new Error("No active trip.");
+  if (s.role !== "organiser") throw new Error("Only an organiser can do that.");
+  return s;
+}
+
+// Organiser only: let members edit shared trip data, or make it read-only for them.
+export async function setMembersCanEdit(value) {
+  const s = requireOrganiser();
+  const next = !!value;
+  const { error } = await supabase.rpc("set_members_can_edit", { p_trip_id: s.tripId, p_value: next });
+  if (error) throw rpcError(error);
+  if (cached?.tripId === s.tripId) await saveSession({ ...cached, membersCanEdit: next });
+}
+
+// Organiser only: make someone a co-organiser ("organiser") or a "member".
+// The server refuses to demote the trip's last organiser.
+export async function setMemberRole(userId, role) {
+  const s = requireOrganiser();
+  if (role !== "organiser" && role !== "member") throw new Error("Role must be organiser or member.");
+  const { error } = await supabase.rpc("set_member_role", { p_trip_id: s.tripId, p_user_id: userId, p_role: role });
+  if (error) throw rpcError(error);
+  if (userId === s.userId && cached?.tripId === s.tripId) await saveSession({ ...cached, role });
 }
 
 // Ensure an anonymous auth user exists; returns its id (or null if unconfigured).
@@ -104,7 +245,8 @@ export async function createTrip(name, color) {
   }
   if (!trip) throw new Error("Couldn't create a trip — please try again.");
   await adoptProfile(name, color);
-  return saveSession({ tripId: trip.id, code: trip.code, userId, name, color });
+  // The creator is the organiser (008); members_can_edit starts at its default, true.
+  return saveSession({ tripId: trip.id, code: trip.code, userId, name, color, role: "organiser", membersCanEdit: true });
 }
 
 // Join an existing trip by code with your profile.
@@ -121,14 +263,24 @@ export async function joinTrip(code, name, color) {
   const row = Array.isArray(data) ? data[0] : data;
   if (!row) throw new Error("No trip found with that code. Check the letters and try again.");
   await adoptProfile(name, color);
-  return saveSession({ tripId: row.trip_id, code: row.trip_code, userId, name, color });
+  // Rejoining keeps whatever role you had; a new joiner is a member. If the
+  // lookup fails, start read-only and let refreshAccess() correct it.
+  const access = (await fetchAccess(row.trip_id, userId).catch(() => null)) || { role: "member", membersCanEdit: false };
+  return saveSession({ tripId: row.trip_id, code: row.trip_code, userId, name, color, ...access });
 }
 
 // Re-enter a trip this user already belongs to (from the Your Trips screen).
+// `trip` is a listMyTrips() entry; refreshAccess() confirms the role after.
 export async function enterTrip(trip) {
   requireConfig();
   const userId = await ensureAuth();
-  return saveSession({ tripId: trip.id, code: trip.code, userId, name: trip.myName, color: trip.myColor });
+  const session = await saveSession({
+    tripId: trip.id, code: trip.code, userId, name: trip.myName, color: trip.myColor,
+    role: trip.myRole || LEGACY_ACCESS.role,
+    membersCanEdit: trip.membersCanEdit ?? LEGACY_ACCESS.membersCanEdit,
+  });
+  refreshAccess();
+  return session;
 }
 
 // Leave the trip view back to the trips list (keeps auth + memberships).
@@ -196,28 +348,32 @@ export async function leaveTrip(tripId) {
 }
 
 // All trips this user belongs to, newest membership first:
-// [{ id, code, myName, myColor, members: [{user_id,name,color}], config }]
+// [{ id, code, createdAt, myName, myColor, myRole, membersCanEdit,
+//    members: [{user_id,name,color,role}], config }]
 export async function listMyTrips() {
   if (!isConfigured) return [];
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
 
-  const { data: mine, error } = await supabase
-    .from("trip_members").select("trip_id, name, color").eq("user_id", user.id);
+  const { data: mine, error } = await selectCompat(
+    (cols) => supabase.from("trip_members").select(cols).eq("user_id", user.id),
+    "trip_id, name, color, role", "trip_id, name, color");
   if (error) throw error;
   if (!mine?.length) return [];
   const ids = mine.map((m) => m.trip_id);
 
   const [tripsRes, membersRes, configsRes] = await Promise.all([
-    supabase.from("trips").select("id, code, created_at").in("id", ids),
-    supabase.from("trip_members").select("trip_id, user_id, name, color").in("trip_id", ids),
-    supabase.from("trip_kv").select("trip_id, value").eq("key", "trip-config").eq("owner", "__shared__").in("trip_id", ids),
+    selectCompat((cols) => supabase.from("trips").select(cols).in("id", ids),
+      "id, code, created_at, members_can_edit", "id, code, created_at"),
+    selectCompat((cols) => supabase.from("trip_members").select(cols).in("trip_id", ids),
+      "trip_id, user_id, name, color, role", "trip_id, user_id, name, color"),
+    supabase.from("trip_kv").select("trip_id, value").eq("key", "trip-config").eq("owner", SHARED).in("trip_id", ids),
   ]);
   if (tripsRes.error) throw tripsRes.error;
 
   const configByTrip = Object.fromEntries((configsRes.data || []).map((r) => [r.trip_id, r.value]));
   const membersByTrip = {};
-  for (const m of membersRes.data || []) (membersByTrip[m.trip_id] ||= []).push(m);
+  for (const m of membersRes.data || []) (membersByTrip[m.trip_id] ||= []).push({ ...m, role: m.role || LEGACY_ACCESS.role });
 
   return (tripsRes.data || []).map((t) => {
     const my = mine.find((m) => m.trip_id === t.id);
@@ -227,10 +383,53 @@ export async function listMyTrips() {
       createdAt: t.created_at,
       myName: my?.name,
       myColor: my?.color,
+      myRole: my?.role || LEGACY_ACCESS.role,
+      membersCanEdit: t.members_can_edit ?? LEGACY_ACCESS.membersCanEdit,
       members: membersByTrip[t.id] || [],
       config: configByTrip[t.id] || null,
     };
   });
+}
+
+// "Run this trip again" (organiser only): a new trip with a fresh code and
+// this person as its only member and organiser, holding the old trip's
+// config, shared day notes and bookings checklist moved to `newStartISO`
+// (see shiftTrip.js). Members, expenses, documents and personal data stay
+// behind. The trip's "Members can edit" setting carries over. Online only.
+// Returns the new session, like createTrip(), and switches to it.
+const COPY_KEYS = ["trip-config", "trip-itinerary", "trip-bookings"];
+
+export async function duplicateTrip(tripId, newStartISO) {
+  requireConfig();
+  const userId = await ensureAuth();
+
+  const [meRes, tripRes, kvRes] = await Promise.all([
+    selectCompat((cols) => supabase.from("trip_members").select(cols).eq("trip_id", tripId).eq("user_id", userId).maybeSingle(),
+      "name, color, role", "name, color"),
+    selectCompat((cols) => supabase.from("trips").select(cols).eq("id", tripId).maybeSingle(),
+      "id, members_can_edit", "id"),
+    supabase.from("trip_kv").select("key, value").eq("trip_id", tripId).eq("owner", SHARED).in("key", COPY_KEYS),
+  ]);
+  for (const res of [meRes, tripRes, kvRes]) if (res.error) throw res.error;
+  const me = meRes.data;
+  if (!me || !tripRes.data) throw new Error("You're not on that trip.");
+  if ((me.role || LEGACY_ACCESS.role) !== "organiser") throw new Error("Only an organiser can run this trip again.");
+
+  const source = Object.fromEntries((kvRes.data || []).map((r) => [r.key, r.value]));
+  if (!source["trip-config"]) throw new Error("That trip has no plan to copy yet.");
+  // Shift before creating anything, so a bad date fails without a stray trip.
+  const shifted = shiftTrip(source["trip-config"], source, newStartISO);
+
+  const session = await createTrip(me.name, me.color);
+  const now = new Date().toISOString();
+  const rows = [["trip-config", shifted.config], ...Object.entries(shifted.kv)].map(([key, value]) => (
+    { trip_id: session.tripId, owner: SHARED, key, value, updated_at: now }
+  ));
+  const { error } = await supabase.from("trip_kv").upsert(rows, { onConflict: "trip_id,owner,key" });
+  if (error) throw error;
+
+  if (tripRes.data.members_can_edit === false) await setMembersCanEdit(false);
+  return getSession();
 }
 
 // Insert this member; if already present, update the name/colour instead.
@@ -260,18 +459,19 @@ export async function setProfile(name, color) {
   return saveSession({ ...s, name, color });
 }
 
-// All members of the current trip: [{ user_id, name, color }]. Falls back to
-// just this device's own profile when offline.
+// All members of the current trip: [{ user_id, name, color, role }]. Falls
+// back to just this device's own profile when offline.
 export async function loadMembers() {
   const s = getSession();
   if (!s) return [];
   if (isConfigured) {
     try {
-      const { data, error } = await supabase
-        .from("trip_members").select("user_id, name, color").eq("trip_id", s.tripId);
+      const { data, error } = await selectCompat(
+        (cols) => supabase.from("trip_members").select(cols).eq("trip_id", s.tripId),
+        "user_id, name, color, role", "user_id, name, color");
       if (error) throw error;
-      if (data?.length) return data;
+      if (data?.length) return data.map((m) => ({ ...m, role: m.role || LEGACY_ACCESS.role }));
     } catch { /* offline — fall through */ }
   }
-  return [{ user_id: s.userId, name: s.name, color: s.color }];
+  return [{ user_id: s.userId, name: s.name, color: s.color, role: s.role }];
 }

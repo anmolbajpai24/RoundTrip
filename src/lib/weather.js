@@ -1,12 +1,14 @@
 import { locationOf } from "./tripConfig.js";
-import { saveKey } from "./storage.js";
+import { saveLocal } from "./storage.js";
 
 // Weather data layer (no React). Fetches a daily forecast for every trip
 // location from Open-Meteo (free, no API key, CORS-enabled), normalizes it, and
-// caches it via the shared storage layer so it syncs to all members + works
-// offline. Dates the live forecast doesn't reach fall back to that location's
-// climate normals when the trip config provides them; otherwise the day simply
-// has no weather yet (the widget shows a placeholder).
+// caches it in this device's IndexedDB so it works offline. The cache is
+// local-only on purpose: every device can rebuild it, and a shared row would
+// need write access members may not have (roles, migration 008). Dates the
+// live forecast doesn't reach fall back to that location's climate normals
+// when the trip config provides them; otherwise the day simply has no weather
+// yet (the widget shows a placeholder).
 
 const FORECAST_URL = "https://api.open-meteo.com/v1/forecast";
 const FORECAST_HORIZON_DAYS = 16;      // Open-Meteo free daily forecast range
@@ -149,7 +151,7 @@ export async function refreshWeather(current, config) {
   }
 
   const next = { v: CACHE_VERSION, fetchedAt: new Date().toISOString(), days };
-  await saveKey("trip-weather", next);
+  await saveLocal("trip-weather", next);
   return next;
 }
 
