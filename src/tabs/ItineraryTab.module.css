@@ -173,3 +173,13 @@
   composes: noteText;
   color: var(--ink-faint);
 }
+
+.mapLoading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 240px;
+  font: 500 12px/1.4 var(--font-text);
+  color: var(--ink-muted);
+}

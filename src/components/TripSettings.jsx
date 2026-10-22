@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { generateDays, listDates, softOf, slugify, legGradient } from "../lib/tripConfig.js";
+import { generateDays, listDates, softOf, slugify, legGradient, toPackingDraft, fromPackingDraft, cleanTripInfo, safeMapUrl } from "../lib/tripConfig.js";
 import usePlaceSearch from "../lib/usePlaceSearch.js";
 import Spinner from "./Spinner.jsx";
 import { searchCoverPhotos, trackDownload, asCover, unsplashEnabled } from "../lib/unsplash.js";
@@ -9,6 +9,7 @@ import { getSession, canEditShared } from "../lib/session.js";
 import { joinUrl } from "../lib/joinLink.js";
 import { shareInvite, copyInviteLink } from "./shareInvite.js";
 import TripPeople from "./TripPeople.jsx";
+import PackingTemplateEditor from "./PackingTemplateEditor.jsx";
 import { confirmDialog } from "./dialogs.jsx";
 import Sheet from "./ui/Sheet.jsx";
 import Button from "./ui/Button.jsx";
@@ -47,6 +48,9 @@ export default function TripSettings({ config, onSave, onClose, memberCount = 1,
   const [coverChoices, setCoverChoices] = useState(null);
   const [coverBusy, setCoverBusy] = useState(false);
   const [error, setError] = useState("");
+  const [packing, setPacking] = useState(() => toPackingDraft(config.packingTemplate));
+  const [info, setInfo] = useState(() => ({ ...(config.info || {}) }));
+  const setInfoField = (k) => (e) => setInfo((v) => ({ ...v, [k]: e.target.value }));
 
   // destination search
   const [query, setQuery] = useState("");
@@ -80,6 +84,7 @@ export default function TripSettings({ config, onSave, onClose, memberCount = 1,
     if (!startDate || !endDate || endDate < startDate) { setError("Check the dates."); return; }
     if (listDates(startDate, endDate).length > MAX_TRIP_DAYS) { setError(`Trips are capped at ${MAX_TRIP_DAYS} days.`); return; }
     if (homeOn && !(parseFloat(homeRate) > 0)) { setError("Enter the conversion rate."); return; }
+    if (info.pickupMapUrl?.trim() && !safeMapUrl(info.pickupMapUrl)) { setError("The map link should start with https://"); return; }
 
     const fallbackLeg = uniqueLegKeys[0];
     const legForDate = (iso) => {
@@ -100,6 +105,9 @@ export default function TripSettings({ config, onSave, onClose, memberCount = 1,
       legs,
       legOrder: legOrder.length ? legOrder : uniqueLegKeys,
       days: days.map((d) => (legs[d.leg] ? d : { ...d, leg: fallbackLeg })),
+      // Only organisers see the packing editor, so only they can change it.
+      // Only organisers see the trip-info fields and the packing editor.
+      ...(isOrganiser ? { packingTemplate: fromPackingDraft(packing), info: cleanTripInfo(info) } : {}),
     });
     requestClose();
   };
@@ -278,6 +286,48 @@ export default function TripSettings({ config, onSave, onClose, memberCount = 1,
             </button>
           ))}
           <p className={s.assignHint}>Assign a day to a destination from the itinerary's day editor.</p>
+
+          {isOrganiser && (
+            <>
+              <div className={s.sectionLabel}>Trip info</div>
+              <div className={[s.groupCard, s.infoCard].join(" ")}>
+                <div className={s.groupRow}>
+                  <span className={s.rowKey}>Pickup</span>
+                  <Input value={info.pickupPoint || ""} onChange={setInfoField("pickupPoint")} maxLength={120}
+                    placeholder="e.g. Majnu ka Tilla, gate 2" aria-label="Pickup point" className={s.rowControl} />
+                </div>
+                <div className={s.groupRow}>
+                  <span className={s.rowKey}>Map link</span>
+                  <Input type="url" value={info.pickupMapUrl || ""} onChange={setInfoField("pickupMapUrl")} maxLength={200}
+                    placeholder="Optional Google Maps link" aria-label="Pickup map link" className={s.rowControl} />
+                </div>
+                <div className={s.groupRow}>
+                  <span className={s.rowKey}>Time</span>
+                  <Input value={info.pickupTime || ""} onChange={setInfoField("pickupTime")} maxLength={60}
+                    placeholder="e.g. Fri 8:30 pm" aria-label="Pickup time" className={s.rowControl} />
+                </div>
+                <div className={s.groupRow}>
+                  <span className={s.rowKey}>Trip lead</span>
+                  <Input value={info.leadName || ""} onChange={setInfoField("leadName")} maxLength={40}
+                    placeholder="Name" aria-label="Trip lead name" className={s.rowControl} />
+                </div>
+                <div className={s.groupRow}>
+                  <span className={s.rowKey}>Phone</span>
+                  <Input type="tel" value={info.leadPhone || ""} onChange={setInfoField("leadPhone")} maxLength={30}
+                    placeholder="Trip lead's phone" aria-label="Trip lead phone" className={s.rowControl} />
+                </div>
+                <div className={s.groupRow}>
+                  <span className={s.rowKey}>Emergency</span>
+                  <Input value={info.emergency || ""} onChange={setInfoField("emergency")} maxLength={80}
+                    placeholder="Name and phone" aria-label="Emergency contact" className={s.rowControl} />
+                </div>
+              </div>
+              <p className={s.inviteHint}>Pinned at the top of the itinerary for everyone. Leave blank to hide.</p>
+
+              <div className={s.sectionLabel}>Packing list</div>
+              <PackingTemplateEditor draft={packing} setDraft={setPacking} />
+            </>
+          )}
 
           {error && <p className={s.error}>{error}</p>}
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, lazy, Suspense } from "react";
 import { useTripConfig, dateLabel, weekday, todayISO, defaultDay, findDay } from "../lib/tripConfig.js";
 import { saveKey } from "../lib/storage.js";
 import { canEditShared } from "../lib/session.js";
@@ -8,12 +8,17 @@ import RouteLine from "../components/ui/RouteLine.jsx";
 import DayStrip from "../components/DayStrip.jsx";
 import PersonBadge from "../components/PersonBadge.jsx";
 import DayWeather from "../components/DayWeather.jsx";
-import TripMap from "../components/TripMap.jsx";
+import TripInfoCard from "../components/TripInfoCard.jsx";
 import Icon from "../components/ui/icons.jsx";
 import Button from "../components/ui/Button.jsx";
 import Field, { Input, TextArea, FormStack } from "../components/ui/Field.jsx";
 import Segmented from "../components/ui/Segmented.jsx";
+import Spinner from "../components/Spinner.jsx";
 import s from "./ItineraryTab.module.css";
+
+// Leaflet is only needed once someone opens the Map view, so it loads then
+// instead of sitting in the main bundle.
+const TripMap = lazy(() => import("../components/TripMap.jsx"));
 
 export default function ItineraryTab({ overrides, setOverrides, notesAll, setNotesAll, membersById, members, myId, weather, saveConfig, packingItems, canEdit = canEditShared() }) {
   const config = useTripConfig();
@@ -71,6 +76,7 @@ export default function ItineraryTab({ overrides, setOverrides, notesAll, setNot
 
   return (
     <div>
+      <TripInfoCard info={config.info} />
       <DayStrip selected={dk} onSelect={selectDay} />
 
       {/* the route spine, coupled to the strip: solid behind, dashed ahead.
@@ -87,7 +93,11 @@ export default function ItineraryTab({ overrides, setOverrides, notesAll, setNot
         />
       </div>
 
-      {view === "map" && <TripMap selected={dk} onSelectDay={selectDay} />}
+      {view === "map" && (
+        <Suspense fallback={<p className={s.mapLoading}><Spinner size={14} /> Loading map…</p>}>
+          <TripMap selected={dk} onSelectDay={selectDay} />
+        </Suspense>
+      )}
 
       {view !== "map" && (
         <>

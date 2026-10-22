@@ -361,3 +361,8 @@
   color: var(--ink-muted);
   margin: 16px 0 0;
 }
+
+/* trip info rows have longer keys ("Emergency") */
+.infoCard .rowKey {
+  width: 78px;
+}
