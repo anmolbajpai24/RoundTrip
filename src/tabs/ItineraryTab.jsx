@@ -1,9 +1,8 @@
 import { useState } from "react";
 import { useTripConfig, dateLabel, weekday, todayISO, defaultDay, findDay } from "../lib/tripConfig.js";
 import { saveKey } from "../lib/storage.js";
-import { outfitForDay, visibleToOthers, hasPhoto } from "../lib/closet.js";
+import { canEditShared } from "../lib/session.js";
 import { onColor } from "../theme.js";
-import OutfitImage from "../components/OutfitImage.jsx";
 import LegChip from "../components/LegChip.jsx";
 import RouteLine from "../components/ui/RouteLine.jsx";
 import DayStrip from "../components/DayStrip.jsx";
@@ -16,7 +15,7 @@ import Field, { Input, TextArea, FormStack } from "../components/ui/Field.jsx";
 import Segmented from "../components/ui/Segmented.jsx";
 import s from "./ItineraryTab.module.css";
 
-export default function ItineraryTab({ overrides, setOverrides, notesAll, setNotesAll, closetsAll, membersById, members, myId, weather, goToOutfit, saveConfig, packingItems }) {
+export default function ItineraryTab({ overrides, setOverrides, notesAll, setNotesAll, membersById, members, myId, weather, saveConfig, packingItems, canEdit = canEditShared() }) {
   const config = useTripConfig();
   const [selected, setSelected] = useState(() => defaultDay(config));
   const [view, setView] = useState("list"); // list | map
@@ -65,11 +64,6 @@ export default function ItineraryTab({ overrides, setOverrides, notesAll, setNot
     .filter((m) => m.user_id !== myId && notesAll[m.user_id]?.[dk]?.notes)
     .map((m) => ({ member: m, notes: notesAll[m.user_id][dk].notes }));
 
-  // Everyone's outfit (with a photo) for this day — private outfits only for their owner.
-  const outfitPeople = (members || [])
-    .map((m) => ({ member: m, outfit: outfitForDay(closetsAll[m.user_id], dk) }))
-    .filter((x) => hasPhoto(x.outfit) && (x.member.user_id === myId || visibleToOthers(x.outfit)));
-
   const myColor = membersById[myId]?.color;
   const routeStops = config.legOrder.map((k) => ({ name: config.legs[k]?.name || k, color: config.legs[k]?.color }));
   const activeLeg = Math.max(0, config.legOrder.indexOf(day.leg));
@@ -98,7 +92,7 @@ export default function ItineraryTab({ overrides, setOverrides, notesAll, setNot
       {view !== "map" && (
         <>
         <div className={s.dayCard}>
-          {saveConfig && !dayEditing && (
+          {canEdit && saveConfig && !dayEditing && (
             <button onClick={startDayEdit} title="Edit this day" aria-label="Edit this day" className={s.editBtn}>
               <Icon name="pencil" size={15} />
             </button>
@@ -140,7 +134,7 @@ export default function ItineraryTab({ overrides, setOverrides, notesAll, setNot
               </div>
             ) : (
               <p className={day.plan ? s.plan : s.planEmpty}>
-                {day.plan || "No plan yet — tap the pencil to add one."}
+                {day.plan || (canEdit ? "No plan yet — tap the pencil to add one." : "No plan yet.")}
               </p>
             )}
 
@@ -148,48 +142,26 @@ export default function ItineraryTab({ overrides, setOverrides, notesAll, setNot
           </div>
         </div>
 
-        {/* Outfits for the day — page-level, outside the card */}
-        <div className={s.sectionLabel}>Outfits for the day</div>
-        {outfitPeople.length > 0 ? (
-          <div className={s.outfitRow}>
-            {outfitPeople.map(({ member, outfit }) => (
-              <button key={member.user_id} onClick={() => goToOutfit(dk)} className={s.outfitTile}>
-                <div className={s.outfitPhoto}>
-                  <OutfitImage item={outfit} alt="" className={s.outfitImg} />
-                </div>
-                <div className={s.outfitBody}>
-                  <span className={s.outfitWho} style={{ "--c": member.color }}>
-                    <span className={s.outfitDot} />{member.user_id === myId ? "You" : member.name}
-                  </span>
-                  {outfit.desc && <span className={s.outfitDesc}>{outfit.desc}</span>}
-                </div>
-              </button>
-            ))}
-          </div>
-        ) : (
-          <button onClick={() => goToOutfit(dk)} className={s.outfitEmpty}>
-            No outfits planned for this day yet — plan one <Icon name="arrow" size={11} strokeWidth={2} />
-          </button>
-        )}
-
         <div className={s.notes}>
           <div className={s.notesHead}>
             <span className={s.sectionLabelInline}>Notes</span>
             <span className={s.notesSpacer} />
-            <button onClick={ov.notes ? startMine : startShared} className={s.notesAdd}>
+            <button onClick={ov.notes || !canEdit ? startMine : startShared} className={s.notesAdd}>
               <Icon name="plus" size={11} strokeWidth={2} /> Add
             </button>
           </div>
 
-              {/* Shared note — everyone */}
+              {/* Shared note: everyone sees it, only editors can change it.
+                  Read-only viewers with nothing shared don't get an empty card. */}
+              {(canEdit || ov.notes) && (
               <div className={s.noteCard}>
                 <div className={s.noteHead}>
-                  <span className={s.kicker}>Shared · anyone can edit</span>
-                  {!editing && (
+                  <span className={s.kicker}>{canEdit ? "Shared · everyone sees this" : "Shared"}</span>
+                  {canEdit && !editing && (
                     <button onClick={startShared} className={s.noteAction}>{ov.notes ? "Edit" : "Add"}</button>
                   )}
                 </div>
-                {editing ? (
+                {canEdit && editing ? (
                   <div className={s.noteEditor}>
                     <TextArea value={draft} onChange={(e) => setDraft(e.target.value)} rows={3} placeholder="Train times, addresses, bookings everyone needs…" />
                     <div className={s.editActions}>
@@ -201,6 +173,7 @@ export default function ItineraryTab({ overrides, setOverrides, notesAll, setNot
                   <p className={ov.notes ? s.noteText : s.noteEmpty}>{ov.notes || "Nothing shared yet."}</p>
                 )}
               </div>
+              )}
 
               {/* My note */}
               <div className={[s.noteCard, (myNote || pEditing) && s.noteMine].filter(Boolean).join(" ")} style={{ "--c": myColor || "var(--border)" }}>

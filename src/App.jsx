@@ -1,11 +1,13 @@
 import { useState, useEffect, useMemo } from "react";
-import { TripConfigContext, CONFIG_KEY, isDuringTrip, tripDayNumber, daysToGo, defaultDay } from "./lib/tripConfig.js";
-import { loadKey, saveKey, loadPersonalAll, loadClosetsAll, subscribe, subscribeMembers, flushOutbox } from "./lib/storage.js";
+import { TripConfigContext, CONFIG_KEY, isDuringTrip, tripDayNumber, daysToGo } from "./lib/tripConfig.js";
+import { loadKey, saveKey, loadPersonalAll, subscribe, subscribeMembers, flushOutbox } from "./lib/storage.js";
 import { refreshWeather } from "./lib/weather.js";
-import { loadSession, getSession, ensureAuth, loadMembers, setProfile, leaveToHome, deleteTrip, leaveTrip, COLORS } from "./lib/session.js";
+import { loadSession, getSession, ensureAuth, loadMembers, setProfile, leaveToHome, deleteTrip, leaveTrip, canEditShared, subscribeSession, COLORS } from "./lib/session.js";
+import { parseJoinPath } from "./lib/joinLink.js";
 import { currentUser } from "./lib/auth.js";
 import Avatar from "./components/Avatar.jsx";
 import TripGate from "./components/TripGate.jsx";
+import JoinLinkGate from "./components/JoinLinkGate.jsx";
 import Onboarding, { hasOnboarded } from "./components/Onboarding.jsx";
 import TripsHome from "./components/TripsHome.jsx";
 import TripWizard from "./components/TripWizard.jsx";
@@ -14,9 +16,9 @@ import LegacyUpgrade from "./components/LegacyUpgrade.jsx";
 import SyncChip from "./components/SyncChip.jsx";
 import Spinner from "./components/Spinner.jsx";
 import { toast } from "./components/dialogs.jsx";
+import { shareInvite } from "./components/shareInvite.js";
 import { setTabPopHandler } from "./lib/useBackClose.js";
 import ItineraryTab from "./tabs/ItineraryTab.jsx";
-import OutfitsTab from "./tabs/OutfitsTab.jsx";
 import PackingTab from "./tabs/PackingTab.jsx";
 import BudgetTab from "./tabs/BudgetTab.jsx";
 import BookingsTab from "./tabs/BookingsTab.jsx";
@@ -32,7 +34,9 @@ const seedPacking = (config) =>
   (config?.packingTemplate || []).flatMap(([cat, items], ci) => items.map((text, ii) => ({ id: ci * 100 + ii, cat, text, done: false })));
 
 const TAB_STORE = "roundtrip:tab";
-const TAB_IDS = ["itinerary", "outfits", "packing", "budget", "bookings"];
+// A stored id that's no longer a tab (the removed "outfits") falls back to
+// the itinerary here; a hidden tab (Budget) falls back at render time.
+const TAB_IDS = ["itinerary", "packing", "budget", "bookings"];
 const storedTab = () => {
   try { const t = sessionStorage.getItem(TAB_STORE); return TAB_IDS.includes(t) ? t : "itinerary"; }
   catch { return "itinerary"; }
@@ -64,17 +68,21 @@ export default function App() {
   const [members, setMembers] = useState([]);
   const [overrides, setOverrides] = useState({});      // shared per-day notes
   const [notesAll, setNotesAll] = useState({});        // { ownerId: { dateISO: {notes} } }
-  const [closetsAll, setClosetsAll] = useState({});    // { ownerId: { items: {id: outfit}, days: {dateISO: id} } }
   const [packingAll, setPackingAll] = useState({});    // { ownerId: [items] }
   const [expenses, setExpenses] = useState([]);        // shared
   const [bookings, setBookings] = useState([]);        // shared
   const [documents, setDocuments] = useState([]);      // shared file metadata
-  const [outfitDay, setOutfitDay] = useState(null);    // ISO date
   const [weather, setWeather] = useState(null);        // shared { v, fetchedAt, days }
   const [editingProfile, setEditingProfile] = useState(false);
   const [editingTrip, setEditingTrip] = useState(false);
   const [wizardProfile, setWizardProfile] = useState(undefined); // undefined = closed
   const [onboarded, setOnboarded] = useState(true);
+  // A /j/CODE link being opened: the join-link gate runs before anything else.
+  const [joinCode, setJoinCode] = useState(() => parseJoinPath(window.location.pathname));
+  // Bumped when my role or the trip's "Members can edit" switch changes, so
+  // edit controls follow canEditShared() without reloading the trip's data.
+  const [, setAccessTick] = useState(0);
+  useEffect(() => subscribeSession(() => setAccessTick((n) => n + 1)), []);
 
   const myId = session?.userId;
   const membersById = useMemo(() => Object.fromEntries(members.map((m) => [m.user_id, m])), [members]);
@@ -85,7 +93,9 @@ export default function App() {
   useEffect(() => {
     (async () => {
       const s = await loadSession();
-      setSession(s);
+      // On a join link the gate decides which trip opens; loading the last
+      // trip here would race it.
+      if (!parseJoinPath(window.location.pathname)) setSession(s);
       setAuthUser(await currentUser().catch(() => null));
       setOnboarded(hasOnboarded());
       setBooted(true);
@@ -107,22 +117,6 @@ export default function App() {
     // personal slice belonging to some member
     if (key === "trip-packing") setPackingAll((p) => ({ ...p, [owner]: value || [] }));
     else if (key === "trip-itinerary-override") setNotesAll((n) => ({ ...n, [owner]: value || {} }));
-    else if (key.startsWith("outfit-item:")) {
-      const id = key.slice("outfit-item:".length);
-      setClosetsAll((c) => {
-        // A first new-model row replaces any closet synthesized from legacy rows.
-        const closet = !c[owner] || c[owner].legacy ? { items: {}, days: {} } : c[owner];
-        const items = { ...closet.items };
-        if (value) items[id] = value; else delete items[id]; // null = deleted
-        return { ...c, [owner]: { ...closet, items } };
-      });
-    } else if (key === "outfit-days") {
-      setClosetsAll((c) => {
-        const closet = !c[owner] || c[owner].legacy ? { items: {}, days: {} } : c[owner];
-        return { ...c, [owner]: { ...closet, days: value || {} } };
-      });
-    }
-    // `outfit:<date>` rows are pre-closet backups — ignored live.
   };
 
   // 2. With a session, load data + subscribe.
@@ -133,13 +127,12 @@ export default function App() {
     (async () => {
       await ensureAuth().catch(() => {});
       flushOutbox();
-      const [cfg, mem, ov, notes, packs, closets, ex, bk, docs, wx] = await Promise.all([
+      const [cfg, mem, ov, notes, packs, ex, bk, docs, wx] = await Promise.all([
         loadKey(CONFIG_KEY, null),
         loadMembers(),
         loadKey("trip-itinerary", {}),
         loadPersonalAll("trip-itinerary-override"),
         loadPersonalAll("trip-packing"),
-        loadClosetsAll(),
         loadKey("trip-expenses", []),
         loadKey("trip-bookings", null),
         loadKey("trip-documents", []),
@@ -149,7 +142,6 @@ export default function App() {
       setMembers(mem);
       setOverrides(ov || {});
       setNotesAll(notes || {});
-      setClosetsAll(closets || {});
       setWeather(wx);
       // Seed my packing list with the trip's template if I don't have one yet.
       if (cfg && (!packs[session.userId] || packs[session.userId].length === 0)) {
@@ -175,7 +167,6 @@ export default function App() {
     setLoaded(false);
     setConfig(null);
     setTab("itinerary", { push: false });
-    setOutfitDay(null);
   };
 
   const goHome = async () => {
@@ -195,6 +186,23 @@ export default function App() {
 
   // ---------- top-level routing ----------
   if (!booted) return <Splash text="Loading…" />;
+
+  if (joinCode) {
+    return (
+      <JoinLinkGate
+        code={joinCode}
+        onReady={() => {
+          setJoinCode(null);
+          setOnboarded(true);
+          setLoaded(false);
+          setConfig(null);
+          setTab("itinerary", { push: false });
+          setSession(getSession());
+          refreshAuth();
+        }}
+      />
+    );
+  }
 
   if (!session) {
     if (wizardProfile !== undefined) {
@@ -225,13 +233,18 @@ export default function App() {
     isDuringTrip(config) ? { n: `Day ${tripDayNumber(config)}`, label: "of the trip" } :
     { n: null, label: "Trip complete" };
 
+  // Operator trips (members can't edit) have no shared budget, so Budget is
+  // hidden for everyone on them, organisers included. Read from the live
+  // session so the organiser's switch shows without a reload.
+  const canEdit = canEditShared();
+  const showBudget = (getSession() || session).membersCanEdit !== false;
   const TABS = [
     { id: "itinerary", label: "Trip", icon: "route" },
-    { id: "outfits", label: "Outfits", icon: "hanger" },
     { id: "packing", label: "Pack", icon: "case" },
-    { id: "budget", label: "Budget", icon: "wallet" },
+    showBudget && { id: "budget", label: "Budget", icon: "wallet" },
     { id: "bookings", label: "Book", icon: "ticket" },
-  ];
+  ].filter(Boolean);
+  const activeTab = TABS.some((t) => t.id === tab) ? tab : "itinerary";
   return (
     <TripConfigContext.Provider value={config}>
     <div className={s.app}>
@@ -260,7 +273,9 @@ export default function App() {
                 </span>
               ))}
             </button>
-            <span className={s.codeChip}>{session.code}</span>
+            <button onClick={() => shareInvite(config.title, session.code)} title="Share the join link" aria-label={`Share the join link, code ${session.code}`} className={s.codeChip}>
+              {session.code}
+            </button>
           </span>
         </div>
       </div>
@@ -282,6 +297,9 @@ export default function App() {
           onSave={saveConfig}
           onClose={() => setEditingTrip(false)}
           memberCount={members.length}
+          members={members}
+          myId={myId}
+          onMembersChanged={async () => setMembers(await loadMembers())}
           onDelete={deleteActiveTrip}
           onLeave={leaveActiveTrip}
         />
@@ -289,31 +307,25 @@ export default function App() {
 
       {/* Content */}
       <div className={s.content}>
-        {tab === "itinerary" && (
+        {activeTab === "itinerary" && (
           <ItineraryTab
             overrides={overrides} setOverrides={setOverrides}
             notesAll={notesAll} setNotesAll={setNotesAll}
-            closetsAll={closetsAll} membersById={membersById} members={members} myId={myId}
+            membersById={membersById} members={members} myId={myId}
             weather={weather}
             saveConfig={saveConfig}
             packingItems={(packingAll[myId] || []).map((i) => i.text)}
-            goToOutfit={(d) => { setOutfitDay(d); setTab("outfits"); }}
+            canEdit={canEdit}
           />
         )}
-        {tab === "outfits" && (
-          <OutfitsTab
-            closetsAll={closetsAll} setClosetsAll={setClosetsAll}
-            membersById={membersById} members={members} myId={myId} initialDay={outfitDay || defaultDay(config)}
-          />
-        )}
-        {tab === "packing" && (
+        {activeTab === "packing" && (
           <PackingTab packingAll={packingAll} setPackingAll={setPackingAll} membersById={membersById} myId={myId} />
         )}
-        {tab === "budget" && (
+        {activeTab === "budget" && (
           <BudgetTab expenses={expenses} setExpenses={setExpenses} members={members} membersById={membersById} myId={myId} />
         )}
-        {tab === "bookings" && (
-          <BookingsTab bookings={bookings} setBookings={setBookings} documents={documents} setDocuments={setDocuments} membersById={membersById} myId={myId} />
+        {activeTab === "bookings" && (
+          <BookingsTab bookings={bookings} setBookings={setBookings} documents={documents} setDocuments={setDocuments} membersById={membersById} myId={myId} canEdit={canEdit} />
         )}
       </div>
 
@@ -321,9 +333,9 @@ export default function App() {
       <nav className={s.nav}>
         <div className={s.navInner}>
           {TABS.map((t) => (
-            <button key={t.id} onClick={() => setTab(t.id)} aria-current={tab === t.id ? "page" : undefined}
-              className={[s.navItem, tab === t.id && s.navActive].filter(Boolean).join(" ")}>
-              <Icon name={t.icon} size={21} strokeWidth={tab === t.id ? 1.7 : 1.6} />
+            <button key={t.id} onClick={() => setTab(t.id)} aria-current={activeTab === t.id ? "page" : undefined}
+              className={[s.navItem, activeTab === t.id && s.navActive].filter(Boolean).join(" ")}>
+              <Icon name={t.icon} size={21} strokeWidth={activeTab === t.id ? 1.7 : 1.6} />
               <span className={s.navLabel}>{t.label}</span>
             </button>
           ))}

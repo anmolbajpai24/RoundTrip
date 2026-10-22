@@ -1,0 +1,82 @@
+.card {
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  padding: 2px 13px;
+}
+
+.switchRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  min-height: 46px;
+}
+
+.switchBody {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.switchTitle {
+  font: 600 13px/1.3 var(--font-text);
+  color: var(--ink);
+}
+
+.switchSub {
+  font: 400 11px/1.45 var(--font-text);
+  color: var(--ink-muted);
+}
+
+.list {
+  margin-top: 8px;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  padding: 0 13px;
+}
+
+.member {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 6px 0;
+}
+
+.member + .member {
+  border-top: 1px solid var(--divider);
+}
+
+.name {
+  flex: 1;
+  min-width: 0;
+  font: 500 13px/1.3 var(--font-text);
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.role {
+  flex: none;
+  font: 600 8.5px/1 var(--font-text);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.promote {
+  flex: none;
+  font: 600 11px/1 var(--font-text);
+  color: var(--accent);
+  white-space: nowrap;
+  padding: 8px 0;
+}
+
+.promote:disabled {
+  color: var(--ink-faint);
+}

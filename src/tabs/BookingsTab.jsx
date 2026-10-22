@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { saveKey } from "../lib/storage.js";
+import { canEditShared } from "../lib/session.js";
 import { DOCS_KEY, uploadDocument, docUrl, removeDocument, docSize } from "../lib/documents.js";
 import { confirmDialog } from "../components/dialogs.jsx";
 import useBackClose from "../lib/useBackClose.js";
@@ -16,7 +17,10 @@ const docExt = (type) =>
   : type?.startsWith("image/") ? (type.split("/")[1] || "IMG").replace("jpeg", "jpg").slice(0, 4).toUpperCase()
   : "FILE";
 
-export default function BookingsTab({ bookings, setBookings, documents, setDocuments, membersById, myId }) {
+// Bookings and documents are shared trip data: without edit rights (an
+// operator trip's members, or the read-only demo) the list is view-only and
+// documents can be opened but not added, linked or deleted.
+export default function BookingsTab({ bookings, setBookings, documents, setDocuments, membersById, myId, canEdit = canEditShared() }) {
   const [newItem, setNewItem] = useState("");
   const [attachFor, setAttachFor] = useState(null); // booking id picking a document
   const done = bookings.filter((b) => b.done).length;
@@ -48,6 +52,7 @@ export default function BookingsTab({ bookings, setBookings, documents, setDocum
             <div className={s.booking}>
               <button
                 onClick={() => toggle(b.id)}
+                disabled={!canEdit}
                 aria-label={b.text}
                 className={[s.check, b.done && s.checkDone, b.urgent && !b.done && s.checkUrgent].filter(Boolean).join(" ")}
               >
@@ -58,15 +63,17 @@ export default function BookingsTab({ bookings, setBookings, documents, setDocum
                 {b.urgent && !b.done && <span className={s.urgentTag}>Urgent</span>}
                 {b.addedBy && <span className={s.badgeInline}><PersonBadge member={membersById[b.addedBy]} size="disc" /></span>}
                 {b.docId && docsById[b.docId] && (
-                  <DocChip doc={docsById[b.docId]} onUnlink={() => setDocFor(b.id, undefined)} />
+                  <DocChip doc={docsById[b.docId]} onUnlink={canEdit ? () => setDocFor(b.id, undefined) : null} />
                 )}
               </div>
-              {(documents?.length || 0) > 0 && !b.docId && (
+              {canEdit && (documents?.length || 0) > 0 && !b.docId && (
                 <button onClick={() => setAttachFor(attachFor === b.id ? null : b.id)} title="Attach a document" aria-label="Attach a document" className={s.iconBtn}><Icon name="clip" size={15} /></button>
               )}
-              <button onClick={() => remove(b.id)} aria-label="Remove" className={s.iconBtn}><Icon name="x" size={14} strokeWidth={2} /></button>
+              {canEdit && (
+                <button onClick={() => remove(b.id)} aria-label="Remove" className={s.iconBtn}><Icon name="x" size={14} strokeWidth={2} /></button>
+              )}
             </div>
-            {attachFor === b.id && (
+            {canEdit && attachFor === b.id && (
               <div className={s.attachPicker}>
                 {(documents || []).map((d) => (
                   <button key={d.id} onClick={() => setDocFor(b.id, d.id)} className={s.attachChip}>
@@ -78,12 +85,14 @@ export default function BookingsTab({ bookings, setBookings, documents, setDocum
           </div>
         ))}
       </div>
-      <div className={s.addRow}>
-        <Input value={newItem} onChange={(e) => setNewItem(e.target.value)} onKeyDown={(e) => e.key === "Enter" && add()} placeholder="Add a booking…" />
-        <Button onClick={add}>Add</Button>
-      </div>
+      {canEdit && (
+        <div className={s.addRow}>
+          <Input value={newItem} onChange={(e) => setNewItem(e.target.value)} onKeyDown={(e) => e.key === "Enter" && add()} placeholder="Add a booking…" />
+          <Button onClick={add}>Add</Button>
+        </div>
+      )}
 
-      <DocumentsSection documents={documents} setDocuments={setDocuments} bookings={bookings} persistBookings={persist} membersById={membersById} />
+      <DocumentsSection documents={documents} setDocuments={setDocuments} bookings={bookings} persistBookings={persist} membersById={membersById} canEdit={canEdit} />
     </div>
   );
 }
@@ -96,13 +105,15 @@ function DocChip({ doc, onUnlink }) {
   return (
     <span className={s.docChip}>
       <button onClick={open} className={s.docChipOpen}><Icon name={docGlyph(doc.type)} size={12} /> {doc.name.length > 18 ? doc.name.slice(0, 16) + "…" : doc.name}</button>
-      <button onClick={onUnlink} title="Unlink" aria-label="Unlink" className={s.docChipX}><Icon name="x" size={11} strokeWidth={2} /></button>
+      {onUnlink && (
+        <button onClick={onUnlink} title="Unlink" aria-label="Unlink" className={s.docChipX}><Icon name="x" size={11} strokeWidth={2} /></button>
+      )}
     </span>
   );
 }
 
 // Shared wallet for tickets / PDFs / screenshots (Supabase Storage).
-function DocumentsSection({ documents, setDocuments, bookings, persistBookings, membersById }) {
+function DocumentsSection({ documents, setDocuments, bookings, persistBookings, membersById, canEdit }) {
   const fileRef = useRef(null);
   const [busy, setBusy] = useState(false);
   const [openingId, setOpeningId] = useState(null);
@@ -170,18 +181,26 @@ function DocumentsSection({ documents, setDocuments, bookings, persistBookings, 
                 <div className={s.docName}>{openingId === d.id ? "Opening…" : d.name}</div>
                 <div className={s.docMeta}>{docSize(d.size)} <PersonBadge member={membersById[d.addedBy]} size="disc" /></div>
               </button>
-              <button onClick={() => del(d)} aria-label="Delete" className={s.iconBtn}><Icon name="x" size={14} strokeWidth={2} /></button>
+              {canEdit && (
+                <button onClick={() => del(d)} aria-label="Delete" className={s.iconBtn}><Icon name="x" size={14} strokeWidth={2} /></button>
+              )}
             </div>
           ))}
         </div>
       )}
-      <Button full variant="tonal" icon="plus" onClick={() => fileRef.current?.click()} disabled={busy} className={s.addDoc}>
-        {busy ? "Uploading…" : "Add a document"}
-      </Button>
-      <input ref={fileRef} type="file" accept="image/*,application/pdf" className={s.hiddenFile} onChange={onPick} />
-      <p className={s.docsHint}>
-        Shared with everyone on the trip. Avoid uploading sensitive scans like passport photo pages unless you need to.
-      </p>
+      {canEdit ? (
+        <>
+          <Button full variant="tonal" icon="plus" onClick={() => fileRef.current?.click()} disabled={busy} className={s.addDoc}>
+            {busy ? "Uploading…" : "Add a document"}
+          </Button>
+          <input ref={fileRef} type="file" accept="image/*,application/pdf" className={s.hiddenFile} onChange={onPick} />
+          <p className={s.docsHint}>
+            Shared with everyone on the trip. Avoid uploading sensitive scans like passport photo pages unless you need to.
+          </p>
+        </>
+      ) : docs.length === 0 && (
+        <p className={s.docsHint}>No documents shared yet.</p>
+      )}
       {error && <p className={s.error}>{error}</p>}
 
       {viewer && <ImageViewer viewer={viewer} onClose={() => setViewer(null)} />}

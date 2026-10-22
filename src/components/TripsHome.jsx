@@ -70,7 +70,7 @@ export default function TripsHome({ user, onOpen, onNew, onAuthChanged }) {
     const solo = (t.members?.length || 1) <= 1;
     const title = t.config?.title || `Trip ${t.code}`;
     const ok = await confirmDialog(solo
-      ? { title: `Delete "${title}"?`, message: "This permanently removes its itinerary, outfits, packing, budget, bookings and documents. This can't be undone.", confirmLabel: "Delete forever", danger: true }
+      ? { title: `Delete "${title}"?`, message: "This permanently removes its itinerary, packing, budget, bookings and documents. This can't be undone.", confirmLabel: "Delete forever", danger: true }
       : { title: `Leave "${title}"?`, message: "You'll lose access to it, but it stays for everyone else on it.", confirmLabel: "Leave trip", danger: true });
     if (!ok) return;
     try {

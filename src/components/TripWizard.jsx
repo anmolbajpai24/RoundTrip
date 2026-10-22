@@ -10,8 +10,8 @@ import { getLocalProfile } from "../lib/profile.js";
 import { searchCoverPhotos, trackDownload, asCover } from "../lib/unsplash.js";
 import { CURRENCIES } from "../data/currencies.js";
 import Spinner from "./Spinner.jsx";
-import { APP_NAME, DEST_COLORS, onColor } from "../theme.js";
-import { toast } from "./dialogs.jsx";
+import { DEST_COLORS, onColor } from "../theme.js";
+import { shareInvite, copyInviteLink } from "./shareInvite.js";
 import Icon from "./ui/icons.jsx";
 import Button from "./ui/Button.jsx";
 import Field, { Input, TextArea, Select, FormStack, FieldRow } from "./ui/Field.jsx";
@@ -207,17 +207,8 @@ export default function TripWizard({ profile, onDone, onCancel }) {
     setBusy(false);
   };
 
-  const copyCode = async () => {
-    try { await navigator.clipboard.writeText(created); toast("Code copied"); } catch { /* unsupported */ }
-  };
-
-  const share = async () => {
-    const text = `Join my trip "${title.trim()}" on ${APP_NAME} — code: ${created}`;
-    try {
-      if (navigator.share) await navigator.share({ text });
-      else { await navigator.clipboard.writeText(created); toast("Code copied"); }
-    } catch { /* cancelled */ }
-  };
+  const copyLink = () => copyInviteLink(created);
+  const share = () => shareInvite(title, created);
 
   if (created) {
     const cfg = buildConfig();
@@ -239,11 +230,11 @@ export default function TripWizard({ profile, onDone, onCancel }) {
           <h1 className={s.createdTitle}>{title.trim()} is ready.</h1>
           {firstCity && <p className={s.createdVoice}>See you in {firstCity}.</p>}
           <div className={s.codeCard}>
-            <div className={s.codeLabel}>Share this code</div>
+            <div className={s.codeLabel}>Invite code</div>
             <div className={s.codeValue}>{created}</div>
-            <p className={s.codeHint}>Anyone with the code joins in seconds — no app store, no sign-up.</p>
+            <p className={s.codeHint}>Share the link and people join in seconds — no app store, no sign-up. The code works too.</p>
             <div className={s.codeActions}>
-              <button onClick={copyCode} className={s.codeBtn}><Icon name="copy" size={13} strokeWidth={1.7} /> Copy</button>
+              <button onClick={copyLink} className={s.codeBtn}><Icon name="copy" size={13} strokeWidth={1.7} /> Copy link</button>
               <button onClick={share} className={s.codeBtn}><Icon name="share" size={13} strokeWidth={1.7} /> Share</button>
             </div>
           </div>
