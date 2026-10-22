@@ -20,7 +20,7 @@
 
     <main class="legal">
       <h1>Privacy Policy</h1>
-      <p class="updated">Last updated 21 July 2026</p>
+      <p class="updated">Last updated 23 October 2026</p>
 
       <p>
         Roundtrip is a shared trip-planning companion. This policy explains what
@@ -49,10 +49,11 @@
           </tr>
           <tr>
             <td>Trip content</td>
-            <td>Everything you add to a trip: itinerary, packing lists, budget
-              and expenses, booking checklist, outfit notes and photos, and trip
-              settings — including destination place names, their coordinates,
-              and travel dates.</td>
+            <td>Everything you add to a trip: itinerary, notes, packing lists,
+              budget and expenses, booking checklist, and trip settings,
+              including destination place names, their coordinates, and travel
+              dates. If an organiser adds contact details (such as a phone
+              number for the pickup), everyone on that trip can see them.</td>
           </tr>
           <tr>
             <td>Documents</td>
@@ -60,11 +61,6 @@
               are shared with everyone on that trip. Please avoid uploading
               highly sensitive scans, such as passport photo pages, unless you
               need to.</td>
-          </tr>
-          <tr>
-            <td>Photos</td>
-            <td>Outfit photos you add are stored privately and scoped to you
-              within your trip.</td>
           </tr>
           <tr>
             <td>Technical</td>
@@ -79,8 +75,9 @@
       </div>
       <p class="muted">
         Everyone who is a member of a trip can see that trip's shared content and
-        documents, and the names of the other members. Personal slices (your own
-        packing list and outfits) are scoped to you.
+        documents, and the names of the other members. The organiser decides
+        whether other members can change shared content. Personal slices (your
+        own packing list and personal notes) are scoped to you.
       </p>
 
       <h2>How we use it</h2>
@@ -90,7 +87,11 @@
         <li>To show weather and maps for your destinations.</li>
         <li>If you use the AI itinerary suggestion feature, the trip title,
           dates, and the description you type are sent to Google's Gemini API to
-          generate the suggestion. Nothing is sent unless you use the feature.</li>
+          generate the suggestion.</li>
+        <li>If you paste an existing itinerary into a trip, the text you paste
+          and the trip dates are sent to Google's Gemini API to sort it into
+          days. Paste only what you are happy to share with that service.</li>
+        <li>Nothing is sent to Gemini unless you use one of these features.</li>
         <li>We do <strong>not</strong> sell your data or use it for advertising.</li>
       </ul>
 
@@ -104,8 +105,8 @@
         <li><strong>Resend</strong> — delivers sign-in code emails to your
           address.</li>
         <li><strong>Google</strong> — authenticates you if you choose Google
-          sign-in; processes AI itinerary requests (Gemini) if you use that
-          feature.</li>
+          sign-in; processes AI itinerary suggestions and pasted itineraries
+          (Gemini) if you use those features.</li>
         <li><strong>Sentry</strong> — receives error reports when something in
           the app breaks.</li>
         <li><strong>Open-Meteo</strong> — receives destination coordinates (for
@@ -120,7 +121,7 @@
       <div class="callout">
         <p style="margin:0">
           Data is protected by row-level security so trip content is only
-          readable by that trip's members. Uploaded documents and photos live in
+          readable by that trip's members. Uploaded documents live in
           private storage buckets and are served through short-lived links that
           expire after about an hour. Traffic is encrypted in transit (HTTPS).
         </p>
@@ -132,7 +133,7 @@
           can delete individual documents and items in the app at any time.</li>
         <li>You can delete your account and your data from inside the app
           (Account → Delete my account). This removes your account, your
-          personal content and photos, and any trips where you are the only
+          personal content, and any trips where you are the only
           member. Trips you shared with others keep their shared content.</li>
         <li>You can also email
           <a href="mailto:support@roundtrip.one">support@roundtrip.one</a> and

@@ -1,0 +1,64 @@
+/* Floats above the app's bottom nav (about 64px tall) and the home bar. */
+.hint {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: calc(env(safe-area-inset-bottom) + 76px);
+  z-index: 30;
+  max-width: 30rem;
+  margin: 0 auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 12px 14px 14px;
+  background-color: var(--raised);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+  box-shadow: 0 8px 28px color-mix(in srgb, var(--ink) 14%, transparent);
+}
+
+.icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--r-pill);
+  background-color: var(--chip);
+  color: var(--accent);
+}
+
+.text {
+  flex: 1;
+  min-width: 0;
+}
+
+.title {
+  font: var(--type-title-sm);
+  color: var(--ink);
+}
+
+.body {
+  font: 400 12.5px/1.5 var(--font-text);
+  color: var(--ink-muted);
+  margin-top: 4px;
+}
+
+.body b {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.install {
+  margin-top: 10px;
+}
+
+.close {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  margin: -6px -4px 0 0;
+  color: var(--ink-faint);
+}
