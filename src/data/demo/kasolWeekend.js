@@ -67,6 +67,15 @@ export function buildDemoTrip(today = new Date()) {
     legOrder: ["delhi", "kasol", "tosh"],
     days,
     packingTemplate: PACKING_TEMPLATE,
+    // Pinned trip info, so the demo shows the card organisers fill in.
+    info: {
+      pickupPoint: "Majnu ka Tilla, gate 2",
+      pickupMapUrl: "https://maps.google.com/?q=Majnu+ka+Tilla+Delhi",
+      pickupTime: "Fri 8:30 pm",
+      leadName: "Rohan",
+      leadPhone: "+91 98100 00000",
+      emergency: "Camp office +91 98160 00000",
+    },
   };
 
   const members = [

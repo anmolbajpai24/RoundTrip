@@ -71,11 +71,10 @@ export default function DemoTrip() {
             <ItineraryTab
               overrides={overrides} setOverrides={setOverrides}
               notesAll={notesAll} setNotesAll={setNotesAll}
-              closetsAll={{}} membersById={membersById} members={members} myId={myId}
+              membersById={membersById} members={members} myId={myId}
               weather={null}
               saveConfig={noop}
               packingItems={(packingAll[myId] || []).map((i) => i.text)}
-              goToOutfit={noop}
             />
           )}
           {tab === "packing" && (
