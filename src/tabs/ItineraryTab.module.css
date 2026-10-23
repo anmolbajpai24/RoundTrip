@@ -93,75 +93,6 @@
   color: var(--on);
 }
 
-/* ---------- outfits for the day (page-level) ---------- */
-.sectionLabel {
-  composes: label from "../styles/type.module.css";
-  letter-spacing: 0.16em;
-  margin: 9px 0 7px;
-}
-
-.outfitRow {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.outfitTile {
-  flex: 1;
-  min-width: 150px;
-  background-color: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--r-card);
-  overflow: hidden;
-  text-align: left;
-}
-
-.outfitPhoto {
-  height: 48px;
-  background-color: var(--field);
-}
-
-.outfitImg {
-  width: 100%;
-  height: 100%;
-  display: block;
-}
-
-.outfitBody {
-  padding: 8px 10px 10px;
-}
-
-.outfitWho {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font: 600 10px/1 var(--font-text);
-  color: var(--c);
-}
-
-.outfitDot {
-  width: 7px;
-  height: 7px;
-  border-radius: var(--r-pill);
-  background-color: var(--c);
-}
-
-.outfitDesc {
-  display: block;
-  font: 400 10.5px/1.35 var(--font-text);
-  color: var(--ink-muted);
-  margin-top: 4px;
-}
-
-.outfitEmpty {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font: 500 12px/1.4 var(--font-text);
-  color: var(--accent);
-  text-align: left;
-}
-
 /* ---------- notes (page-level) ---------- */
 .notes {
   margin-top: 9px;
@@ -241,4 +172,14 @@
 .noteEmpty {
   composes: noteText;
   color: var(--ink-faint);
+}
+
+.mapLoading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 240px;
+  font: 500 12px/1.4 var(--font-text);
+  color: var(--ink-muted);
 }

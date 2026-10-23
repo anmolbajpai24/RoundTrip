@@ -6,7 +6,9 @@ import s from "./BackupControls.module.css";
 
 // Trip data syncs across devices via Supabase; this is an extra manual safety
 // net — download the current trip's data as JSON, or restore it from a file.
-export default function BackupControls() {
+// Restore rewrites the trip's shared data, so it's offered only to people
+// who can edit it. Export is a read and stays available to everyone.
+export default function BackupControls({ canRestore = true }) {
   const fileRef = useRef(null);
   const [status, setStatus] = useState("");
 
@@ -42,9 +44,11 @@ export default function BackupControls() {
         <button onClick={doExport} className={s.rowBtn}>
           <Icon name="export" size={13} strokeWidth={1.7} /> Export trip backup
         </button>
-        <button onClick={() => fileRef.current?.click()} className={s.rowBtn}>
-          <Icon name="restore" size={13} strokeWidth={1.7} /> Restore from backup
-        </button>
+        {canRestore && (
+          <button onClick={() => fileRef.current?.click()} className={s.rowBtn}>
+            <Icon name="restore" size={13} strokeWidth={1.7} /> Restore from backup
+          </button>
+        )}
       </div>
       <input ref={fileRef} type="file" accept="application/json" className={s.hiddenFile} onChange={doImport} />
       {status && <span className={s.status}>{status}</span>}

@@ -5,19 +5,20 @@ import { CONFIG_KEY, listDates, softOf, slugify, dateLabel, weekday, addDays, to
 import { searchPlaces } from "../lib/geocode.js";
 import buildTripConfig from "../lib/buildTripConfig.js";
 import usePlaceSearch from "../lib/usePlaceSearch.js";
-import { generateItinerary, aiItineraryAvailable } from "../lib/itinerary.js";
+import { generateItinerary, importItinerary, aiItineraryAvailable, itineraryImportAvailable } from "../lib/itinerary.js";
 import { getLocalProfile } from "../lib/profile.js";
 import { searchCoverPhotos, trackDownload, asCover } from "../lib/unsplash.js";
 import { CURRENCIES } from "../data/currencies.js";
 import Spinner from "./Spinner.jsx";
-import { APP_NAME, DEST_COLORS, onColor } from "../theme.js";
-import { toast } from "./dialogs.jsx";
+import { DEST_COLORS, onColor } from "../theme.js";
+import { shareInvite, copyInviteLink } from "./shareInvite.js";
 import Icon from "./ui/icons.jsx";
 import Button from "./ui/Button.jsx";
 import Field, { Input, TextArea, Select, FormStack, FieldRow } from "./ui/Field.jsx";
 import SwatchPicker from "./ui/SwatchPicker.jsx";
 import Toggle from "./ui/Toggle.jsx";
 import RouteLine from "./ui/RouteLine.jsx";
+import Segmented from "./ui/Segmented.jsx";
 import s from "./TripWizard.module.css";
 
 const MAX_TRIP_DAYS = 60;
@@ -78,7 +79,16 @@ export default function TripWizard({ profile, onDone, onCancel }) {
   const [dests, setDests] = useState([]);
 
   // Step 4 (optional, only when the AI planner is available) — AI itinerary
-  const aiOn = aiItineraryAvailable;
+  // The days step offers an AI draft from a brief and/or importing an
+  // itinerary the organiser already has (pasted text). Writing the days by
+  // hand is "Skip for now".
+  const aiOn = aiItineraryAvailable || itineraryImportAvailable;
+  const daysModes = [
+    aiItineraryAvailable && { id: "draft", label: "Draft with AI" },
+    itineraryImportAvailable && { id: "paste", label: "Paste yours" },
+  ].filter(Boolean);
+  const [daysMode, setDaysMode] = useState(daysModes[0]?.id || "draft");
+  const [pasteText, setPasteText] = useState("");
   const totalSteps = aiOn ? 5 : 4;
   const reviewStep = totalSteps;
   const stepNames = aiOn
@@ -136,15 +146,12 @@ export default function TripWizard({ profile, onDone, onCancel }) {
     return cur;
   };
 
-  const aiGenerate = async () => {
+  // Shared by the AI draft and the pasted import, which both return
+  // [{ date, city, plan }]: run the call, turn the cities into legs, preview.
+  const runDays = async (fetchDays) => {
     setAiBusy(true); setAiError(null);
     try {
-      const days = await generateItinerary({
-        title: title.trim(),
-        startDate, endDate,
-        description: aiDesc.trim(),
-        days: listDates(startDate, endDate).map((date) => ({ date, legName: destForDate(date).name })),
-      });
+      const days = await fetchDays();
       // Turn the AI's per-day cities into legs (first-appearance order). Reuse a
       // typed destination's coords when the name matches, else geocode the city.
       const legs = {};
@@ -173,6 +180,18 @@ export default function TripWizard({ profile, onDone, onCancel }) {
       setAiDays(days); setAiLegs({ legs, legOrder, dateKey }); setAiAccepted(false); setAiKey(aiInputsKey);
     } catch (e) { setAiError(e); }
     setAiBusy(false);
+  };
+
+  const aiGenerate = () => runDays(() => generateItinerary({
+    title: title.trim(),
+    startDate, endDate,
+    description: aiDesc.trim(),
+    days: listDates(startDate, endDate).map((date) => ({ date, legName: destForDate(date).name })),
+  }));
+
+  const aiImport = () => {
+    if (!pasteText.trim()) { setAiError(Object.assign(new Error("empty"), { code: "empty" })); return; }
+    runDays(() => importItinerary({ text: pasteText, startDate, endDate }));
   };
 
   const aiDiscard = () => { setAiDays(null); setAiLegs(null); setAiAccepted(false); setAiKey(""); setAiError(null); };
@@ -207,17 +226,8 @@ export default function TripWizard({ profile, onDone, onCancel }) {
     setBusy(false);
   };
 
-  const copyCode = async () => {
-    try { await navigator.clipboard.writeText(created); toast("Code copied"); } catch { /* unsupported */ }
-  };
-
-  const share = async () => {
-    const text = `Join my trip "${title.trim()}" on ${APP_NAME} — code: ${created}`;
-    try {
-      if (navigator.share) await navigator.share({ text });
-      else { await navigator.clipboard.writeText(created); toast("Code copied"); }
-    } catch { /* cancelled */ }
-  };
+  const copyLink = () => copyInviteLink(created);
+  const share = () => shareInvite(title, created);
 
   if (created) {
     const cfg = buildConfig();
@@ -239,11 +249,11 @@ export default function TripWizard({ profile, onDone, onCancel }) {
           <h1 className={s.createdTitle}>{title.trim()} is ready.</h1>
           {firstCity && <p className={s.createdVoice}>See you in {firstCity}.</p>}
           <div className={s.codeCard}>
-            <div className={s.codeLabel}>Share this code</div>
+            <div className={s.codeLabel}>Invite code</div>
             <div className={s.codeValue}>{created}</div>
-            <p className={s.codeHint}>Anyone with the code joins in seconds — no app store, no sign-up.</p>
+            <p className={s.codeHint}>Share the link and people join in seconds — no app store, no sign-up. The code works too.</p>
             <div className={s.codeActions}>
-              <button onClick={copyCode} className={s.codeBtn}><Icon name="copy" size={13} strokeWidth={1.7} /> Copy</button>
+              <button onClick={copyLink} className={s.codeBtn}><Icon name="copy" size={13} strokeWidth={1.7} /> Copy link</button>
               <button onClick={share} className={s.codeBtn}><Icon name="share" size={13} strokeWidth={1.7} /> Share</button>
             </div>
           </div>
@@ -399,6 +409,8 @@ export default function TripWizard({ profile, onDone, onCancel }) {
         {aiOn && step === 4 && (
           <AiItineraryStep desc={aiDesc} setDesc={setAiDesc} days={aiDays} legs={aiLegs?.legs} busy={aiBusy} error={aiError}
             accepted={aiAccepted} tripLen={tripLen} onGenerate={aiGenerate} onRemove={() => setAiAccepted(false)}
+            modes={daysModes} mode={daysMode} setMode={(m) => { setDaysMode(m); setAiError(null); }}
+            pasteText={pasteText} setPasteText={setPasteText} onImport={aiImport}
             spine={<Spine step={step} total={totalSteps} names={stepNames} />} />
         )}
 
@@ -504,8 +516,26 @@ function DestinationsStep({ dests, setDests, startDate, endDate, spine }) {
 // Optional AI planning step. Everything is previewed before it touches the
 // config: plans only make it into buildConfig() once the user accepts (the
 // Discard / Use this draft decision lives in the wizard footer).
-function AiItineraryStep({ desc, setDesc, days, legs, busy, error, accepted, tripLen, onGenerate, onRemove, spine }) {
+// Short, plain messages for importItinerary()/generateItinerary() error codes.
+const PASTE_LIMIT = 6000;
+function daysErrorText(error, mode) {
+  switch (error?.code) {
+    case "empty": return ["Paste your itinerary first", "Copy it from your website, PDF or WhatsApp and paste it in the box."];
+    case "disabled": return ["AI isn't set up here", "Skip this step and write the days yourself."];
+    case "quota": return ["Today's AI limit is used up", "Try again tomorrow, or skip this step and write the days yourself."];
+    case "unauthorized": return ["Couldn't check who you are", "Reload the page and try again."];
+    case "bad-input": return mode === "paste"
+      ? ["Couldn't find the days in that", "Paste an itinerary that lists each day, then try again."]
+      : ["Couldn't use that brief", "Shorten or reword it, then try again."];
+    case "busy": return ["The AI is busy right now", "Nothing you've set is lost. Try again in a minute."];
+    default: return ["Couldn't reach the AI", "Nothing you've set is lost. Try again in a few minutes, or write the days yourself."];
+  }
+}
+
+function AiItineraryStep({ desc, setDesc, days, legs, busy, error, accepted, tripLen, onGenerate, onRemove, modes, mode, setMode, pasteText, setPasteText, onImport, spine }) {
   const disabled = error?.code === "disabled";
+  const pasting = mode === "paste";
+  const [errTitle, errBody] = error ? daysErrorText(error, mode) : [];
   return (
     <div>
       <h1 className={s.h1}>
@@ -513,35 +543,46 @@ function AiItineraryStep({ desc, setDesc, days, legs, busy, error, accepted, tri
       </h1>
       {spine}
       <div className={s.stepBody}>
-        {!days && (
+        {!days && !busy && modes.length > 1 && (
+          <div className={s.modeRow}>
+            <Segmented value={mode} onChange={setMode} options={modes} />
+          </div>
+        )}
+        {!days && !pasting && (
           <Field label="Your brief">
             <TextArea value={desc} onChange={(e) => setDesc(e.target.value)} rows={4} maxLength={2000}
               placeholder="e.g. Slow mornings, big food energy, one museum max." />
           </Field>
         )}
+        {!days && pasting && (
+          <Field label="Your itinerary" hint={
+            <span className={pasteText.length > PASTE_LIMIT ? s.pasteOver : undefined}>
+              {pasteText.length.toLocaleString()} / {PASTE_LIMIT.toLocaleString()} characters. Anything past {PASTE_LIMIT.toLocaleString()} is cut off.
+            </span>
+          }>
+            <TextArea value={pasteText} onChange={(e) => setPasteText(e.target.value)} rows={8}
+              placeholder={"Paste it from your website, PDF or WhatsApp.\ne.g. Day 1: Pickup from Delhi at 9 pm, overnight Volvo…"} />
+          </Field>
+        )}
         {!disabled && !busy && !days && (
-          <Button full variant="tonal" onClick={onGenerate} className={s.aiGen}>
-            Draft my days
+          <Button full variant="tonal" onClick={pasting ? onImport : onGenerate} className={s.aiGen}>
+            {pasting ? "Read my itinerary" : "Draft my days"}
           </Button>
         )}
         {busy && (
           <div className={s.aiWait}>
             <div className={s.aiWaitHead}>
-              <span className={s.aiWaitTitle}>Drafting your {tripLen || ""} days…</span>
+              <span className={s.aiWaitTitle}>{pasting ? "Reading your itinerary…" : `Drafting your ${tripLen || ""} days…`}</span>
               <span className={s.aiWaitEta}>~30s</span>
             </div>
             <div className={s.aiWaitRule} />
-            <p className={s.aiWaitLine}><Spinner size={13} /> Reading your route and your brief</p>
+            <p className={s.aiWaitLine}><Spinner size={13} /> {pasting ? "Matching it to your dates" : "Reading your route and your brief"}</p>
           </div>
         )}
         {error && (
           <div className={s.aiErrorCard}>
-            <p className={s.aiErrorTitle}>{disabled ? "The planner isn't set up here" : "The planner is busy right now"}</p>
-            <p className={s.aiErrorBody}>
-              {disabled
-                ? "AI suggestions aren't enabled on this deployment — skip this step and write the days yourself."
-                : "Nothing you've set is lost. Write the days yourself, or try drafting again in a few minutes."}
-            </p>
+            <p className={s.aiErrorTitle}>{errTitle}</p>
+            <p className={s.aiErrorBody}>{errBody}</p>
           </div>
         )}
         {days && (
@@ -564,7 +605,9 @@ function AiItineraryStep({ desc, setDesc, days, legs, busy, error, accepted, tri
                 );
               })}
             </div>
-            {desc.trim() && <p className={s.aiCaption}>Drafted around your brief.</p>}
+            {pasting
+              ? <p className={s.aiCaption}>Read from your itinerary. Check the days, then edit anything in the trip.</p>
+              : desc.trim() && <p className={s.aiCaption}>Drafted around your brief.</p>}
             {accepted && (
               <div className={s.aiAcceptedRow}>
                 <span className={s.aiAccepted}><Icon name="check" size={13} strokeWidth={2} /> Added — you'll see it on the review step</span>

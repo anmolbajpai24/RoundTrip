@@ -61,3 +61,28 @@ you a code others use to **Join**.
 > The `anon` key is safe to ship in a client app — it only grants what the
 > Row-Level Security policies allow (access to trips you're a member of).
 > Do **not** paste the `service_role` key anywhere in this app.
+
+## Free-plan limits (checked Oct 2026, confirm on supabase.com/pricing)
+
+Roundtrip runs on the free plan. The limits that matter for the operator test:
+
+- **Database: 500 MB.** Trips are small JSON rows; outfit and try-on photos
+  are purged by 009. Check the size under
+  Project Settings → Usage.
+- **Storage: 1 GB** across buckets, plus the per-file caps we set
+  (`trip-docs` 10 MB). Documents are the only thing that grows here.
+- **Egress: 5 GB a month** (database, storage and realtime combined).
+- **Realtime: 200 concurrent connections and 2 million messages a month.**
+  Every open app holds one connection. A 40-person departure where everyone
+  has the app open at pickup is fine; several large trips at once could reach
+  the cap. Past it, new devices stop getting live updates (they still load and
+  save normally).
+- **Monthly active users: 50,000.** Every anonymous guest counts as a user.
+- **Anonymous sign-ins: rate-limited per IP** (30 an hour by default, under
+  Authentication → Rate Limits). A group joining from one hotel Wi-Fi shares
+  an IP, so raise it before a large trip if joins start failing.
+- **Pausing:** a free project with no activity for 7 days is paused. Prod has
+  daily traffic; `roundtrip-dev` may pause and needs "Restore" in the dashboard.
+- **No point-in-time recovery or managed backups** on the free plan. That's
+  why `.github/workflows/backup.yml` runs a weekly `pg_dump`. Run it by hand
+  before any prod migration.

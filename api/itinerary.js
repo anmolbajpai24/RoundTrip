@@ -1,6 +1,7 @@
-import { createClient } from "@supabase/supabase-js";
 import { FEATURES } from "../src/appConfig.js";
 import { reportError } from "./_lib/sentry.js";
+import { guardAiRequest, reply } from "./_lib/aiGuard.js";
+import { geminiJson, classifyGeminiError } from "./_lib/gemini.js";
 
 // AI itinerary endpoint. Takes the trip's title, dates, day/leg list and the
 // traveller's free-text description and returns a suggested plan per day.
@@ -38,32 +39,10 @@ export async function runItinerary(body, authHeader) {
     cleanDays.push({ date, legName: String(d?.legName || "").slice(0, 60) });
   }
 
-  // Only signed-in users may spend the free Gemini quota: verify the Supabase
-  // JWT. Fail closed — a misconfigured deploy must not become an open endpoint.
-  const supaUrl = process.env.VITE_SUPABASE_URL;
-  const supaKey = process.env.VITE_SUPABASE_ANON_KEY;
-  if (!supaUrl || !supaKey) {
-    console.error("itinerary: VITE_SUPABASE_URL/ANON_KEY missing — refusing unauthenticated access");
-    return reply(503, "misconfigured", "AI suggestions are temporarily unavailable.");
-  }
-  const token = String(authHeader || "").replace(/^Bearer\s+/i, "");
-  if (!token) return reply(401, "unauthorized", "Sign in to use AI suggestions.");
-  const supa = createClient(supaUrl, supaKey, { global: { headers: { Authorization: `Bearer ${token}` } } });
-  const { data, error } = await supa.auth.getUser(token);
-  if (error || !data?.user) return reply(401, "unauthorized", "Sign in to use AI suggestions.");
-
-  // Per-user daily cap (anonymous sign-in is free, so the JWT alone isn't
-  // enough to protect the quota). Counted via a SECURITY DEFINER RPC — see
-  // supabase/migrations/006_ai_usage.sql. Fail closed if the RPC errors.
-  const cap = Number(process.env.AI_DAILY_CAP) || 10;
-  const { data: used, error: capErr } = await supa.rpc("consume_ai_credit");
-  if (capErr) {
-    console.error("itinerary: consume_ai_credit failed:", capErr.message);
-    return reply(503, "misconfigured", "AI suggestions are temporarily unavailable.");
-  }
-  if (used > cap) {
-    return reply(429, "quota", "You've used today's AI suggestions — try again tomorrow.");
-  }
+  // Signed-in users only, charged against the daily cap. Fails closed; see
+  // api/_lib/aiGuard.js.
+  const guard = await guardAiRequest(authHeader, "itinerary");
+  if (!guard.ok) return guard.out;
 
   try {
     const byDate = await geminiItinerary({ title: title.trim().slice(0, 80), startDate, endDate, description, days: cleanDays });
@@ -75,10 +54,11 @@ export async function runItinerary(body, authHeader) {
     return { status: 200, body: { days: out } };
   } catch (e) {
     const msg = String(e?.message || e);
-    if (/quota|exceeded|resource.?exhausted|429/i.test(msg)) {
+    const kind = classifyGeminiError(msg);
+    if (kind === "quota") {
       return reply(429, "quota", "The free AI planner has hit its daily limit — try again tomorrow (it resets daily).");
     }
-    if (/timeout|timed out|overloaded|busy|503/i.test(msg)) {
+    if (kind === "busy") {
       return reply(503, "busy", "The AI planner is busy right now — try again in a minute.");
     }
     console.error("itinerary failed:", msg);
@@ -87,11 +67,8 @@ export async function runItinerary(body, authHeader) {
   }
 }
 
-const reply = (status, error, message) => ({ status, body: { error, message } });
-
 // Ask Gemini for a city + plan per date (JSON mode) → Map(date → { city, plan }).
 async function geminiItinerary({ title, startDate, endDate, description, days }) {
-  const model = process.env.GEMINI_MODEL || "gemini-flash-lite-latest";
   const hints = [...new Set(days.map((d) => d.legName).filter(Boolean))];
   const dayList = days.map((d) => d.date).join("\n");
   const prompt = [
@@ -114,39 +91,19 @@ async function geminiItinerary({ title, startDate, endDate, description, days })
     "- Plain text only — no markdown, and no day numbers or dates inside the plan text.",
   ].filter(Boolean).join("\n");
 
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`,
-    {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: "ARRAY",
-            items: {
-              type: "OBJECT",
-              properties: { date: { type: "STRING" }, city: { type: "STRING" }, plan: { type: "STRING" } },
-              required: ["date", "city", "plan"],
-            },
-          },
-          temperature: 0.7,
-          maxOutputTokens: 16384,
-          // 3.x models (what the -latest alias now resolves to) reject
-          // thinkingBudget with a bare 400 INVALID_ARGUMENT; use thinkingLevel.
-          thinkingConfig: { thinkingLevel: "minimal" },
-        },
-      }),
+  // Throws on HTTP errors or bad JSON → 502 in the caller.
+  const parsed = await geminiJson({
+    prompt,
+    temperature: 0.7,
+    responseSchema: {
+      type: "ARRAY",
+      items: {
+        type: "OBJECT",
+        properties: { date: { type: "STRING" }, city: { type: "STRING" }, plan: { type: "STRING" } },
+        required: ["date", "city", "plan"],
+      },
     },
-  );
-  if (!res.ok) {
-    const err = await res.text().catch(() => "");
-    throw new Error(`gemini ${res.status}: ${err.slice(0, 300)}`);
-  }
-  const data = await res.json();
-  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-  const parsed = JSON.parse(text); // throws → 502 in the caller
+  });
   if (!Array.isArray(parsed)) throw new Error("gemini returned non-array JSON");
 
   const wanted = new Set(days.map((d) => d.date));

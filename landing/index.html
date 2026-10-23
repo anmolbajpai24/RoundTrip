@@ -3,8 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Roundtrip — plan trips together</title>
-    <meta name="description" content="Roundtrip is a shared trip companion: itinerary, packing, outfits, budget and bookings, planned together with your trip-mates and synced live. Free, no sign-up needed to start." />
+    <title>Roundtrip: one link for your group trip</title>
+    <meta name="description" content="For people who run group trips. Put the itinerary, pickup and packing list in one place, send one link to the WhatsApp group, and everyone has the plan on their phone, even offline. No account needed." />
     <link rel="canonical" href="https://roundtrip.one/" />
     <meta name="theme-color" content="#F5EFE4" />
     <link rel="icon" href="/icon-192.png" />
@@ -12,11 +12,13 @@
 
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Roundtrip" />
-    <meta property="og:title" content="Roundtrip — plan trips together" />
-    <meta property="og:description" content="Itinerary, packing, outfits, budget and bookings — planned together with your trip-mates, synced live, works offline. Free." />
+    <meta property="og:title" content="Roundtrip: one link for your group trip" />
+    <meta property="og:description" content="Itinerary, pickup and packing list in one place. Send one link, and the whole group has the plan on their phone, even offline. No account needed." />
     <meta property="og:url" content="https://roundtrip.one/" />
     <meta property="og:image" content="https://roundtrip.one/og.png" />
-    <meta name="twitter:card" content="summary" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -31,75 +33,91 @@
 
     <main>
       <section class="wrap hero">
-        <h1>The trip, planned together.</h1>
+        <p class="eyebrow">For people who run group trips</p>
+        <h1>Send one link. The whole group has the plan.</h1>
         <p class="sub">
-          One shared home for your group trip — the day-by-day itinerary, packing
-          lists, outfits, budget and bookings. Everyone on the trip sees the same
-          plan, live, on any phone. Free to use.
+          Put the day-by-day plan, the pickup point and the packing list in one
+          place. Drop the link in the WhatsApp group. Everyone taps it, adds
+          their name and sees the same trip on their phone, even with no signal.
         </p>
-        <a class="cta" href="https://app.roundtrip.one">Start a trip</a>
-        <p class="aside">
-          No account needed — just open it and plan.
-          Got a join code from a friend? <a href="https://app.roundtrip.one">Enter it in the app</a>.
-        </p>
+        <div class="ctas">
+          <a class="cta" href="https://app.roundtrip.one/demo">See a demo trip</a>
+          <a class="cta-quiet" href="https://app.roundtrip.one">Start a trip</a>
+        </div>
+        <p class="aside">No account needed, for you or your travellers. Free.</p>
       </section>
 
-      <section class="wrap shots" aria-label="App screenshots">
-        <!-- Swap each .coming block for <img src="/shots/<name>.png" alt="…" />
-             once screenshots are captured from the live app (see launch checklist). -->
+      <section class="wrap shots" aria-label="Screens from the demo trip">
         <figure class="phone">
-          <div class="screen"><div class="coming">Itinerary<br />screenshot soon</div></div>
-          <figcaption>Every day, mapped out</figcaption>
+          <div class="screen"><img src="/shots/itinerary.png" alt="The demo trip's pinned info (pickup at Majnu ka Tilla at 8:30 pm, trip lead, emergency number) above day one, the overnight bus to Kasol." loading="lazy" width="390" height="780" /></div>
+          <figcaption>Pickup, trip lead and every day's plan</figcaption>
         </figure>
         <figure class="phone">
-          <div class="screen"><div class="coming">Packing<br />screenshot soon</div></div>
-          <figcaption>Your list, ticked off</figcaption>
+          <div class="screen"><img src="/shots/packing.png" alt="A traveller's packing list for the Kasol weekend, with a few items ticked off." loading="lazy" width="390" height="780" /></div>
+          <figcaption>One packing list, ticked by each person</figcaption>
         </figure>
         <figure class="phone">
-          <div class="screen"><div class="coming">Outfits<br />screenshot soon</div></div>
-          <figcaption>Outfits, planned per day</figcaption>
+          <div class="screen"><img src="/shots/bookings.png" alt="The trip's bookings: bus seats and camp confirmed, taxi and balance payment still to do." loading="lazy" width="390" height="780" /></div>
+          <figcaption>What's booked and what isn't</figcaption>
         </figure>
+      </section>
+
+      <section class="wrap steps">
+        <h2>How it works</h2>
+        <ol class="grid">
+          <li class="card">
+            <span class="num">1</span>
+            <h3>Make the trip</h3>
+            <p>Add the dates and stops. Already have the itinerary you send on WhatsApp? Paste it in and Roundtrip sorts it into days.</p>
+          </li>
+          <li class="card">
+            <span class="num">2</span>
+            <h3>Share the link</h3>
+            <p>Post it in the group. People tap it, type their name and they're in. No app store, no sign-up, no code to copy.</p>
+          </li>
+          <li class="card">
+            <span class="num">3</span>
+            <h3>Run it again</h3>
+            <p>Same route next weekend? Copy the trip to new dates in one go, with the plan and packing list already done.</p>
+          </li>
+        </ol>
       </section>
 
       <section class="wrap features">
-        <h2>Everything the group keeps asking about, in one place</h2>
+        <h2>The questions you answer every trip, answered once</h2>
         <div class="grid">
           <div class="card">
-            <h3>Itinerary</h3>
-            <p>A day-by-day plan with places, legs and notes — plus the map and the weather for each day, so "what's tomorrow?" answers itself.</p>
+            <h3>Where's the pickup?</h3>
+            <p>Pickup point, timings and the plan for each day, with a map and the weather. "What time tomorrow?" answers itself.</p>
           </div>
           <div class="card">
-            <h3>Packing</h3>
-            <p>Your own packing list, private to you, that survives the night-before chaos. Tick things off as they hit the suitcase.</p>
+            <h3>What do I bring?</h3>
+            <p>Set the packing list once. Every traveller gets their own copy to tick off, so nobody turns up at Tosh without a jacket.</p>
           </div>
           <div class="card">
-            <h3>Outfits</h3>
-            <p>Plan what you're wearing for each day of the trip, with photos — and keep it to yourself or share it with the group.</p>
+            <h3>Who changed the plan?</h3>
+            <p>Only you. Travellers see the trip but can't edit it, unless you switch editing on for the group.</p>
           </div>
           <div class="card">
-            <h3>Budget</h3>
-            <p>Log expenses as they happen and see where the money went — shared with the trip so nobody's doing spreadsheet archaeology later.</p>
+            <h3>Is everything booked?</h3>
+            <p>A checklist of bookings, with tickets and confirmations attached where everyone can find them.</p>
           </div>
           <div class="card">
-            <h3>Bookings</h3>
-            <p>A checklist of what's booked and what isn't, with the tickets and confirmations uploaded right where everyone can find them.</p>
+            <h3>No signal?</h3>
+            <p>The trip is saved on every phone. It works on the bus and up the hill, and syncs when the signal comes back.</p>
           </div>
           <div class="card">
-            <h3>Together, live</h3>
-            <p>Invite your trip-mates with a short join code. Everyone edits the same trip and changes sync instantly across phones.</p>
+            <h3>Another app to install?</h3>
+            <p>No. It opens in the browser from the link, and can sit on the home screen like an app on iPhone and Android.</p>
           </div>
         </div>
       </section>
 
-      <section class="wrap install">
-        <h2>Feels like an app, works anywhere</h2>
+      <section class="wrap closing">
         <div class="card">
-          <p>
-            Roundtrip runs in the browser and installs to your home screen on
-            iPhone and Android — no app store. It keeps working with no signal
-            and syncs back up when you're online, which is exactly what you want
-            halfway up a mountain.
-          </p>
+          <h2>See what your travellers will see</h2>
+          <p>A three-day Kasol weekend, set up the way an organiser would run it. Nothing to sign up for.</p>
+          <a class="cta" href="https://app.roundtrip.one/demo">See a demo trip</a>
         </div>
       </section>
     </main>

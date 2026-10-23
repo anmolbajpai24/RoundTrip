@@ -33,7 +33,7 @@ export default function LegacyUpgrade({ onDone }) {
           This trip was created before in-app trip setup existed (the original
           <span className={s.strong}> London &amp; the Loop</span> itinerary).
           Upgrading moves it to the new format. <span className={s.strong}>Nothing will be deleted</span> —
-          all notes, outfit photos, packing, expenses and bookings stay exactly as they are.
+          all notes, packing, expenses and bookings stay exactly as they are.
         </p>
         <Button full onClick={upgrade} disabled={busy} className={s.upgrade}>
           {busy ? "Upgrading…" : "Upgrade this trip"}

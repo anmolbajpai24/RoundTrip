@@ -2,7 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 import { reportError } from "./_lib/sentry.js";
 
 // Account deletion endpoint. Removes the caller's account and everything only
-// they own: personal trip_kv rows, their outfit photos, memberships, trips
+// they own: personal trip_kv rows, memberships, trips
 // where they are the sole member (including that trip's documents), and
 // finally the auth user itself. Trips shared with other members survive, and
 // shared rows the caller wrote stay (documented in the privacy policy).
@@ -51,20 +51,13 @@ export async function runAccountDelete(body, authHeader) {
         // Sole member — the trip dies with the account, storage included
         // (the DB cascade from trips doesn't reach Storage objects).
         await removePrefix(admin, "trip-docs", tripId);
-        await removePrefix(admin, "outfit-photos", tripId);
         const { error } = await admin.from("trips").delete().eq("id", tripId);
         if (error) throw error; // cascades trip_members + trip_kv
       } else {
-        // Shared trip — take only the caller's slice: their outfit photos
-        // (paths live in their personal kv rows, so read before deleting),
-        // their personal kv rows, then their membership.
-        const { data: rows } = await admin
-          .from("trip_kv").select("value")
-          .eq("trip_id", tripId).eq("owner", uid).like("key", "outfit-item:%");
-        const paths = (rows || []).map((r) => r.value?.photoPath).filter(Boolean);
-        if (paths.length) {
-          await admin.storage.from("outfit-photos").remove(paths).catch(() => {});
-        }
+        // Shared trip — take only the caller's slice: their personal kv
+        // rows, then their membership. If they were the last organiser,
+        // migration 010's trigger promotes the earliest-joined remaining
+        // member inside this same delete.
         const { error: kvErr } = await admin
           .from("trip_kv").delete().eq("trip_id", tripId).eq("owner", uid);
         if (kvErr) throw kvErr;

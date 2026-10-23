@@ -12,3 +12,6 @@ docs/redesign/
 !.env.example
 
 .vercel
+
+# AI eval run output (evals/ is committed, its results are not)
+evals/results/

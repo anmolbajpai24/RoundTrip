@@ -1,6 +1,6 @@
 import { get, set, del, keys } from "idb-keyval";
 import { supabase, isConfigured } from "./supabase.js";
-import { getSession, myId } from "./session.js";
+import { getSession, myId, canEditShared } from "./session.js";
 import { APP_SLUG, LEGACY_APP_SLUG } from "../theme.js";
 
 // Persistence layer. Public surface stays close to the local-only version
@@ -10,16 +10,20 @@ import { APP_SLUG, LEGACY_APP_SLUG } from "../theme.js";
 // offline cache + a write outbox so the app still works with no signal.
 
 const SHARED = "__shared__";
+const LOCAL = "__local__"; // cache-only owner for device-local keys
 const OUTBOX_KEY = "__outbox__";
 
-// Which keys are shared between everyone vs. personal to one member.
+// Which keys are shared between everyone vs. personal to one member, plus
+// "local" keys that never leave this device.
+//   trip-weather is a cache every device can rebuild from Open-Meteo. It used
+//   to be a shared row written by every member's phone, which fails RLS for
+//   members once roles exist (008), so it stays in IndexedDB only.
 function scopeOf(key) {
-  if (key.startsWith("outfit:") || key.startsWith("outfit-item:")) return "personal";
   switch (key) {
+    case "trip-weather":
+      return "local";
     case "trip-packing":
     case "trip-itinerary-override":
-    case "outfit-days":
-    case "tryon-base-photo":
       return "personal";
     default: // trip-itinerary, trip-expenses, trip-bookings, ... are shared
       return "shared";
@@ -27,7 +31,9 @@ function scopeOf(key) {
 }
 
 function ownerOf(key) {
-  return scopeOf(key) === "shared" ? SHARED : (myId() || "unknown");
+  const scope = scopeOf(key);
+  if (scope === "local") return LOCAL;
+  return scope === "shared" ? SHARED : (myId() || "unknown");
 }
 
 // ---------- local cache ----------
@@ -46,7 +52,7 @@ export async function loadKey(key, fallback) {
   if (!s) return fallback;
   const owner = ownerOf(key);
 
-  if (online()) {
+  if (owner !== LOCAL && online()) {
     try {
       const { data, error } = await supabase
         .from("trip_kv").select("value")
@@ -90,93 +96,29 @@ export async function loadPersonalAll(key) {
   return result;
 }
 
-// Read every member's outfit closet →
-//   { [ownerId]: { items: { id: {photo,desc,visibility,...} }, days: { dateISO: id }, legacy?: true } }
-// New-model rows are `outfit-item:<id>` (one per outfit) + `outfit-days` (the
-// day → outfit assignment map). Owners with only pre-closet `outfit:<dateISO>`
-// rows get a synthesized closet (one item per day, flagged `legacy`) so their
-// data still renders; those rows stay in place as inert backups.
-export async function loadClosetsAll() {
-  const s = getSession();
-  if (!s) return {};
-
-  if (online()) {
-    try {
-      const { data, error } = await supabase
-        .from("trip_kv").select("owner, key, value")
-        .eq("trip_id", s.tripId).neq("owner", SHARED).like("key", "outfit%");
-      if (error) throw error;
-      for (const row of data) await writeCache(s.tripId, row.owner, row.key, row.value);
-      return foldClosetRows(data);
-    } catch { /* fall through to cache */ }
-  }
-  const all = await keys();
-  const base = `kv:${s.tripId}:`;
-  const rows = [];
-  for (const k of all) {
-    if (typeof k !== "string" || !k.startsWith(base)) continue;
-    const rest = k.slice(base.length); // "<owner>:<key>" — owner is a uuid, no colons
-    const cut = rest.indexOf(":");
-    const owner = rest.slice(0, cut);
-    const key = rest.slice(cut + 1);
-    if (owner !== SHARED && key.startsWith("outfit")) rows.push({ owner, key, value: await get(k) });
-  }
-  return foldClosetRows(rows);
-}
-
-// [{owner, key, value}] → assembled closets. Pure (unit-tested); the exported
-// loadClosetsAll wraps it with the network/cache plumbing.
-export function foldClosetRows(rows) {
-  // owner → { items, days (null until an outfit-days row is seen), legacy: {date: value} }
-  const raw = {};
-  const bucket = (owner) => (raw[owner] ||= { items: {}, days: null, legacy: {} });
-  for (const { owner, key, value } of rows) {
-    if (key.startsWith("outfit-item:")) {
-      const id = key.slice("outfit-item:".length);
-      const b = bucket(owner);
-      if (value) b.items[id] = value; // null = deleted tombstone
-      b.hasNewModel = true; // even a tombstone marks this owner as new-model
-    } else if (key === "outfit-days") {
-      bucket(owner).days = value || {};
-      bucket(owner).hasNewModel = true;
-    } else if (key.startsWith("outfit:")) {
-      const day = key.slice("outfit:".length);
-      if (!isLegacyDayKey(day) && value) bucket(owner).legacy[day] = value;
-    }
-  }
-  return assembleClosets(raw);
-}
-
-function assembleClosets(raw) {
-  const result = {};
-  for (const [owner, b] of Object.entries(raw)) {
-    if (b.hasNewModel) {
-      result[owner] = { items: b.items, days: b.days || {} };
-    } else if (Object.keys(b.legacy).length) {
-      // Pre-closet owner: one synthesized item per day, assigned to that day.
-      const items = {}, days = {};
-      for (const [day, value] of Object.entries(b.legacy)) {
-        if (!value?.photo && !value?.desc) continue;
-        items[`legacy:${day}`] = { photo: value.photo || null, desc: value.desc || "", visibility: "trip" };
-        days[day] = `legacy:${day}`;
-      }
-      if (Object.keys(items).length) result[owner] = { items, days, legacy: true };
-    }
-  }
-  return result;
-}
-
-// Day suffixes from before the ISO-date refactor looked like "d7".
-const isLegacyDayKey = (day) => /^d\d+$/.test(day);
-
 // ---------- writes (optimistic: cache now, sync via outbox) ----------
+// Shared writes are skipped when this person can't edit shared data (RLS
+// would reject them, and a rejected entry would show "Sync failed"). The UI
+// should already hide those controls; this is the backstop.
 export async function saveKey(key, value) {
   const s = getSession();
   if (!s) return;
   const owner = ownerOf(key);
+  if (owner === LOCAL) return saveLocal(key, value);
+  if (owner === SHARED && !canEditShared()) {
+    console.warn(`Not saved: you can't edit "${key}" on this trip.`);
+    return;
+  }
   await writeCache(s.tripId, owner, key, value);
   await enqueue({ tripId: s.tripId, owner, key, value });
   flushOutbox();
+}
+
+// Device-only write for "local" keys: IndexedDB, no outbox, no Supabase.
+export async function saveLocal(key, value) {
+  const s = getSession();
+  if (!s) return;
+  await writeCache(s.tripId, LOCAL, key, value);
 }
 
 // ---------- write outbox ----------
@@ -212,6 +154,11 @@ export async function flushOutbox() {
         { trip_id: entry.tripId, owner: entry.owner, key: entry.key, value: entry.value, updated_at: new Date().toISOString() },
         { onConflict: "trip_id,owner,key" }
       );
+      // 42501 = RLS refused it: this person may no longer edit (an organiser
+      // turned "Members can edit" off while the write was queued). Retrying
+      // can't succeed and would block every later write, so drop it and put
+      // the server's value back in the cache.
+      if (error?.code === "42501") { await dropRejected(id, entry); continue; }
       if (error) throw error;
       // Dequeue only if the entry wasn't superseded while the upsert was in
       // flight — otherwise the newer value must survive for the next flush.
@@ -232,13 +179,25 @@ export async function flushOutbox() {
   }
 }
 
-// Drop every local trace of a trip (its cached kv rows, cached photo blobs +
-// any queued outbox writes). Used after a trip is deleted or left so stale
+async function dropRejected(id, entry) {
+  const box = (await get(OUTBOX_KEY)) || {};
+  if (box[id] && box[id].at === entry.at) { delete box[id]; await set(OUTBOX_KEY, box); }
+  setSyncStatus({ pending: Object.keys(box).length });
+  try {
+    const { data } = await supabase.from("trip_kv").select("value")
+      .eq("trip_id", entry.tripId).eq("owner", entry.owner).eq("key", entry.key).maybeSingle();
+    if (data) await writeCache(entry.tripId, entry.owner, entry.key, data.value);
+    else await del(cacheId(entry.tripId, entry.owner, entry.key));
+  } catch { /* the next load refetches anyway */ }
+}
+
+// Drop every local trace of a trip (its cached kv rows + any queued outbox
+// writes). Used after a trip is deleted or left so stale
 // data doesn't linger.
 export async function clearLocalTrip(tripId) {
   const all = await keys();
   for (const k of all)
-    if (typeof k === "string" && (k.startsWith(`kv:${tripId}:`) || k.startsWith(`photo:${tripId}/`))) await del(k);
+    if (typeof k === "string" && k.startsWith(`kv:${tripId}:`)) await del(k);
   const box = (await get(OUTBOX_KEY)) || {};
   let changed = false;
   for (const [id, e] of Object.entries(box))
@@ -261,6 +220,9 @@ export function subscribe(onChange) {
       (payload) => {
         const row = payload.new && Object.keys(payload.new).length ? payload.new : payload.old;
         if (!row) return;
+        // Older app builds still write trip-weather as a shared row; this
+        // device keeps its own copy, so ignore theirs.
+        if (row.key && scopeOf(row.key) === "local") return;
         const value = payload.eventType === "DELETE" ? undefined : row.value;
         writeCache(s.tripId, row.owner, row.key, value);
         onChange(row.key, value, row.owner);
@@ -299,6 +261,26 @@ export async function upsertRow(owner, key, value) {
   await writeCache(s.tripId, owner, key, value);
 }
 
+// ---------- retired outfit data ----------
+// Outfits and try-on are gone (migration 009 purges the rows and photos).
+// Old backups can still carry outfit-*, outfit:<day> and tryon-base-photo
+// rows; restoring them would now land as shared rows, so they're skipped.
+const isRetiredKey = (key) =>
+  typeof key === "string" && (key.startsWith("outfit") || key === "tryon-base-photo");
+
+// Devices still hold cached outfit rows, face photos and downloaded outfit
+// photo blobs (photo:<path>) in IndexedDB. Drop them once, best-effort.
+async function purgeRetiredCache() {
+  for (const k of await keys()) {
+    if (typeof k !== "string") continue;
+    if (k.startsWith("photo:")) { await del(k); continue; }
+    if (!k.startsWith("kv:")) continue;
+    // kv:<tripId>:<owner>:<key>; trip ids and owners are uuids or __x__, no colons.
+    const key = k.split(":").slice(3).join(":");
+    if (isRetiredKey(key)) await del(k);
+  }
+}
+
 // ---------- backup / restore (current trip: shared + your own) ----------
 export async function exportAll() {
   const s = getSession();
@@ -314,9 +296,12 @@ export async function exportAll() {
 
 export async function importAll(backup) {
   if (!backup || (backup.app !== APP_SLUG && backup.app !== LEGACY_APP_SLUG)) throw new Error("Not a valid trip backup file");
-  if (Array.isArray(backup.rows)) { for (const r of backup.rows) await saveKey(r.key, r.value); return; }
+  if (Array.isArray(backup.rows)) {
+    for (const r of backup.rows) if (!isRetiredKey(r.key)) await saveKey(r.key, r.value);
+    return;
+  }
   if (backup.data && typeof backup.data === "object") {
-    for (const [key, value] of Object.entries(backup.data)) await saveKey(key, value);
+    for (const [key, value] of Object.entries(backup.data)) if (!isRetiredKey(key)) await saveKey(key, value);
     return;
   }
   throw new Error("Not a valid trip backup file");
@@ -329,14 +314,14 @@ const MIGRATED_FLAG = "__legacy_migrated__";
 export async function hasLegacyData() {
   if (await get(MIGRATED_FLAG)) return false;
   const all = await keys();
-  return all.some((k) => typeof k === "string" && (LEGACY_KEYS.includes(k) || k.startsWith("outfit:")));
+  return all.some((k) => typeof k === "string" && LEGACY_KEYS.includes(k));
 }
 
 export async function migrateLegacyData() {
   const all = await keys();
   for (const k of all) {
     if (typeof k !== "string") continue;
-    if (LEGACY_KEYS.includes(k) || k.startsWith("outfit:")) {
+    if (LEGACY_KEYS.includes(k)) {
       const value = await get(k);
       if (value !== undefined) await saveKey(k, value);
     }
@@ -346,6 +331,7 @@ export async function migrateLegacyData() {
 }
 
 if (typeof window !== "undefined") {
+  purgeRetiredCache().catch(() => {});
   window.addEventListener("online", () => flushOutbox());
   // Surface any queue left over from a previous session right away.
   get(OUTBOX_KEY).then((box) => { if (box) setSyncStatus({ pending: Object.keys(box).length }); }).catch(() => {});

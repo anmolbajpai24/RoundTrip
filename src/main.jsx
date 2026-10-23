@@ -1,10 +1,11 @@
-import { StrictMode } from "react";
+import { StrictMode, Suspense, lazy } from "react";
 import { createRoot } from "react-dom/client";
 import * as Sentry from "@sentry/react";
 import { Analytics } from "@vercel/analytics/react";
 import "./index.css";
 import App from "./App.jsx";
 import DialogHost from "./components/dialogs.jsx";
+import InstallHint from "./components/InstallHint.jsx";
 import { initTheme } from "./theme.js";
 
 // Crash reporting — only in production builds and only when a DSN is deployed,
@@ -19,11 +20,18 @@ if (import.meta.env.PROD && import.meta.env.VITE_SENTRY_DSN) {
 
 initTheme();
 
+// /demo is a static, read-only trip from bundled data. It branches here,
+// before App, so no session is loaded and nothing syncs. Lazy so the demo
+// fixture and its frame stay out of the main chunk.
+const isDemo = /^\/demo\/?$/.test(window.location.pathname);
+const DemoTrip = lazy(() => import("./demo/DemoTrip.jsx"));
+
 createRoot(document.getElementById("root")).render(
   <StrictMode>
-    <Sentry.ErrorBoundary fallback={<p style={{ padding: 24, textAlign: "center" }}>Something broke — please reload the app.</p>}>
-      <App />
+    <Sentry.ErrorBoundary fallback={<p style={{ padding: 24, textAlign: "center" }}>Something broke. Please reload the app.</p>}>
+      {isDemo ? <Suspense fallback={null}><DemoTrip /></Suspense> : <App />}
     </Sentry.ErrorBoundary>
+    {!isDemo && <InstallHint />}
     <DialogHost />
     <Analytics />
   </StrictMode>

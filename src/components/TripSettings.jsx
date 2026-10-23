@@ -1,11 +1,15 @@
 import { useState } from "react";
-import { generateDays, listDates, softOf, slugify, legGradient } from "../lib/tripConfig.js";
+import { generateDays, listDates, softOf, slugify, legGradient, toPackingDraft, fromPackingDraft, cleanTripInfo, safeMapUrl } from "../lib/tripConfig.js";
 import usePlaceSearch from "../lib/usePlaceSearch.js";
 import Spinner from "./Spinner.jsx";
 import { searchCoverPhotos, trackDownload, asCover, unsplashEnabled } from "../lib/unsplash.js";
 import { CURRENCIES } from "../data/currencies.js";
 import { DEST_COLORS } from "../theme.js";
-import { getSession } from "../lib/session.js";
+import { getSession, canEditShared } from "../lib/session.js";
+import { joinUrl } from "../lib/joinLink.js";
+import { shareInvite, copyInviteLink } from "./shareInvite.js";
+import TripPeople from "./TripPeople.jsx";
+import PackingTemplateEditor from "./PackingTemplateEditor.jsx";
 import { confirmDialog } from "./dialogs.jsx";
 import Sheet from "./ui/Sheet.jsx";
 import Button from "./ui/Button.jsx";
@@ -21,8 +25,15 @@ const MAX_TRIP_DAYS = 60;
 // Trip settings modal: title, dates, money, destinations. Saving rebuilds the
 // day list for the (possibly new) date range while preserving each existing
 // day's title/plan; days outside a shrunk range disappear from view but their
-// notes/outfits stay in the kv store (and reappear if the range grows back).
-export default function TripSettings({ config, onSave, onClose, memberCount = 1, onDelete, onLeave }) {
+// notes stay in the kv store (and reappear if the range grows back).
+//
+// Without edit rights (a member on a trip where members can't edit) the sheet
+// is view-only: the invite link, backup export and leaving. Organisers also
+// get the People section ("Members can edit", "Make co-organiser").
+export default function TripSettings({ config, onSave, onClose, memberCount = 1, members = [], myId, onMembersChanged, onDelete, onLeave }) {
+  const session = getSession();
+  const canEdit = canEditShared();
+  const isOrganiser = session?.role === "organiser";
   const [title, setTitle] = useState(config.title);
   const [startDate, setStartDate] = useState(config.startDate);
   const [endDate, setEndDate] = useState(config.endDate);
@@ -37,6 +48,9 @@ export default function TripSettings({ config, onSave, onClose, memberCount = 1,
   const [coverChoices, setCoverChoices] = useState(null);
   const [coverBusy, setCoverBusy] = useState(false);
   const [error, setError] = useState("");
+  const [packing, setPacking] = useState(() => toPackingDraft(config.packingTemplate));
+  const [info, setInfo] = useState(() => ({ ...(config.info || {}) }));
+  const setInfoField = (k) => (e) => setInfo((v) => ({ ...v, [k]: e.target.value }));
 
   // destination search
   const [query, setQuery] = useState("");
@@ -70,6 +84,7 @@ export default function TripSettings({ config, onSave, onClose, memberCount = 1,
     if (!startDate || !endDate || endDate < startDate) { setError("Check the dates."); return; }
     if (listDates(startDate, endDate).length > MAX_TRIP_DAYS) { setError(`Trips are capped at ${MAX_TRIP_DAYS} days.`); return; }
     if (homeOn && !(parseFloat(homeRate) > 0)) { setError("Enter the conversion rate."); return; }
+    if (info.pickupMapUrl?.trim() && !safeMapUrl(info.pickupMapUrl)) { setError("The map link should start with https://"); return; }
 
     const fallbackLeg = uniqueLegKeys[0];
     const legForDate = (iso) => {
@@ -90,6 +105,9 @@ export default function TripSettings({ config, onSave, onClose, memberCount = 1,
       legs,
       legOrder: legOrder.length ? legOrder : uniqueLegKeys,
       days: days.map((d) => (legs[d.leg] ? d : { ...d, leg: fallbackLeg })),
+      // Only organisers see the packing editor, so only they can change it.
+      // Only organisers see the trip-info fields and the packing editor.
+      ...(isOrganiser ? { packingTemplate: fromPackingDraft(packing), info: cleanTripInfo(info) } : {}),
     });
     requestClose();
   };
@@ -105,8 +123,35 @@ export default function TripSettings({ config, onSave, onClose, memberCount = 1,
     <Sheet onClose={onClose} label="Trip settings">
       {(requestClose) => (
         <>
-          <h2 className={s.title}>Trip settings</h2>
+          <h2 className={s.title}>{canEdit ? "Trip settings" : config.title}</h2>
 
+          {session?.code && (
+            <>
+              <div className={s.sectionLabelTight}>Invite</div>
+              <div className={s.groupCard}>
+                <div className={s.groupRow}>
+                  <span className={s.inviteLink}>{joinUrl(session.code).replace(/^https:\/\//, "")}</span>
+                  <button onClick={() => copyInviteLink(session.code)} className={s.linkMuted}>Copy</button>
+                  <button onClick={() => shareInvite(config.title, session.code)} className={s.linkAccent}>Share</button>
+                </div>
+              </div>
+              <p className={s.inviteHint}>Anyone with the link joins the trip. Code {session.code} works too.</p>
+            </>
+          )}
+
+          {isOrganiser && (
+            <>
+              <div className={s.sectionLabel}>People</div>
+              <TripPeople members={members} myId={myId} membersCanEdit={session.membersCanEdit !== false} onMembersChanged={onMembersChanged} />
+            </>
+          )}
+
+          {!canEdit && (
+            <p className={s.readOnly}>Only the trip's organisers can change its details.</p>
+          )}
+
+          {canEdit && (<>
+          <div className={s.sectionLabel}>Details</div>
           <FormStack>
             <Field label="Trip name">
               <Input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={40} />
@@ -123,7 +168,7 @@ export default function TripSettings({ config, onSave, onClose, memberCount = 1,
               </FieldRow>
               {(startDate !== config.startDate || endDate !== config.endDate) && (
                 <p className={s.dateNote}>
-                  Changing dates re-generates the day list. Notes and outfits on removed dates are kept and come back if the dates return.
+                  Changing dates re-generates the day list. Notes on removed dates are kept and come back if the dates return.
                 </p>
               )}
             </div>
@@ -242,15 +287,58 @@ export default function TripSettings({ config, onSave, onClose, memberCount = 1,
           ))}
           <p className={s.assignHint}>Assign a day to a destination from the itinerary's day editor.</p>
 
+          {isOrganiser && (
+            <>
+              <div className={s.sectionLabel}>Trip info</div>
+              <div className={[s.groupCard, s.infoCard].join(" ")}>
+                <div className={s.groupRow}>
+                  <span className={s.rowKey}>Pickup</span>
+                  <Input value={info.pickupPoint || ""} onChange={setInfoField("pickupPoint")} maxLength={120}
+                    placeholder="e.g. Majnu ka Tilla, gate 2" aria-label="Pickup point" className={s.rowControl} />
+                </div>
+                <div className={s.groupRow}>
+                  <span className={s.rowKey}>Map link</span>
+                  <Input type="url" value={info.pickupMapUrl || ""} onChange={setInfoField("pickupMapUrl")} maxLength={200}
+                    placeholder="Optional Google Maps link" aria-label="Pickup map link" className={s.rowControl} />
+                </div>
+                <div className={s.groupRow}>
+                  <span className={s.rowKey}>Time</span>
+                  <Input value={info.pickupTime || ""} onChange={setInfoField("pickupTime")} maxLength={60}
+                    placeholder="e.g. Fri 8:30 pm" aria-label="Pickup time" className={s.rowControl} />
+                </div>
+                <div className={s.groupRow}>
+                  <span className={s.rowKey}>Trip lead</span>
+                  <Input value={info.leadName || ""} onChange={setInfoField("leadName")} maxLength={40}
+                    placeholder="Name" aria-label="Trip lead name" className={s.rowControl} />
+                </div>
+                <div className={s.groupRow}>
+                  <span className={s.rowKey}>Phone</span>
+                  <Input type="tel" value={info.leadPhone || ""} onChange={setInfoField("leadPhone")} maxLength={30}
+                    placeholder="Trip lead's phone" aria-label="Trip lead phone" className={s.rowControl} />
+                </div>
+                <div className={s.groupRow}>
+                  <span className={s.rowKey}>Emergency</span>
+                  <Input value={info.emergency || ""} onChange={setInfoField("emergency")} maxLength={80}
+                    placeholder="Name and phone" aria-label="Emergency contact" className={s.rowControl} />
+                </div>
+              </div>
+              <p className={s.inviteHint}>Pinned at the top of the itinerary for everyone. Leave blank to hide.</p>
+
+              <div className={s.sectionLabel}>Packing list</div>
+              <PackingTemplateEditor draft={packing} setDraft={setPacking} />
+            </>
+          )}
+
           {error && <p className={s.error}>{error}</p>}
 
           <div className={s.actions}>
             <Button full onClick={() => save(requestClose)}>Save</Button>
             <Button variant="ghost" onClick={requestClose}>Cancel</Button>
           </div>
+          </>)}
 
           <div className={s.sectionLabel}>Backup</div>
-          <BackupControls />
+          <BackupControls canRestore={canEdit} />
 
           <div className={s.dangerLabel}>Danger</div>
           {memberCount > 1 ? (
@@ -268,7 +356,7 @@ export default function TripSettings({ config, onSave, onClose, memberCount = 1,
               onClick={async () => {
                 const ok = await confirmDialog({
                   title: "Delete this trip?",
-                  message: "This permanently removes its itinerary, outfits, packing, budget, bookings and documents. This can't be undone.",
+                  message: "This permanently removes its itinerary, packing, budget, bookings and documents. This can't be undone.",
                   confirmLabel: "Delete forever", danger: true,
                   typeToConfirm: getSession()?.code || null,
                 });

@@ -15,7 +15,7 @@ export const hasOnboarded = () => {
 
 const SLIDES = [
   { title: "Plan trips together", text: "Ideas land on everyone's phone as they're typed — labelled with who said what." },
-  { title: "Everything in one place", text: "Days, budget, packing, outfits, bookings, documents. One trip, one home — nothing lives in a group-chat scrollback." },
+  { title: "Everything in one place", text: "Days, packing, budget, bookings, documents. One trip, one home — nothing lives in a group-chat scrollback." },
   { title: "Works anywhere", text: "Offline on the metro, instant on wifi. Share with a 6-letter code — no app store, no sign-up." },
 ];
 
@@ -48,7 +48,7 @@ function ArtSpine() {
     ["Days", "colour-coded by city"],
     ["Budget", "split fairly, any currency"],
     ["Packing", "per person, checked off"],
-    ["Outfits", "photographed, day by day"],
+    ["Join link", "one tap and they're in"],
     ["Bookings", "chased until they're done"],
     ["Documents", "confirmations, one wallet"],
   ];

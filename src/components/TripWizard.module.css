@@ -760,3 +760,12 @@
   color: var(--danger);
   margin-top: 12px;
 }
+
+/* days step: AI draft vs pasted itinerary */
+.modeRow {
+  margin-bottom: 14px;
+}
+
+.pasteOver {
+  color: var(--warning);
+}

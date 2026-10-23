@@ -1,0 +1,16 @@
+{
+  "id": "10-auli-weekend-day0",
+  "source": "https://insider.in/auli-weekend-tour-dec20-2019/event",
+  "fetched": "2026-10-23",
+  "region": "Uttarakhand",
+  "kind": "weekend",
+  "startDate": "2026-12-04",
+  "endDate": "2026-12-07",
+  "expectedDays": 4,
+  "mustMention": [
+    "Auli",
+    "Joshimath"
+  ],
+  "text": "Auli weekend from Delhi\n\nDay 0 - Leave from Delhi by 09:00 PM (Friday). Overnight bus, stop at Devprayag on the way.\nDay 1-2 - Reach Joshimath, check in. Day trip to Auli by road or ropeway. Skiing and snow meadows, optional snow trek to Gorson Bugyal depending on conditions. Overnight stay in Joshimath.\nDay 3 - Check out from hotel. Visit Narsingh Temple. Leave for Delhi. Halt at Rishikesh for dinner. Reach Delhi early next morning.",
+  "note": "Day 0 is the overnight departure evening, so it counts as a date. Day 1-2 is a range line to test grouping. Source page was unreachable (502) on fetch; text assembled from the operator's listing as shown in search results."
+}

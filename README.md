@@ -1,17 +1,19 @@
 # Roundtrip
 
-A trip planner for groups. One person creates a trip, shares a six-letter
-code, and everyone on it sees the same itinerary, budget, bookings and
-documents, syncing in near real-time. Installs to the home screen and works
-offline.
+A trip planner for groups. One person creates a trip and shares a link, and
+everyone on it sees the same itinerary, packing list, bookings and documents,
+synced in near real-time. Installs to the home screen and works offline.
+
+Right now it's being tested with small trip operators who run weekend group
+trips: the organiser sets up the plan, drops one link in the WhatsApp group,
+and travellers tap it, type their name and they're in.
 
 Live at [roundtrip.one](https://roundtrip.one) (landing) and
-[app.roundtrip.one](https://app.roundtrip.one) (the app). No account needed
-to start.
+[app.roundtrip.one](https://app.roundtrip.one) (the app). See a read-only
+sample trip at [app.roundtrip.one/demo](https://app.roundtrip.one/demo). No
+account needed to start.
 
-<!-- SCREENSHOT: the trip itinerary view on mobile, with the day list and
-     weather strip visible. Use a real trip with real destinations, not
-     placeholder data. Full width, right here. -->
+![The demo trip's itinerary on a phone](landing/shots/itinerary.png)
 
 ## Why I built it
 
@@ -25,28 +27,33 @@ signal, and nobody wanted to make an account before they could see anything.
 
 ## What's in it
 
-Itinerary with per-day weather and outfit advice, a trip map, outfit planner
-with photos, packing lists, shared budget with settle-up, a booking
-checklist, and a documents wallet for tickets and PDFs. Light and dark
-themes. Backup and restore of a whole trip as JSON.
+Itinerary with per-day weather and a trip map, packing lists (the organiser
+sets the list, each person ticks their own), a booking checklist, a documents
+wallet for tickets and PDFs, and a shared budget with settle-up. Light and
+dark themes. Backup and restore of a whole trip as JSON.
+
+**Join links.** `app.roundtrip.one/j/CODE` opens a trip directly: no intro
+screens, just a name and you're in. The six-letter code still works as a
+fallback.
+
+**Organisers and members.** Whoever creates the trip is its organiser.
+Members see the shared plan; the organiser decides whether they can edit it.
+Everyone keeps their own packing list and personal notes.
+
+**Demo.** `/demo` renders a bundled three-day Kasol weekend read-only, with
+no sign-in and no backend calls.
 
 ### The AI parts
 
 **Itinerary planner.** In the trip wizard, generates a starting plan for the
-destinations and dates you picked. Runs on Gemini.
+destinations and dates you picked.
 
-**Virtual try-on.** Upload one photo of yourself, private, and any outfit in
-the closet can be rendered on you. Defaults to the public IDM-VTON
-HuggingFace Space, which is free and takes 30 to 90 seconds. Setting
-`GEMINI_API_KEY` switches it to Gemini 2.5 Flash Image, roughly four cents an
-image with no daily cap. Results are cached per outfit, so nothing
-regenerates unless you ask.
+**Paste your itinerary.** Paste the plan you already send on WhatsApp and it
+gets sorted into the trip's days.
 
-Both run server-side in `api/tryon.js`, a Vercel function also mounted on the
-dev server, so engine keys never reach the browser.
-
-<!-- GIF: the try-on flow. Pick an outfit, hit "See it on me", show the
-     result. Cut the wait, nobody needs to watch 60 seconds of spinner. -->
+Both run on Gemini, server-side in `api/` (Vercel functions, also mounted on
+the dev server), behind a Supabase sign-in check and a daily cap, so the key
+never reaches the browser.
 
 ## Stack
 
@@ -68,9 +75,8 @@ npm run dev
 
 The app uses a free Supabase project for sync and auth. Follow
 `supabase/SETUP.md`: create the project, run `supabase/schema.sql` once and
-never again because it drops the tables, then run
-`supabase/migrations/001_public_hardening.sql` and
-`002_documents_storage.sql`, both additive and live-safe. Enable the auth
+never again because it drops the tables, then run each file in
+`supabase/migrations/` in number order. They are additive and live-safe. Enable the auth
 providers, and put your project URL and anon key in `.env.local`.
 
 ### Optional keys, all with free tiers
@@ -78,11 +84,7 @@ providers, and put your project URL and anon key in `.env.local`.
 | Variable | What it turns on |
 |---|---|
 | `VITE_UNSPLASH_ACCESS_KEY` | Real destination photos on trip cards instead of gradients |
-| `HF_TOKEN` | Your own free ZeroGPU quota for try-on, roughly 7 to 14 a day |
-| `GEMINI_API_KEY` | Faster, better try-on, and the itinerary planner |
-
-If the IDM-VTON Space moves or breaks, point `HF_TRYON_SPACE` at another one
-with the same `/tryon` API.
+| `GEMINI_API_KEY` | The itinerary planner and paste-your-itinerary (server-side only) |
 
 ## Deploy
 
@@ -92,11 +94,11 @@ checklist, DNS through to backups, is in `docs/LAUNCH.md`.
 
 ## How trips work
 
-Create a trip: name, dates, currency (plus an optional second display
-currency and budget), then search and add destinations. Each day is assigned
-to a destination automatically and can be edited after. Share the trip code
-so others can join. Everyone sees the whole trip, with each person's
-additions labelled.
+Create a trip: name, dates, currency, then search and add destinations (or
+paste an itinerary). Each day is assigned to a destination automatically and
+can be edited after. Share the join link; anyone who opens it joins as a
+member. Each person's additions are labelled. A finished trip can be run
+again on new dates.
 
 ## Where the data lives
 
@@ -104,10 +106,12 @@ Everything is stored in Supabase and mirrored to IndexedDB on each device as
 an offline cache with a write outbox.
 
 - **Shared by all members:** the trip definition (days, destinations, money
-  settings, cover photo), shared day notes, expenses with who-paid and
+  settings, cover photo, packing template), shared day notes, expenses with who-paid and
   settle-up, bookings, and the document list. The files themselves live in a
   private, member-only Supabase Storage bucket.
-- **Personal per member:** packing list, outfit photos, own per-day notes.
+- **Personal per member:** packing list, own per-day notes.
+- **Members** carry a role (organiser or member), and each trip has a
+  "members can edit" setting enforced by row-level security.
 - **Profile** (display name and colour) lives in auth user metadata and
   follows your account across trips and devices.
 
@@ -115,7 +119,10 @@ an offline cache with a write outbox.
 
 ```
 src/
-  App.jsx             shell: routing (gate -> trips home -> trip), header, tabs
+  main.jsx            entry: Sentry, theme, /demo branch, install hint
+  App.jsx             routing (join link -> gate -> trips home -> trip), header, tabs
+  demo/               the read-only /demo trip (data in data/demo/)
+  lib/joinLink.js     /j/CODE parsing and share URLs
   lib/tripConfig.js   per-trip config context + date/money helpers
   lib/session.js      trip create/join/enter, members, trips list
   lib/auth.js         account linking + sign-in (email OTP, Google)
@@ -124,7 +131,7 @@ src/
   lib/documents.js    documents wallet (Supabase Storage)
   components/         shared UI (wizard, settings, trips home)
   tabs/               one file per tab
-api/tryon.js          server-side try-on, holds the engine keys
+api/                  serverless functions (AI itinerary, import, account delete)
 supabase/             schema.sql (do not re-run) + additive migrations
 landing/              the marketing site at roundtrip.one
 ```

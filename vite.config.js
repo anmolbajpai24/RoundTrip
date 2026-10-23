@@ -7,13 +7,13 @@ import { sentryVitePlugin } from "@sentry/vite-plugin";
 
 // Serve the api/ functions on the dev server so they work under `npm run dev`
 // (in production Vercel serves them as serverless functions). Server-side env
-// vars (HF_TOKEN, GEMINI_API_KEY, ...) come from .env.local via loadEnv.
+// vars (GEMINI_API_KEY, SUPABASE_SERVICE_ROLE_KEY, ...) come from .env.local via loadEnv.
 function apiDevEndpoints(env) {
   // Absolute file URLs: Vite executes this config from a transpiled temp
   // file, so relative dynamic imports would resolve from the wrong directory.
   const routes = {
-    "/api/tryon": ["api/tryon.js", "runTryOn"],
     "/api/itinerary": ["api/itinerary.js", "runItinerary"],
+    "/api/itinerary-import": ["api/itinerary-import.js", "runItineraryImport"],
     "/api/account-delete": ["api/account-delete.js", "runAccountDelete"],
   };
   return {
@@ -67,11 +67,18 @@ export default defineConfig(({ mode }) => ({
         // Workbox's default glob skips fonts; without woff2 here an offline
         // launch after cache eviction falls back to Georgia/system forever.
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
+        // The link-preview image is for crawlers only; do not make every
+        // install download it.
+        globIgnores: ["**/og.png"],
+        // Offline, any app route (/, /j/CODE, /demo) opens the cached shell
+        // and the client routes from there. Static pages and api/ stay out.
+        navigateFallback: "index.html",
+        navigateFallbackDenylist: [/^\/api\//, /^\/privacy/, /^\/terms/, /\.[a-z0-9]+$/i],
       },
       manifest: {
         name: "Roundtrip",
         short_name: "Roundtrip",
-        description: "Shared trip companion — itinerary, outfits, packing, budget, bookings",
+        description: "Shared group trips: itinerary, packing list, bookings and budget, synced for everyone and usable offline.",
         theme_color: "#F5EFE4",
         background_color: "#F5EFE4",
         display: "standalone",

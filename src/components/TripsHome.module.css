@@ -319,11 +319,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-.pastArrow {
-  flex: none;
-  color: var(--ink-faint);
-}
-
 /* ---------- zero-trips welcome ---------- */
 .welcome {
   margin-top: 40px;

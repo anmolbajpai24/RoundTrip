@@ -6,6 +6,7 @@ import { dateRangeLabel, todayISO, daysToGo, tripDayNumber, legGradient } from "
 import Avatar from "./Avatar.jsx";
 import ProfileSheet from "./ProfileSheet.jsx";
 import JoinCode from "./JoinCode.jsx";
+import TripMenu from "./TripMenu.jsx";
 import { confirmDialog } from "./dialogs.jsx";
 import Icon from "./ui/icons.jsx";
 import Button from "./ui/Button.jsx";
@@ -19,6 +20,7 @@ import s from "./TripsHome.module.css";
 export default function TripsHome({ user, onOpen, onNew, onAuthChanged }) {
   const [trips, setTrips] = useState(null); // null = loading
   const [joining, setJoining] = useState(false);
+  const [menuFor, setMenuFor] = useState(null); // trip whose "…" menu is open
   const [profileOpen, setProfileOpen] = useState(false);
   const [, setBump] = useState(0); // re-render after profile edits
   const [error, setError] = useState("");
@@ -70,7 +72,7 @@ export default function TripsHome({ user, onOpen, onNew, onAuthChanged }) {
     const solo = (t.members?.length || 1) <= 1;
     const title = t.config?.title || `Trip ${t.code}`;
     const ok = await confirmDialog(solo
-      ? { title: `Delete "${title}"?`, message: "This permanently removes its itinerary, outfits, packing, budget, bookings and documents. This can't be undone.", confirmLabel: "Delete forever", danger: true }
+      ? { title: `Delete "${title}"?`, message: "This permanently removes its itinerary, packing, budget, bookings and documents. This can't be undone.", confirmLabel: "Delete forever", danger: true }
       : { title: `Leave "${title}"?`, message: "You'll lose access to it, but it stays for everyone else on it.", confirmLabel: "Leave trip", danger: true });
     if (!ok) return;
     try {
@@ -163,7 +165,7 @@ export default function TripsHome({ user, onOpen, onNew, onAuthChanged }) {
               {hero.config?.cover?.author && (
                 <span className={s.heroCredit}>Photo: {hero.config.cover.author} / Unsplash</span>
               )}
-              <button onClick={(e) => { e.stopPropagation(); remove(hero); }} title="Leave or delete trip" aria-label="Leave or delete trip" className={s.heroMenu}>
+              <button onClick={(e) => { e.stopPropagation(); setMenuFor(hero); }} title="Trip options" aria-label="Trip options" className={s.heroMenu}>
                 <Icon name="dots" size={14} />
               </button>
             </div>
@@ -219,7 +221,7 @@ export default function TripsHome({ user, onOpen, onNew, onAuthChanged }) {
                     {t.config ? dateRangeLabel(t.config) : "Needs setup"}{t.members.length > 1 ? ` · ${t.members.length} members` : ""}
                   </span>
                 </span>
-                <button onClick={(e) => { e.stopPropagation(); remove(t); }} title="Leave or delete trip" aria-label="Leave or delete trip" className={s.cardMenu}>
+                <button onClick={(e) => { e.stopPropagation(); setMenuFor(t); }} title="Trip options" aria-label="Trip options" className={s.cardMenu}>
                   <Icon name="dots" size={16} />
                 </button>
               </div>
@@ -236,7 +238,9 @@ export default function TripsHome({ user, onOpen, onNew, onAuthChanged }) {
                 <span className={s.pastTitle}>{t.config?.title || `Trip ${t.code}`}</span>
                 <span className={s.pastSpacer} />
                 <span className={s.pastMeta}>{t.config ? dateRangeLabel(t.config) : t.code}</span>
-                <span className={s.pastArrow}><Icon name="arrow" size={13} strokeWidth={2} /></span>
+                <button onClick={(e) => { e.stopPropagation(); setMenuFor(t); }} title="Trip options" aria-label="Trip options" className={s.cardMenu}>
+                  <Icon name="dots" size={16} />
+                </button>
               </div>
             ))}
           </>
@@ -256,6 +260,10 @@ export default function TripsHome({ user, onOpen, onNew, onAuthChanged }) {
             <h2 className={s.joinTitle}>Join with a code</h2>
             <JoinCode defaultProfile={lastProfile} onJoined={onOpen} autoFocus />
           </Sheet>
+        )}
+
+        {menuFor && (
+          <TripMenu trip={menuFor} onClose={() => setMenuFor(null)} onRemove={remove} onCreated={onOpen} />
         )}
 
         {profileOpen && (

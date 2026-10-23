@@ -157,3 +157,47 @@ export function fmtHome(config, amount) {
   if (!config?.homeCurrency || !config?.homeRate) return null;
   return fmtMoney(amount * config.homeRate, config.homeCurrency);
 }
+
+// The settings editor's draft of packingTemplate ([[category, [items]]]):
+// a category name plus one item per line, quicker to edit on a phone than a
+// row per item. Blank lines and empty categories drop out on the way back.
+export const toPackingDraft = (template) =>
+  (template || []).map(([cat, items]) => ({ cat, text: (items || []).join("\n") }));
+
+export const fromPackingDraft = (draft) =>
+  draft
+    .map(({ cat, text }) => [cat.trim(), text.split("\n").map((i) => i.trim()).filter(Boolean)])
+    .filter(([cat, items]) => cat || items.length)
+    .map(([cat, items]) => [cat || "Other", items]);
+
+// Pinned trip info (operator trips): config.info = { pickupPoint, pickupMapUrl,
+// pickupTime, leadName, leadPhone, emergency }, all optional strings. Shown
+// at the top of the itinerary for everyone; organisers edit it in settings.
+export const TRIP_INFO_FIELDS = ["pickupPoint", "pickupMapUrl", "pickupTime", "leadName", "leadPhone", "emergency"];
+
+// Trimmed copy with only known, non-empty fields, or null when nothing is set.
+export function cleanTripInfo(info) {
+  const out = {};
+  for (const k of TRIP_INFO_FIELDS) {
+    const v = typeof info?.[k] === "string" ? info[k].trim().slice(0, 200) : "";
+    if (v) out[k] = v;
+  }
+  return Object.keys(out).length ? out : null;
+}
+
+// Only http(s) links become a "Map" link; anything else (javascript:, typos)
+// is dropped rather than rendered as a live href.
+export function safeMapUrl(url) {
+  try {
+    const u = new URL(String(url || "").trim());
+    return u.protocol === "https:" || u.protocol === "http:" ? u.href : null;
+  } catch { return null; }
+}
+
+// "tel:" href for the first phone-number-looking run in a string, or null.
+export function telHref(text) {
+  const m = /\+?\d[\d\s().-]{5,}\d/.exec(String(text || ""));
+  if (!m) return null;
+  const digits = m[0].replace(/[^\d+]/g, "");
+  return digits.replace(/\+/g, "").length >= 7 ? `tel:${digits}` : null;
+}

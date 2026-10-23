@@ -63,6 +63,11 @@
   color: var(--accent-ink);
 }
 
+/* View-only members see the tick state but can't change it. */
+.check:disabled {
+  cursor: default;
+}
+
 .checkDone {
   background-color: var(--success);
   border-color: var(--success);
