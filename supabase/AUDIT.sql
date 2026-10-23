@@ -1,6 +1,6 @@
 -- Read-only production audit — safe to run anytime (SELECTs only).
 -- Run each block in the Supabase SQL editor and compare with the expectations.
--- Expectations below are for a database with migrations 001-008 applied.
+-- Expectations below are for a database with migrations 001-010 applied.
 
 -- 1) RLS policies on the three app tables.
 --    EXPECT (after 008):
@@ -107,3 +107,12 @@ where key like 'outfit:%' or key like 'outfit-item:%'
    or key in ('outfit-days', 'tryon-base-photo')
 group by key
 order by key;
+
+-- 10) Keep an organiser (010).
+--    EXPECT: one row, trip_members_keep_an_organiser, on_delete = D, enabled
+--    = O. Block 6 covers the result: no trip with members has zero organisers.
+select tgname,
+       case when tgtype & 8 = 8 then 'D' end as on_delete,
+       tgenabled as enabled
+from pg_trigger
+where tgrelid = 'public.trip_members'::regclass and not tgisinternal;

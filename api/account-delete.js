@@ -55,7 +55,9 @@ export async function runAccountDelete(body, authHeader) {
         if (error) throw error; // cascades trip_members + trip_kv
       } else {
         // Shared trip — take only the caller's slice: their personal kv
-        // rows, then their membership.
+        // rows, then their membership. If they were the last organiser,
+        // migration 010's trigger promotes the earliest-joined remaining
+        // member inside this same delete.
         const { error: kvErr } = await admin
           .from("trip_kv").delete().eq("trip_id", tripId).eq("owner", uid);
         if (kvErr) throw kvErr;

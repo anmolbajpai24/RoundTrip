@@ -1,7 +1,7 @@
-// RLS check for migration 008 (roles). Run against roundtrip-dev ONLY, after
-// 008 has been applied there:
+// RLS check for migrations 008 (roles) and 010 (keep an organiser). Run
+// against roundtrip-dev ONLY, after both have been applied there:
 //
-//   node --env-file=.env.local supabase/tests/rls-roles.mjs
+//   node --env-file=.env.local supabase/tests/rls-roles.mjs --i-know-this-is-dev
 //
 // It reads VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY from the environment
 // and never prints them. It signs in three throwaway anonymous users
@@ -144,12 +144,27 @@ async function main() {
     await expectDenied("[locked] demoted organiser can't write shared rows", () => upsert(org, tripId, SHARED, "trip-bookings", ["org3"]));
     await expectDenied("A can't demote themself as last organiser", () => a.client.rpc("set_member_role", { p_trip_id: tripId, p_user_id: a.id, p_role: "member" }));
     await expectDenied("set_member_role rejects a bad role", () => a.client.rpc("set_member_role", { p_trip_id: tripId, p_user_id: b.id, p_role: "admin" }));
+
+    // ---- keep an organiser (010) ----
+    // Now A is the only organiser; org (joined first) and B are members.
+    // "org:role a:role b:role", with "-" for someone no longer on the trip.
+    const rolesNow = async () => {
+      const { data } = await org.client.from("trip_members").select("user_id, role").eq("trip_id", tripId);
+      const r = (u) => data?.find((m) => m.user_id === u.id)?.role || "-";
+      return `org:${r(org)} a:${r(a)} b:${r(b)}`;
+    };
+    await expectAllowed("member B leaves", () => b.client.from("trip_members").delete().eq("trip_id", tripId).eq("user_id", b.id));
+    await expectValue("a member leaving changes no roles", rolesNow(), "org:member a:organiser b:-");
+    await expectAllowed("last organiser A leaves", () => a.client.from("trip_members").delete().eq("trip_id", tripId).eq("user_id", a.id));
+    await expectValue("earliest-joined remaining member becomes organiser", rolesNow(), "org:organiser a:- b:-");
+    await expectAllowed("[locked] promoted organiser writes a shared row", () => upsert(org, tripId, SHARED, "trip-bookings", ["org4"]));
   } finally {
-    // ---- cleanup: A (organiser now) removes docs, everyone else leaves, A deletes ----
+    // ---- cleanup: whoever is organiser removes docs, A and B leave (no-op
+    // if they already did; 010 keeps an organiser), org deletes the trip ----
     await a.client.storage.from("trip-docs").remove([`${tripId}/rls-member.txt`, `${tripId}/rls-org.txt`]).catch(() => {});
     await org.client.storage.from("trip-docs").remove([`${tripId}/rls-member.txt`, `${tripId}/rls-org.txt`]).catch(() => {});
-    for (const m of [org, b]) await m.client.from("trip_members").delete().eq("trip_id", tripId).eq("user_id", m.id);
-    const { error } = await a.client.rpc("delete_trip", { p_trip_id: tripId });
+    for (const m of [b, a]) await m.client.from("trip_members").delete().eq("trip_id", tripId).eq("user_id", m.id);
+    const { error } = await org.client.rpc("delete_trip", { p_trip_id: tripId });
     if (error) console.log(`cleanup: couldn't delete test trip ${tripId}: ${error.message}`);
     else console.log("cleanup: test trip deleted");
   }

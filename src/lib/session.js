@@ -327,6 +327,9 @@ export async function leaveTrip(tripId) {
     await supabase.from("trip_kv").delete().eq("trip_id", tripId).eq("owner", user.id);
   } catch { /* best-effort */ }
 
+  // If you're the last organiser, migration 010's trigger promotes the
+  // earliest-joined remaining member in the same transaction, so the trip is
+  // never left without one and this delete doesn't need to wait for it.
   const { error } = await supabase
     .from("trip_members").delete().eq("trip_id", tripId).eq("user_id", user.id);
   if (error) throw error;
