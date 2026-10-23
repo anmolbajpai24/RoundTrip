@@ -139,11 +139,9 @@ GoDaddy no longer bundles free email forwarding with most domain plans, so use
       - [ ] delete a **throwaway** account: auth user, kv rows and photos gone;
             a shared trip with another member survives
       - [ ] old vercel.app URL redirects
-- [ ] Capture landing screenshots (itinerary / packing / outfits tabs with a
-      good-looking demo trip, phone viewport), save as
-      `landing/shots/{itinerary,packing,outfits}.png`, swap the placeholder
-      blocks in `landing/index.html`, and replace `landing/og.png` with a real
-      1200×630 social image.
+- [x] Landing screenshots: taken from the demo trip (itinerary and packing,
+      phone viewport) into `landing/shots/`. Still to do: replace `landing/og.png`
+      with a real 1200x630 social image if it is still a placeholder.
 
 ## Later gates (not now)
 

@@ -132,7 +132,8 @@ fair-use limits on AI, we may suspend abuse.
 ## 8. Account deletion
 
 **What:** `api/account-delete.js` — verifies the caller's JWT, then with the
-service_role key deletes their personal kv rows, their outfit photos, their
+service_role key deletes their personal kv rows, any leftover outfit photos from before
+the Outfits tab was removed, their
 memberships, trips where they're the *sole* member (including storage), and
 finally the auth user. In the UI: "Delete my account…" behind a
 type-DELETE-to-confirm dialog.
