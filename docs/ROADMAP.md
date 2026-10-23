@@ -52,7 +52,7 @@ How to check, on `npm run dev` against `roundtrip-dev` or the `operator-build` p
 Goal: an operator can paste their itinerary, run the trip again next weekend, and see a demo before trying anything.
 
 Order and dependencies:
-1. [~] **ai:** `api/itinerary-import.js`, `importItinerary()`, evals at 8 of 10 or better. Shell adds the dev route. Built; evals 5 of 5 on 5 fixtures, waiting on 5 more itineraries from the user.
+1. [x] **ai:** `api/itinerary-import.js`, `importItinerary()`, evals at 8 of 10 or better. Shell adds the dev route. Evals 10 of 10 (W4, 23 Oct).
 2. [x] **data:** `shiftTrip.js` with tests, `duplicateTrip()`, `supabase/queries/operator-metrics.sql`.
 3. [x] **trip:** paste-your-itinerary in the wizard (needs 1), Run again on trips home (needs 2), organiser packing list in settings. If time: pinned trip info (item 8), then lazy-load the map. Including item 8 and the lazy map.
 4. [x] **shell:** the `/demo` trip, then the landing rewrite with real screenshots from it, then README and `LAUNCH-REMAINING.md` updates including the extended phone smoke test.
@@ -114,6 +114,18 @@ Not in BUILD-PLAN, but needed to ship. Each has an owner and a phase.
 - [ ] **Gemini key in Vercel.** The import endpoint needs `GEMINI_API_KEY` in both Production and Preview, and "AI itinerary suggestion works" is still unticked in `LAUNCH-REMAINING.md`. **user**, Phase 1: check both environments. **shell** adds any new env var names to `.env.example`.
 - [x] **Privacy policy is out of date.** `landing/privacy.html` and `public/privacy.html` describe outfit photos, and don't mention pasted itineraries going to Gemini or organiser contact details on the trip-info card. **shell**, Phase 2.
 - [x] **Join link with no signal.** Someone opening a `/j/` link offline can't join. `JoinLinkGate` needs a clear offline message and a retry, plus loading and bad-code states. **shell**, Phase 1.
-- [~] **Accessibility on new screens.** Labels on the join name field, the "Members can edit" switch and the Run again date picker, and contrast in both themes. **trip** and **shell**, as part of verifying their own work. Labels done; contrast in both themes not checked.
+- [~] **Accessibility on new screens.** Labels on the join name field, the "Members can edit" switch and the Run again date picker, and contrast in both themes. **trip** and **shell**, as part of verifying their own work. Labels done. Contrast computed from token values in both themes (W4): `--ink-faint` raised to pass 4.5:1; not yet measured on rendered pages.
 - [x] **Supabase free-plan limits.** Inactive free projects get paused, and realtime connections are capped. **data**, Phase 1: note the current limits in `supabase/SETUP.md` so nobody is surprised during live trips.
 - [ ] **Automated join-flow check (if time).** A `playwright-core` script that opens a `/j/` link in a fresh browser against dev and confirms it lands on the itinerary. **shell**, Phase 2.
+
+## Waiting on user
+
+Collected from the overnight W4 run (23 Oct). Nothing here blocks the build; each one blocks a check.
+
+- [ ] Run `supabase/migrations/008_roles.sql` on `roundtrip-dev` (expect "Success. No rows returned.").
+- [ ] Then run `supabase/migrations/010_keep_an_organiser.sql` on `roundtrip-dev` (needs 008 first; same expected result).
+- [ ] Then run `node --env-file=.env.local supabase/tests/rls-roles.mjs --i-know-this-is-dev` (expect "All checks passed"), and `supabase/AUDIT.sql`: block 6 returns 0 rows, block 10 returns one trigger row.
+- [ ] Check `GEMINI_API_KEY` is set in Vercel Production and Preview.
+- [ ] Two-browser check on the `operator-build` preview: organiser and member, join link, "Members can edit" off and on, paste itinerary, Run again.
+- [ ] Look at the new eval fixtures 09 and 10: 09 is a real itinerary rewritten as a WhatsApp message, and 10 was rebuilt from search results because the operator page returned 502. Swap in real operator text if you have it.
+- [ ] Sun 1 Nov: backup, then 008, 010 and 009 on prod (009 also needs the `outfit-photos` bucket emptied and deleted in the dashboard), merge `operator-build` into `main`, phone smoke test from `docs/LAUNCH-REMAINING.md`.
