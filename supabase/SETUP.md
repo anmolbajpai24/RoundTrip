@@ -66,8 +66,8 @@ you a code others use to **Join**.
 
 Roundtrip runs on the free plan. The limits that matter for the operator test:
 
-- **Database: 500 MB.** Trips are small JSON rows; outfit photos already moved
-  out of the database (007) and are being purged. Check the size under
+- **Database: 500 MB.** Trips are small JSON rows; outfit and try-on photos
+  are purged by 009. Check the size under
   Project Settings → Usage.
 - **Storage: 1 GB** across buckets, plus the per-file caps we set
   (`trip-docs` 10 MB). Documents are the only thing that grows here.

@@ -1,4 +1,3 @@
-import { supabase } from "./supabase.js";
 import { getSession } from "./session.js";
 import { loadKey, saveKey, loadPersonalAll, upsertRow, flushOutbox } from "./storage.js";
 import { CONFIG_KEY } from "./tripConfig.js";
@@ -13,7 +12,6 @@ import { buildLegacyConfig, legacyDayISO, seedLegacyBookings } from "../data/exa
 // Nothing is deleted: the old dN rows stay in place as inert backups, and the
 // whole routine is idempotent (re-running upserts the same values again).
 
-const SHARED = "__shared__";
 const isLegacyKey = (k) => /^d\d+$/.test(k);
 const isoOf = (dk) => legacyDayISO(Number(dk.slice(1)));
 
@@ -55,17 +53,6 @@ export async function migrateLegacyTrip() {
   for (const [owner, map] of Object.entries(overrides)) {
     const next = rewriteDayMap(map);
     if (next) await upsertRow(owner, "trip-itinerary-override", next);
-  }
-
-  // Every member's outfit rows: duplicate outfit:dN → outfit:<ISO>.
-  const { data: outfitRows, error } = await supabase
-    .from("trip_kv").select("owner, key, value")
-    .eq("trip_id", s.tripId).neq("owner", SHARED).like("key", "outfit:d%");
-  if (error) throw error;
-  for (const row of outfitRows || []) {
-    const day = row.key.slice("outfit:".length);
-    if (!isLegacyKey(day)) continue;
-    await upsertRow(row.owner, `outfit:${isoOf(day)}`, row.value);
   }
 
   // The bookings list used to be seeded client-side only; make sure the shared

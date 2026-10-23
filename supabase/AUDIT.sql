@@ -43,8 +43,8 @@ where n.nspname = 'public'
 order by p.proname;
 
 -- 3) Storage buckets.
---    EXPECT: trip-docs (private, 10MB) and outfit-photos (private, 2MB)
---    until the outfits purge empties and removes the latter.
+--    EXPECT: trip-docs (private, 10MB) only. Before 009 (outfits purge) and
+--    its dashboard step, outfit-photos (private, 2MB) is still listed.
 select id, public, file_size_limit from storage.buckets order by id;
 
 -- 4) Storage policies for trip-docs.
@@ -98,3 +98,12 @@ select count(*)                                as base64_rows,
        pg_size_pretty(sum(pg_column_size(value))::bigint) as approx_size
 from public.trip_kv
 where value::text like '%data:image%';
+
+-- 9) Outfits purge (009).
+--    EXPECT: 0 rows after 009. Before it, outfit and try-on rows are listed.
+select key, count(*) as rows
+from public.trip_kv
+where key like 'outfit:%' or key like 'outfit-item:%'
+   or key in ('outfit-days', 'tryon-base-photo')
+group by key
+order by key;
