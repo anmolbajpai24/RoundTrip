@@ -14,30 +14,30 @@ Goal: everything committed on a working branch, a green build, and every agent a
 
 - [ ] **user:** commit or stash any uncommitted work of your own that isn't part of this setup, then open the agent tabs (see `docs/SETUP.md`).
 - [ ] **user:** message the friend group: open the app once while online so offline changes sync, and outfit photos will be deleted on Sun 1 Nov, so export a backup from settings if they want them.
-- [ ] **director:** tag the current `main` as `pre-operator-build`, create the `operator-build` branch, commit the setup files (`CLAUDE.md`, `.claude/agents/`, `docs/ROADMAP.md`, `docs/PROMPTS.md`, `docs/SETUP.md`, `docs/BUILD-PLAN.md`, `docs/LAUNCH-EXPLAINED.md`) and push the branch.
-- [ ] **every agent:** read your owned paths and report their current state to @director in a few lines.
-- [ ] **data:** send @trip and @shell the role and session API names (BUILD-PLAN item 1).
-- [ ] **ai:** send @trip the planned `importItinerary()` signature and error codes.
-- [ ] **shell:** send @trip the `joinLink.js` helpers and where `JoinLinkGate` will mount.
+- [x] **director:** tag the current `main` as `pre-operator-build`, create the `operator-build` branch, commit the setup files (`CLAUDE.md`, `.claude/agents/`, `docs/ROADMAP.md`, `docs/PROMPTS.md`, `docs/SETUP.md`, `docs/BUILD-PLAN.md`, `docs/LAUNCH-EXPLAINED.md`) and push the branch.
+- [x] **every agent:** read your owned paths and report their current state to @director in a few lines. (Orchestrated run: replaced by fixed contracts in `docs/ORCHESTRATE.md`.)
+- [x] **data:** send @trip and @shell the role and session API names (BUILD-PLAN item 1).
+- [x] **ai:** send @trip the planned `importItinerary()` signature and error codes.
+- [x] **shell:** send @trip the `joinLink.js` helpers and where `JoinLinkGate` will mount.
 
 How to check: `git log --oneline -3` on `operator-build` shows the setup commit with no Claude attribution, `git tag` lists `pre-operator-build`, `npm run check` passes, and each agent's report is noted below.
 
-Agent reports:
-- data:
-- ai:
-- trip:
-- shell:
+Agent reports (orchestrated run, 23 Oct; commits start `W<n> <agent>:`):
+- data: W1 roles, session API, weather, RLS test, shiftTrip, metrics; W3 outfit data removed, 009 written.
+- ai: W1 guard, try-on 410, import endpoint, tests, evals 5/5; W3 `tryon.js` deleted, evals 5/5.
+- trip: W2 role gating, join links, Outfits removed, import, Run again, packing editor, trip-info card, lazy map.
+- shell: W1 join gate, install hint, demo, OG, SW fallback, landing, README; W3 gradio dropped, screenshots, phone smoke test.
 
 ## Phase 1: Foundations (Sat 24 to Tue 27 Oct). Items 0 to 4
 
 Goal: roles enforced in the database, join links working, Outfits gone from the UI, Budget hidden on organiser-only trips.
 
 Order and dependencies:
-1. [ ] **data:** `008_roles.sql`, the session API, weather cache local-only, and the RLS test script. The user runs 008 on `roundtrip-dev`. Trip and shell build against the announced names in parallel, but can't fully test until 008 is on dev.
-2. [ ] **shell:** `joinLink.js`, `JoinLinkGate.jsx`, Open Graph tags, service-worker fallback for `/j/*` and `/demo`, `InstallHint.jsx`. Remove the `OutfitsTab` import from `harness.jsx`. Widen the Vitest include for @ai.
-3. [ ] **trip:** role gating across tabs and settings, the "Members can edit" switch and co-organiser control, mount `JoinLinkGate`, `joinUrl()` in share text, remove Outfits (after shell's harness change), hide Budget when members can't edit.
-4. [ ] **ai:** move the guard into `api/_lib/`, `api/tryon.js` returns 410, delete `src/lib/tryon.js` after trip removes Outfits.
-5. [ ] **data:** after trip's Outfits removal, take closet loading out of `storage.js` and `session.js`, and write `009_purge_outfits.sql` (not run yet).
+1. [~] **data:** `008_roles.sql`, the session API, weather cache local-only, and the RLS test script. The user runs 008 on `roundtrip-dev`. Trip and shell build against the announced names in parallel, but can't fully test until 008 is on dev. Built; waiting on the user to run 008 on dev, then the RLS test.
+2. [x] **shell:** `joinLink.js`, `JoinLinkGate.jsx`, Open Graph tags, service-worker fallback for `/j/*` and `/demo`, `InstallHint.jsx`. Remove the `OutfitsTab` import from `harness.jsx`. Widen the Vitest include for @ai.
+3. [x] **trip:** role gating across tabs and settings, the "Members can edit" switch and co-organiser control, mount `JoinLinkGate`, `joinUrl()` in share text, remove Outfits (after shell's harness change), hide Budget when members can't edit. Not yet checked in two browsers against dev.
+4. [x] **ai:** move the guard into `api/_lib/`, `api/tryon.js` returns 410, delete `src/lib/tryon.js` after trip removes Outfits.
+5. [x] **data:** after trip's Outfits removal, take closet loading out of `storage.js` and `session.js`, and write `009_purge_outfits.sql` (not run yet).
 
 How to check, on `npm run dev` against `roundtrip-dev` or the `operator-build` preview:
 - As organiser in one browser: create a trip, turn "Members can edit" off, share it. The share text contains an `app.roundtrip.one/j/...` link.
@@ -52,11 +52,11 @@ How to check, on `npm run dev` against `roundtrip-dev` or the `operator-build` p
 Goal: an operator can paste their itinerary, run the trip again next weekend, and see a demo before trying anything.
 
 Order and dependencies:
-1. [ ] **ai:** `api/itinerary-import.js`, `importItinerary()`, evals at 8 of 10 or better. Shell adds the dev route.
-2. [ ] **data:** `shiftTrip.js` with tests, `duplicateTrip()`, `supabase/queries/operator-metrics.sql`.
-3. [ ] **trip:** paste-your-itinerary in the wizard (needs 1), Run again on trips home (needs 2), organiser packing list in settings. If time: pinned trip info (item 8), then lazy-load the map.
-4. [ ] **shell:** the `/demo` trip, then the landing rewrite with real screenshots from it, then README and `LAUNCH-REMAINING.md` updates including the extended phone smoke test.
-5. [ ] **director:** Thu 29 Oct schedule check. If behind, drop item 8, then item 5.
+1. [~] **ai:** `api/itinerary-import.js`, `importItinerary()`, evals at 8 of 10 or better. Shell adds the dev route. Built; evals 5 of 5 on 5 fixtures, waiting on 5 more itineraries from the user.
+2. [x] **data:** `shiftTrip.js` with tests, `duplicateTrip()`, `supabase/queries/operator-metrics.sql`.
+3. [x] **trip:** paste-your-itinerary in the wizard (needs 1), Run again on trips home (needs 2), organiser packing list in settings. If time: pinned trip info (item 8), then lazy-load the map. Including item 8 and the lazy map.
+4. [x] **shell:** the `/demo` trip, then the landing rewrite with real screenshots from it, then README and `LAUNCH-REMAINING.md` updates including the extended phone smoke test.
+5. [x] **director:** Thu 29 Oct schedule check. If behind, drop item 8, then item 5. Nothing dropped; all items built by 23 Oct.
 
 How to check:
 - Paste a real itinerary from an operator's website into the wizard and get a trip with the right days and readable plans.
@@ -110,10 +110,10 @@ Kill check, Sun 10 Jan: [ ] at least 2 operators ran 3 or more trips each, [ ] a
 
 Not in BUILD-PLAN, but needed to ship. Each has an owner and a phase.
 
-- [ ] **CI doesn't run on `operator-build`.** `check.yml` runs only on pushes to `main` and on pull requests. **director**, Phase 0: open a draft pull request from `operator-build` to `main` so every push gets checked. Don't merge it before Sun 1 Nov.
+- [x] **CI doesn't run on `operator-build`.** `check.yml` runs only on pushes to `main` and on pull requests. **director**, Phase 0: open a draft pull request from `operator-build` to `main` so every push gets checked. Don't merge it before Sun 1 Nov. Draft PR #1.
 - [ ] **Gemini key in Vercel.** The import endpoint needs `GEMINI_API_KEY` in both Production and Preview, and "AI itinerary suggestion works" is still unticked in `LAUNCH-REMAINING.md`. **user**, Phase 1: check both environments. **shell** adds any new env var names to `.env.example`.
-- [ ] **Privacy policy is out of date.** `landing/privacy.html` and `public/privacy.html` describe outfit photos, and don't mention pasted itineraries going to Gemini or organiser contact details on the trip-info card. **shell**, Phase 2.
-- [ ] **Join link with no signal.** Someone opening a `/j/` link offline can't join. `JoinLinkGate` needs a clear offline message and a retry, plus loading and bad-code states. **shell**, Phase 1.
-- [ ] **Accessibility on new screens.** Labels on the join name field, the "Members can edit" switch and the Run again date picker, and contrast in both themes. **trip** and **shell**, as part of verifying their own work.
-- [ ] **Supabase free-plan limits.** Inactive free projects get paused, and realtime connections are capped. **data**, Phase 1: note the current limits in `supabase/SETUP.md` so nobody is surprised during live trips.
+- [x] **Privacy policy is out of date.** `landing/privacy.html` and `public/privacy.html` describe outfit photos, and don't mention pasted itineraries going to Gemini or organiser contact details on the trip-info card. **shell**, Phase 2.
+- [x] **Join link with no signal.** Someone opening a `/j/` link offline can't join. `JoinLinkGate` needs a clear offline message and a retry, plus loading and bad-code states. **shell**, Phase 1.
+- [~] **Accessibility on new screens.** Labels on the join name field, the "Members can edit" switch and the Run again date picker, and contrast in both themes. **trip** and **shell**, as part of verifying their own work. Labels done; contrast in both themes not checked.
+- [x] **Supabase free-plan limits.** Inactive free projects get paused, and realtime connections are capped. **data**, Phase 1: note the current limits in `supabase/SETUP.md` so nobody is surprised during live trips.
 - [ ] **Automated join-flow check (if time).** A `playwright-core` script that opens a `/j/` link in a fresh browser against dev and confirms it lands on the itinerary. **shell**, Phase 2.
